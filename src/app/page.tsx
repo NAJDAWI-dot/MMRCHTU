@@ -15,14 +15,14 @@ export default function HomePage() {
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-ras-gray dark:text-white/70">
           The 2026 Micro Mouse Robot Competition. Build a maze-solving robot, race the clock,
-          and play Cheddar Mouse — our maze game — while you wait for results.
+          and play Robo-Maze Mouse — our maze game — while you wait for results.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
           <Button asChild>
             <Link href="/register">Register your team</Link>
           </Button>
           <Button variant="ghost" asChild>
-            <Link href="/game">Play Cheddar Mouse</Link>
+            <Link href="/game">Play Robo-Maze Mouse</Link>
           </Button>
         </div>
       </section>
@@ -30,7 +30,7 @@ export default function HomePage() {
       <section className="mt-20 grid grid-cols-2 gap-6 sm:grid-cols-4">
         <StatCounter statKey="registrations" label="Teams registered" />
         <StatCounter statKey="submissions" label="Submissions" />
-        <StatCounter statKey="game_plays" label="Cheddar Mouse plays" />
+        <StatCounter statKey="game_plays" label="Robo-Maze plays" />
         <StatCounter statKey="participants" label="Participants" />
       </section>
 

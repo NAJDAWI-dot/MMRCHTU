@@ -1,37 +1,46 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
-declare global {
-  interface Window {
-    __CHEDDAR_MOUSE_DEBUG__?: { phase: string; mousePosition: { x: number; y: number }; score: number };
-  }
-}
+test.describe("Robo-Maze Mouse", () => {
+  test("Classic Maze starts and responds to input", async ({ page }) => {
+    await page.goto("/game");
+    await expect(page.getByRole("heading", { name: "Robo-Maze Mouse" })).toBeVisible();
 
-async function readDebug(page: Page) {
-  return page.evaluate(() => window.__CHEDDAR_MOUSE_DEBUG__);
-}
+    await page.getByRole("button", { name: "Start Mission" }).click();
+    const canvas = page.getByRole("application", { name: "Classic Maze game" });
+    await expect(canvas).toBeVisible();
 
-test("Cheddar Mouse starts, mounts a canvas, and responds to input", async ({ page }) => {
-  await page.goto("/game");
-  await expect(page.getByRole("heading", { name: "Cheddar Mouse", level: 1 })).toBeVisible();
+    await page.keyboard.press("ArrowUp");
+    await page.waitForTimeout(2200); // ready countdown + a little play time
+    await page.keyboard.press("ArrowLeft");
+    await page.waitForTimeout(300);
 
-  await page.getByRole("button", { name: "Start game" }).click();
-  await expect(page.locator("canvas")).toBeVisible();
+    // score should have increased from pellet pickup during that window
+    const score = await page.getByTestId("classic-score").textContent();
+    expect(Number(score)).toBeGreaterThan(0);
+  });
 
-  await expect
-    .poll(async () => (await readDebug(page))?.phase, { timeout: 5000 })
-    .not.toBeUndefined();
+  test("switching to First-Person mode mounts its own canvas", async ({ page }) => {
+    await page.goto("/game");
+    await page.getByRole("button", { name: /First-Person/ }).click();
+    await expect(page.getByRole("button", { name: "Enter the Maze" })).toBeVisible();
 
-  const before = await readDebug(page);
-  expect(before?.mousePosition).toBeDefined();
+    await page.getByRole("button", { name: "Enter the Maze" }).click();
+    const canvas = page.getByRole("application", { name: "First-person maze view" });
+    await expect(canvas).toBeVisible();
+  });
 
-  const application = page.getByRole("application", { name: "Cheddar Mouse game" });
-  await application.focus();
-  await page.keyboard.press("ArrowLeft");
+  test("switching tabs unmounts the previous mode cleanly (no console errors)", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message));
 
-  await expect
-    .poll(async () => {
-      const debug = await readDebug(page);
-      return debug?.mousePosition.x;
-    }, { timeout: 5000 })
-    .not.toBe(before?.mousePosition.x);
+    await page.goto("/game");
+    await page.getByRole("button", { name: "Start Mission" }).click();
+    await page.waitForTimeout(300);
+    await page.getByRole("button", { name: /First-Person/ }).click();
+    await page.waitForTimeout(300);
+    await page.getByRole("button", { name: /Classic Maze/ }).click();
+    await page.waitForTimeout(300);
+
+    expect(errors).toEqual([]);
+  });
 });

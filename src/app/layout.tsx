@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     template: "%s | MMRC 26",
   },
   description:
-    "MMRC 26 is the IEEE RAS HTU Student Chapter's Micro Mouse Robot Competition — rules, schedule, registration, and the Cheddar Mouse game.",
+    "MMRC 26 is the IEEE RAS HTU Student Chapter's Micro Mouse Robot Competition — rules, schedule, registration, and the Robo-Maze Mouse game.",
   icons: {
     icon: "/brand/favicon/favicon.ico",
     apple: "/brand/favicon/apple-touch-icon.png",

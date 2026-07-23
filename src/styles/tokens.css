@@ -1,8 +1,7 @@
 /*
-  Mirrors tailwind.config.ts colors as raw CSS custom properties.
-  The Cheddar Mouse canvas renderer draws with raw color strings and can't
-  read Tailwind utility classes, so the palette is defined once here and
-  once in Tailwind's theme — keep both in sync if the palette changes.
+  Mirrors tailwind.config.ts colors as raw CSS custom properties, for any
+  code (e.g. canvas rendering) that needs a raw color string rather than a
+  Tailwind utility class — keep both in sync if the palette changes.
 */
 :root {
   --color-ras-crimson: #862633;
