@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:/data/dev.db
+    volumes:
+      - sqlite-data:/data
+
+  # One-off: `docker compose run --rm migrate` -- uses the "builder" stage,
+  # which still has the Prisma CLI (a devDependency, so it's stripped from
+  # the runtime "runner" image's standalone output).
+  migrate:
+    build:
+      context: .
+      target: builder
+    environment:
+      - DATABASE_URL=file:/data/dev.db
+    volumes:
+      - sqlite-data:/data
+    # Runs as root (the volume mountpoint is root-owned by default), then
+    # hands the file to the "app" service's non-root user (Dockerfile's
+    # nextjs, uid/gid 1001) so the running app can actually write to it.
+    entrypoint: ["sh", "-c", "npx prisma migrate deploy && chown -R 1001:1001 /data"]
+    profiles: ["tools"]
+
+volumes:
+  sqlite-data:

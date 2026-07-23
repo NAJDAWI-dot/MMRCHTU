@@ -1,0 +1,34 @@
+/*
+  Mirrors tailwind.config.ts colors as raw CSS custom properties.
+  The Cheddar Mouse canvas renderer draws with raw color strings and can't
+  read Tailwind utility classes, so the palette is defined once here and
+  once in Tailwind's theme — keep both in sync if the palette changes.
+*/
+:root {
+  --color-ras-crimson: #862633;
+  --color-ras-purple: #5f2167;
+  --color-ras-gray: #57565b;
+
+  --color-mood-plum: #611169;
+  --color-mood-garnet: #97012d;
+  --color-mood-rose: #a11640;
+  --color-mood-orchid: #732e7d;
+  --color-mood-violet: #82468c;
+  --color-mood-amethyst: #74347d;
+
+  --color-bg: #ffffff;
+  --color-fg: #1a1a1a;
+  --color-surface: #f7f5f8;
+  --color-border: #e3dde5;
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.dark {
+  --color-bg: #17111a;
+  --color-fg: #f4f2f5;
+  --color-surface: #241c28;
+  --color-border: #3a2e40;
+}

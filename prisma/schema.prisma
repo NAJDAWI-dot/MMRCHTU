@@ -1,0 +1,32 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// SQLite has no native enum support, so status is a plain String constrained
+// at the application layer (see RegistrationStatus in src/lib/registration.ts).
+// Swapping to Postgres later can promote this to a real enum without an
+// application code change to the Prisma client call sites.
+model Registration {
+  id          String   @id @default(cuid())
+  teamName    String
+  contactName String
+  email       String
+  memberCount Int      @default(1)
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+
+  @@index([status])
+}
+
+// Generic key/value counters so new live stats (submissions, game_plays, ...)
+// can be added later without a schema migration.
+model Counter {
+  key       String   @id
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
