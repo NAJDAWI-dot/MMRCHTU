@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { headers } from "next/headers";
 import { optionalEnv } from "@/lib/env";
 import {
   faqNotificationEmail,
@@ -6,6 +7,24 @@ import {
   type FaqNotificationData,
   type RegistrationConfirmationData,
 } from "@/lib/email-templates";
+
+/**
+ * Prefer the incoming request's actual host (so links stay correct when the
+ * dev server lands on 3001/3002 because 3000 was already taken, or in prod
+ * behind a proxy) over the SITE_URL env var, which is only a fallback for
+ * contexts with no request (there are none currently, but keep it safe).
+ */
+function getSiteUrl(): string {
+  try {
+    const headerList = headers();
+    const host = headerList.get("x-forwarded-host") ?? headerList.get("host");
+    if (!host) return optionalEnv.siteUrl;
+    const proto = headerList.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+    return `${proto}://${host}`;
+  } catch {
+    return optionalEnv.siteUrl;
+  }
+}
 
 // resend.dev's shared test sender only delivers to the Resend account's own
 // verified email — swap this for a verified custom domain address once one
@@ -37,14 +56,14 @@ async function sendEmail(to: string, subject: string, html: string, text: string
 }
 
 export async function sendAdminNotification(data: Omit<FaqNotificationData, "siteUrl">): Promise<void> {
-  const { adminNotificationEmail, siteUrl } = optionalEnv;
+  const { adminNotificationEmail } = optionalEnv;
 
   if (!adminNotificationEmail) {
     console.warn(`[email] Skipped FAQ admin notification — ADMIN_NOTIFICATION_EMAIL not configured.`);
     return;
   }
 
-  const { subject, html, text } = faqNotificationEmail({ ...data, siteUrl });
+  const { subject, html, text } = faqNotificationEmail({ ...data, siteUrl: getSiteUrl() });
   await sendEmail(adminNotificationEmail, subject, html, text);
 }
 
@@ -52,7 +71,6 @@ export async function sendRegistrationConfirmation(
   to: string,
   data: Omit<RegistrationConfirmationData, "siteUrl">,
 ): Promise<void> {
-  const { siteUrl } = optionalEnv;
-  const { subject, html, text } = registrationConfirmationEmail({ ...data, siteUrl });
+  const { subject, html, text } = registrationConfirmationEmail({ ...data, siteUrl: getSiteUrl() });
   await sendEmail(to, subject, html, text);
 }
