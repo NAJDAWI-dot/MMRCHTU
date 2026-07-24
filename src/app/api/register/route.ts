@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createRegistration, validateRegistration } from "@/lib/registration";
+import { createRegistration, validateRegistration, hasFieldErrors } from "@/lib/registration";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -9,15 +9,17 @@ export async function POST(request: Request) {
   }
 
   const errors = validateRegistration(body);
-  if (Object.keys(errors).length > 0) {
+  if (hasFieldErrors(errors)) {
     return NextResponse.json({ errors }, { status: 422 });
   }
 
   const registration = await createRegistration({
     teamName: body.teamName,
-    contactName: body.contactName,
-    email: body.email,
+    submitterEmail: body.submitterEmail,
     memberCount: Number(body.memberCount),
+    technicalExperience: body.technicalExperience,
+    motivation: body.motivation,
+    members: body.members,
   });
 
   return NextResponse.json({ registration }, { status: 201 });

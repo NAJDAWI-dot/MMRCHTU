@@ -1,7 +1,7 @@
 # MMRC 26
 
 Website for the IEEE RAS HTU Student Chapter's Micro Mouse Robot Competition 2026 — competition
-info pages, registration, and the Robo-Maze Mouse browser game (Classic top-down + First-Person
+info pages, registration, and the Cheddar Mouse browser game (Classic top-down + First-Person
 raycaster modes).
 
 ## Stack
@@ -25,9 +25,9 @@ npm run test          # Vitest: game engine unit tests + component tests
 npx playwright test   # Playwright e2e (builds + serves a standalone build automatically)
 ```
 
-The Robo-Maze Mouse game (`src/game/classic/`) is an imperative canvas game ported directly from
+The Cheddar Mouse game (`src/game/classic/`) is an imperative canvas game ported directly from
 the standalone ieee-ras-mouse-maze site rather than a pure-function engine, so it isn't unit
-tested the way the earlier Cheddar Mouse prototype was; component/e2e tests cover the surrounding
+tested the way the original pure-function engine was; component/e2e tests cover the surrounding
 page (routing, registration, dark mode) and a Playwright smoke test drives the game itself.
 
 ## Production build
@@ -61,7 +61,7 @@ just needs the file paths updated.
 ## Project structure
 
 - `src/app/` — routes (home, `/game`, `/rules`, `/schedule`, `/register`, `/faq`, API routes)
-- `src/game/classic/` — Robo-Maze Mouse (Classic + First-Person modes), isolated behind
+- `src/game/classic/` — Cheddar Mouse (Classic + First-Person modes), isolated behind
   `GameTabs.tsx`; `shared.ts`/`audio.ts` hold the maze layout, robot defs, and sound effects
   common to both modes
 - `src/components/` — layout, brand, and shared UI components

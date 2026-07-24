@@ -19,7 +19,7 @@ import {
 } from "./shared";
 import { audioInit, sndMunch, sndCheese, sndEatRobot, sndDeath, sndLevel, sndStart, isMuted, toggleMute } from "./audio";
 
-type Phase = "idle" | "ready" | "play" | "dying" | "levelup" | "over";
+type Phase = "idle" | "ready" | "play" | "paused" | "dying" | "levelup" | "over";
 type RobotMode = "house" | "exit" | "scatter" | "chase" | "fright" | "eyes";
 
 interface MouseEnt {
@@ -55,6 +55,12 @@ export function ClassicMaze() {
   const ovTextRef = useRef<HTMLParagraphElement>(null);
   const startBtnRef = useRef<HTMLButtonElement>(null);
   const muteBtnRef = useRef<HTMLButtonElement>(null);
+  const pauseBtnRef = useRef<HTMLButtonElement>(null);
+  const fullscreenBtnRef = useRef<HTMLButtonElement>(null);
+  const pauseMenuRef = useRef<HTMLDivElement>(null);
+  const resumeBtnRef = useRef<HTMLButtonElement>(null);
+  const restartBtnRef = useRef<HTMLButtonElement>(null);
+  const exitBtnRef = useRef<HTMLButtonElement>(null);
   const liveRef = useRef<HTMLDivElement>(null);
   const dpadRef = useRef<HTMLDivElement>(null);
 
@@ -67,6 +73,12 @@ export function ClassicMaze() {
       !ovTextRef.current ||
       !startBtnRef.current ||
       !muteBtnRef.current ||
+      !pauseBtnRef.current ||
+      !fullscreenBtnRef.current ||
+      !pauseMenuRef.current ||
+      !resumeBtnRef.current ||
+      !restartBtnRef.current ||
+      !exitBtnRef.current ||
       !scoreRef.current ||
       !hiRef.current ||
       !levelRef.current ||
@@ -84,6 +96,12 @@ export function ClassicMaze() {
     const ovText = ovTextRef.current as HTMLParagraphElement;
     const startBtn = startBtnRef.current as HTMLButtonElement;
     const muteBtn = muteBtnRef.current as HTMLButtonElement;
+    const pauseBtn = pauseBtnRef.current as HTMLButtonElement;
+    const fullscreenBtn = fullscreenBtnRef.current as HTMLButtonElement;
+    const pauseMenu = pauseMenuRef.current as HTMLDivElement;
+    const resumeBtn = resumeBtnRef.current as HTMLButtonElement;
+    const restartBtn = restartBtnRef.current as HTMLButtonElement;
+    const exitBtn = exitBtnRef.current as HTMLButtonElement;
     const scoreEl = scoreRef.current as HTMLSpanElement;
     const hiEl = hiRef.current as HTMLSpanElement;
     const lvlEl = levelRef.current as HTMLSpanElement;
@@ -92,6 +110,8 @@ export function ClassicMaze() {
     const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 
     let disposed = false;
+    const READY_TITLE = ovTitle.textContent ?? "Classic Maze";
+    const READY_HTML = ovText.innerHTML;
 
     /* ---- maze state ---- */
     let maze: MazeGrid = buildMaze();
@@ -198,6 +218,38 @@ export function ClassicMaze() {
       resetActors(true);
       updateHud();
       setPhase("ready");
+    }
+
+    function pauseGame() {
+      if (phase !== "play") return;
+      setPhase("paused");
+      ovTitle.textContent = "Paused";
+      ovText.innerHTML = "Game paused.<br><br>Resume, restart the mission, or exit to the menu.";
+      startBtn.classList.add("hidden");
+      pauseMenu.classList.remove("hidden");
+      overlay.classList.remove("hidden");
+    }
+    function resumeGame() {
+      if (phase !== "paused") return;
+      overlay.classList.add("hidden");
+      pauseMenu.classList.add("hidden");
+      startBtn.classList.remove("hidden");
+      setPhase("play");
+    }
+    function restartFromPause() {
+      overlay.classList.add("hidden");
+      pauseMenu.classList.add("hidden");
+      startBtn.classList.remove("hidden");
+      newGame();
+    }
+    function exitToMenu() {
+      pauseMenu.classList.add("hidden");
+      startBtn.classList.remove("hidden");
+      ovTitle.textContent = READY_TITLE;
+      ovText.innerHTML = READY_HTML;
+      startBtn.textContent = "Start Mission";
+      overlay.classList.remove("hidden");
+      setPhase("idle");
     }
 
     /* ---- movement ---- */
@@ -663,6 +715,10 @@ export function ClassicMaze() {
         mouse.want = dir;
       }
       if ((e.key === " " || e.key === "Enter") && phase === "over") startBtn.click();
+      if (e.key === "Escape") {
+        if (phase === "play") pauseGame();
+        else if (phase === "paused") resumeGame();
+      }
     }
     let touchStart: { x: number; y: number } | null = null;
     function handleTouchStart(e: TouchEvent) {
@@ -694,9 +750,33 @@ export function ClassicMaze() {
       const m = toggleMute();
       muteBtn.textContent = m ? "🔇" : "🔊";
     }
+    function handlePauseToggle() {
+      if (phase === "play") pauseGame();
+      else if (phase === "paused") resumeGame();
+    }
+    function isFullscreen() {
+      return document.fullscreenElement === wrap;
+    }
+    function handleFullscreenToggle() {
+      if (isFullscreen()) {
+        document.exitFullscreen();
+      } else {
+        wrap.requestFullscreen().catch(() => {});
+      }
+    }
+    function handleFullscreenChange() {
+      fullscreenBtn.textContent = isFullscreen() ? "⤢" : "⛶";
+      fit();
+    }
     startBtn.addEventListener("click", handleStart);
     muteBtn.addEventListener("click", handleMute);
     muteBtn.textContent = isMuted() ? "🔇" : "🔊";
+    pauseBtn.addEventListener("click", handlePauseToggle);
+    fullscreenBtn.addEventListener("click", handleFullscreenToggle);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    resumeBtn.addEventListener("click", resumeGame);
+    restartBtn.addEventListener("click", restartFromPause);
+    exitBtn.addEventListener("click", exitToMenu);
 
     const dpad = dpadRef.current;
     function dpadHandler(this: HTMLElement) {
@@ -708,9 +788,13 @@ export function ClassicMaze() {
     for (const b of dpadButtons) b.addEventListener("click", dpadHandler);
 
     function fit() {
-      const availW = Math.min(window.innerWidth * 0.94, 532);
-      const availH = window.innerHeight - wrap.getBoundingClientRect().top - 40;
-      const s = Math.min(availW / 456, availH / 504, 1.15);
+      const fullscreen = isFullscreen();
+      const availW = fullscreen ? window.innerWidth * 0.98 : Math.min(window.innerWidth * 0.94, 700);
+      const availH = fullscreen
+        ? window.innerHeight * 0.98
+        : window.innerHeight - wrap.getBoundingClientRect().top - 40;
+      const cap = fullscreen ? 3 : 1.5;
+      const s = Math.min(availW / 456, availH / 504, cap);
       canvas.style.width = 456 * s + "px";
       canvas.style.height = 504 * s + "px";
     }
@@ -729,15 +813,21 @@ export function ClassicMaze() {
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("resize", fit);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
       startBtn.removeEventListener("click", handleStart);
       muteBtn.removeEventListener("click", handleMute);
+      pauseBtn.removeEventListener("click", handlePauseToggle);
+      fullscreenBtn.removeEventListener("click", handleFullscreenToggle);
+      resumeBtn.removeEventListener("click", resumeGame);
+      restartBtn.removeEventListener("click", restartFromPause);
+      exitBtn.removeEventListener("click", exitToMenu);
       for (const b of dpadButtons) b.removeEventListener("click", dpadHandler);
     };
   }, []);
 
   return (
     <div className="mx-auto flex flex-col items-center">
-      <div className="flex w-full max-w-[532px] items-center justify-between px-1 py-2 font-mono text-sm">
+      <div className="flex w-full max-w-[700px] items-center justify-between px-1 py-2 font-mono text-sm">
         <div>
           SCORE <span ref={scoreRef} data-testid="classic-score" className="text-[#F2A900]">0</span>
         </div>
@@ -752,6 +842,12 @@ export function ClassicMaze() {
 
       <div ref={wrapRef} className="relative leading-none">
         <canvas ref={canvasRef} width={456} height={504} role="application" aria-label="Classic Maze game" className="rounded-lg border-2 border-ras-purple bg-[#140b1e] shadow-[0_0_30px_rgba(95,33,103,.45)]" />
+        <button ref={pauseBtnRef} type="button" title="Pause (Esc)" className="absolute right-24 top-2 h-9 w-9 rounded-md border border-ras-purple/40 bg-black/40 text-lg">
+          ⏸
+        </button>
+        <button ref={fullscreenBtnRef} type="button" title="Fullscreen" className="absolute right-12 top-2 h-9 w-9 rounded-md border border-ras-purple/40 bg-black/40 text-lg">
+          ⛶
+        </button>
         <button ref={muteBtnRef} type="button" title="Mute" className="absolute right-2 top-2 h-9 w-9 rounded-md border border-ras-purple/40 bg-black/40 text-lg">
           🔊
         </button>
@@ -769,6 +865,17 @@ export function ClassicMaze() {
           <button ref={startBtnRef} type="button" className="rounded-full border-2 border-[#F2A900] bg-ras-crimson px-8 py-3 text-sm font-bold uppercase tracking-widest text-white">
             Start Mission
           </button>
+          <div ref={pauseMenuRef} className="hidden flex flex-col gap-2">
+            <button ref={resumeBtnRef} type="button" className="rounded-full border-2 border-[#F2A900] bg-ras-crimson px-8 py-2 text-sm font-bold uppercase tracking-widest text-white">
+              Resume
+            </button>
+            <button ref={restartBtnRef} type="button" className="rounded-full border border-ras-purple/60 bg-black/40 px-8 py-2 text-sm font-bold uppercase tracking-widest text-white">
+              Restart
+            </button>
+            <button ref={exitBtnRef} type="button" className="rounded-full border border-ras-purple/60 bg-black/40 px-8 py-2 text-sm font-bold uppercase tracking-widest text-white">
+              Exit to menu
+            </button>
+          </div>
         </div>
       </div>
 

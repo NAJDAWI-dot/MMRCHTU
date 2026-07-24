@@ -1,7 +1,0 @@
-[
-  { "date": "2026-09-01", "title": "Registration opens", "description": "Team sign-up opens on the /register page." },
-  { "date": "2026-10-15", "title": "Registration closes", "description": "Last day to register a team." },
-  { "date": "2026-11-01", "title": "Design check-in", "description": "Optional robot design review with organizers." },
-  { "date": "2026-11-20", "title": "Competition day", "description": "Search and speed runs, IEEE RAS HTU venue." },
-  { "date": "2026-11-20", "title": "Awards", "description": "Winners announced at the close of competition day." }
-]

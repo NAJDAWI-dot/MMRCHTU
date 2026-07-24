@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { ROWS, COLS, DIRS, OPP, ROBOT_DEFS, buildMaze, countPellets, GOLD, type Dir, type MazeGrid } from "./shared";
 import { audioInit, sndMunch, sndCheese, sndEatRobot, sndDeath, sndLevel, sndStart, isMuted, toggleMute } from "./audio";
 
-type Phase = "idle" | "ready" | "play" | "dying" | "levelup" | "over";
+type Phase = "idle" | "ready" | "play" | "paused" | "dying" | "levelup" | "over";
 type BotMode = "house" | "exit" | "active" | "fright" | "eyes";
 
 interface Bot {
@@ -44,6 +44,12 @@ export function FirstPerson() {
   const ovTextRef = useRef<HTMLParagraphElement>(null);
   const startBtnRef = useRef<HTMLButtonElement>(null);
   const muteBtnRef = useRef<HTMLButtonElement>(null);
+  const pauseBtnRef = useRef<HTMLButtonElement>(null);
+  const fullscreenBtnRef = useRef<HTMLButtonElement>(null);
+  const pauseMenuRef = useRef<HTMLDivElement>(null);
+  const resumeBtnRef = useRef<HTMLButtonElement>(null);
+  const restartBtnRef = useRef<HTMLButtonElement>(null);
+  const exitBtnRef = useRef<HTMLButtonElement>(null);
   const liveRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,6 +61,12 @@ export function FirstPerson() {
       !ovTextRef.current ||
       !startBtnRef.current ||
       !muteBtnRef.current ||
+      !pauseBtnRef.current ||
+      !fullscreenBtnRef.current ||
+      !pauseMenuRef.current ||
+      !resumeBtnRef.current ||
+      !restartBtnRef.current ||
+      !exitBtnRef.current ||
       !scoreRef.current ||
       !hiRef.current ||
       !levelRef.current ||
@@ -72,6 +84,12 @@ export function FirstPerson() {
     const ovText = ovTextRef.current as HTMLParagraphElement;
     const startBtn = startBtnRef.current as HTMLButtonElement;
     const muteBtn = muteBtnRef.current as HTMLButtonElement;
+    const pauseBtn = pauseBtnRef.current as HTMLButtonElement;
+    const fullscreenBtn = fullscreenBtnRef.current as HTMLButtonElement;
+    const pauseMenu = pauseMenuRef.current as HTMLDivElement;
+    const resumeBtn = resumeBtnRef.current as HTMLButtonElement;
+    const restartBtn = restartBtnRef.current as HTMLButtonElement;
+    const exitBtn = exitBtnRef.current as HTMLButtonElement;
     const scoreEl = scoreRef.current as HTMLSpanElement;
     const hiEl = hiRef.current as HTMLSpanElement;
     const lvlEl = levelRef.current as HTMLSpanElement;
@@ -80,6 +98,8 @@ export function FirstPerson() {
     const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 
     let disposed = false;
+    const READY_TITLE = ovTitle.textContent ?? "Mouse-Eye View";
+    const READY_HTML = ovText.innerHTML;
 
     /* ---- world ---- */
     let grid: MazeGrid = buildMaze();
@@ -165,6 +185,10 @@ export function FirstPerson() {
         keys[k] = true;
       }
       if ((e.key === " " || e.key === "Enter") && phase === "over") startBtn.click();
+      if (e.key === "Escape") {
+        if (phase === "play") pauseGame();
+        else if (phase === "paused") resumeGame();
+      }
     }
     function handleKeyup(e: KeyboardEvent) {
       keys[e.key.toLowerCase()] = false;
@@ -728,14 +752,77 @@ export function FirstPerson() {
       const m = toggleMute();
       muteBtn.textContent = m ? "🔇" : "🔊";
     }
+    function pauseGame() {
+      if (phase !== "play") return;
+      phase = "paused";
+      phaseT = 0;
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      ovTitle.textContent = "Paused";
+      ovText.innerHTML = "Game paused.<br><br>Resume, restart the mission, or exit to the menu.";
+      startBtn.classList.add("hidden");
+      pauseMenu.classList.remove("hidden");
+      overlay.classList.remove("hidden");
+    }
+    function resumeGame() {
+      if (phase !== "paused") return;
+      overlay.classList.add("hidden");
+      pauseMenu.classList.add("hidden");
+      startBtn.classList.remove("hidden");
+      phase = "play";
+      phaseT = 0;
+    }
+    function restartFromPause() {
+      overlay.classList.add("hidden");
+      pauseMenu.classList.add("hidden");
+      startBtn.classList.remove("hidden");
+      handleStart();
+    }
+    function exitToMenu() {
+      pauseMenu.classList.add("hidden");
+      startBtn.classList.remove("hidden");
+      ovTitle.textContent = READY_TITLE;
+      ovText.innerHTML = READY_HTML;
+      startBtn.textContent = "Enter the Maze";
+      overlay.classList.remove("hidden");
+      phase = "idle";
+      phaseT = 0;
+    }
+    function handlePauseToggle() {
+      if (phase === "play") pauseGame();
+      else if (phase === "paused") resumeGame();
+    }
+    function isFullscreen() {
+      return document.fullscreenElement === wrap;
+    }
+    function handleFullscreenToggle() {
+      if (isFullscreen()) {
+        document.exitFullscreen();
+      } else {
+        wrap.requestFullscreen().catch(() => {});
+      }
+    }
+    function handleFullscreenChange() {
+      fullscreenBtn.textContent = isFullscreen() ? "⤢" : "⛶";
+      fit();
+    }
     startBtn.addEventListener("click", handleStart);
     muteBtn.addEventListener("click", handleMute);
     muteBtn.textContent = isMuted() ? "🔇" : "🔊";
+    pauseBtn.addEventListener("click", handlePauseToggle);
+    fullscreenBtn.addEventListener("click", handleFullscreenToggle);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    resumeBtn.addEventListener("click", resumeGame);
+    restartBtn.addEventListener("click", restartFromPause);
+    exitBtn.addEventListener("click", exitToMenu);
 
     function fit() {
-      const availW = Math.min(window.innerWidth * 0.94, 660);
-      const availH = window.innerHeight - wrap.getBoundingClientRect().top - 60;
-      const s = Math.min(availW / W, availH / H, 1.1);
+      const fullscreen = isFullscreen();
+      const availW = fullscreen ? window.innerWidth * 0.98 : Math.min(window.innerWidth * 0.94, 840);
+      const availH = fullscreen
+        ? window.innerHeight * 0.98
+        : window.innerHeight - wrap.getBoundingClientRect().top - 60;
+      const cap = fullscreen ? 3 : 1.4;
+      const s = Math.min(availW / W, availH / H, cap);
       canvas.style.width = W * s + "px";
       canvas.style.height = H * s + "px";
     }
@@ -757,15 +844,21 @@ export function FirstPerson() {
       canvas.removeEventListener("touchstart", handleTouchStart);
       canvas.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("resize", fit);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
       startBtn.removeEventListener("click", handleStart);
       muteBtn.removeEventListener("click", handleMute);
+      pauseBtn.removeEventListener("click", handlePauseToggle);
+      fullscreenBtn.removeEventListener("click", handleFullscreenToggle);
+      resumeBtn.removeEventListener("click", resumeGame);
+      restartBtn.removeEventListener("click", restartFromPause);
+      exitBtn.removeEventListener("click", exitToMenu);
       if (document.pointerLockElement === canvas) document.exitPointerLock();
     };
   }, []);
 
   return (
     <div className="mx-auto flex flex-col items-center">
-      <div className="flex w-full max-w-[660px] items-center justify-between px-1 py-2 font-mono text-sm">
+      <div className="flex w-full max-w-[840px] items-center justify-between px-1 py-2 font-mono text-sm">
         <div>
           SCORE <span ref={scoreRef} className="text-[#F2A900]">0</span>
         </div>
@@ -783,6 +876,12 @@ export function FirstPerson() {
         <button ref={muteBtnRef} type="button" title="Mute" className="absolute left-2 top-2 h-9 w-9 rounded-md border border-ras-purple/40 bg-black/40 text-lg">
           🔊
         </button>
+        <button ref={fullscreenBtnRef} type="button" title="Fullscreen" className="absolute left-12 top-2 h-9 w-9 rounded-md border border-ras-purple/40 bg-black/40 text-lg">
+          ⛶
+        </button>
+        <button ref={pauseBtnRef} type="button" title="Pause (Esc)" className="absolute left-24 top-2 h-9 w-9 rounded-md border border-ras-purple/40 bg-black/40 text-lg">
+          ⏸
+        </button>
         <div ref={overlayRef} className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-black/85 p-5 text-center">
           <div className="text-5xl">🐭</div>
           <h2 ref={ovTitleRef} className="font-display text-2xl font-bold uppercase tracking-widest text-[#F2A900]">
@@ -798,6 +897,17 @@ export function FirstPerson() {
           <button ref={startBtnRef} type="button" className="rounded-full border-2 border-[#F2A900] bg-ras-crimson px-8 py-3 text-sm font-bold uppercase tracking-widest text-white">
             Enter the Maze
           </button>
+          <div ref={pauseMenuRef} className="hidden flex flex-col gap-2">
+            <button ref={resumeBtnRef} type="button" className="rounded-full border-2 border-[#F2A900] bg-ras-crimson px-8 py-2 text-sm font-bold uppercase tracking-widest text-white">
+              Resume
+            </button>
+            <button ref={restartBtnRef} type="button" className="rounded-full border border-ras-purple/60 bg-black/40 px-8 py-2 text-sm font-bold uppercase tracking-widest text-white">
+              Restart
+            </button>
+            <button ref={exitBtnRef} type="button" className="rounded-full border border-ras-purple/60 bg-black/40 px-8 py-2 text-sm font-bold uppercase tracking-widest text-white">
+              Exit to menu
+            </button>
+          </div>
         </div>
       </div>
 

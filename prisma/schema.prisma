@@ -12,15 +12,35 @@ generator client {
 // Swapping to Postgres later can promote this to a real enum without an
 // application code change to the Prisma client call sites.
 model Registration {
-  id          String   @id @default(cuid())
-  teamName    String
-  contactName String
-  email       String
-  memberCount Int      @default(1)
-  status      String   @default("PENDING")
-  createdAt   DateTime @default(now())
+  id                  String   @id @default(cuid())
+  teamName            String
+  submitterEmail      String
+  memberCount         Int      @default(1)
+  technicalExperience String
+  motivation          String
+  status              String   @default("PENDING")
+  createdAt           DateTime @default(now())
+
+  members TeamMember[]
 
   @@index([status])
+}
+
+model TeamMember {
+  id               String       @id @default(cuid())
+  registrationId   String
+  registration     Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  order            Int
+  firstName        String
+  lastName         String
+  email            String
+  whatsapp         String
+  university       String
+  major            String
+  ieeeStatus       String
+  ieeeMembershipId String
+
+  @@index([registrationId])
 }
 
 // Generic key/value counters so new live stats (submissions, game_plays, ...)
@@ -29,4 +49,60 @@ model Counter {
   key       String   @id
   value     Int      @default(0)
   updatedAt DateTime @updatedAt
+}
+
+model AdminUser {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  lastLoginAt  DateTime?
+}
+
+model ScheduleEvent {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  startsAt    DateTime
+  endsAt      DateTime?
+  location    String?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([startsAt])
+}
+
+model FaqEntry {
+  id          String   @id @default(cuid())
+  question    String
+  answer      String
+  sortOrder   Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Visitor-submitted questions not yet in the published FaqEntry list.
+model FaqQuestion {
+  id         String    @id @default(cuid())
+  question   String
+  askerEmail String?
+  reply      String?
+  repliedAt  DateTime?
+  status     String    @default("PENDING")
+  createdAt  DateTime  @default(now())
+
+  @@index([status])
+}
+
+// Singleton row (id is always "singleton") holding admin-editable copy for
+// the public register page.
+model RegisterFormConfig {
+  id           String    @id @default("singleton")
+  deadlineText String    @default("Registration closes soon — check back for the exact date.")
+  deadlineDate DateTime?
+  feeInfoText  String    @default("35 JD (non-member) / 25 JD (IEEE member) / 15 JD (IEEE RAS member) per team.")
+  isOpen       Boolean   @default(true)
+  updatedAt    DateTime  @updatedAt
 }
