@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { ClassicMaze } from "./ClassicMaze";
 import { FirstPerson } from "./FirstPerson";
+import { Leaderboard } from "./Leaderboard";
+import type { GameMode } from "@/lib/leaderboard";
 
-type Tab = "classic" | "fp";
+type Tab = GameMode;
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "classic", label: "🕹️ Classic Maze" },
@@ -39,6 +41,9 @@ export function GameTabs() {
         className="motion-safe:animate-[fadeIn_.32s_cubic-bezier(.22,.61,.36,1)]"
       >
         {tab === "classic" ? <ClassicMaze /> : <FirstPerson />}
+        {/* Keyed on tab so switching modes remounts the board for that mode
+            and discards any unsaved run from the mode just left. */}
+        <Leaderboard key={tab} mode={tab} />
       </div>
     </div>
   );

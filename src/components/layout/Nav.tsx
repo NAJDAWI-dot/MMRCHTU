@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const LINKS = [
-  { href: "/game", label: "Cheddar Mouse" },
+  { href: "/game", label: "Pac Mouse" },
   { href: "/rules", label: "Rules" },
   { href: "/schedule", label: "Schedule" },
   { href: "/faq", label: "FAQ" },

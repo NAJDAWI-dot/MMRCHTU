@@ -1,8 +1,22 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ROWS, COLS, DIRS, OPP, ROBOT_DEFS, buildMaze, countPellets, GOLD, type Dir, type MazeGrid } from "./shared";
+import {
+  ROWS,
+  COLS,
+  DIRS,
+  OPP,
+  ROBOT_DEFS,
+  buildMaze,
+  countPellets,
+  GAME_SPEED_SCALE,
+  MOUSE_SPEED_SCALE,
+  GOLD,
+  type Dir,
+  type MazeGrid,
+} from "./shared";
 import { audioInit, sndMunch, sndCheese, sndEatRobot, sndDeath, sndLevel, sndStart, isMuted, toggleMute } from "./audio";
+import { GAME_OVER_EVENT, type GameOverDetail } from "@/lib/leaderboard";
 
 type Phase = "idle" | "ready" | "play" | "paused" | "dying" | "levelup" | "over";
 type BotMode = "house" | "exit" | "active" | "fright" | "eyes";
@@ -26,11 +40,8 @@ const FOV = Math.PI / 3;
 const THALF = Math.tan(FOV / 2);
 const MS = 5; // minimap tile size
 
-function wrapDx(dx: number) {
-  if (dx > COLS / 2) dx -= COLS;
-  if (dx < -COLS / 2) dx += COLS;
-  return dx;
-}
+// Distances are plain differences: the maze is fully enclosed, so there is no
+// side tunnel that would make the short way round the grid the real distance.
 
 export function FirstPerson() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -109,8 +120,10 @@ export function FirstPerson() {
       dotsLeft = countPellets(grid);
     }
     function cellAt(r: number, c: number): string {
-      if (r < 0 || r >= ROWS) return "#";
-      return grid[r]![((c % COLS) + COLS) % COLS] ?? "#";
+      // Solid outside the grid on both axes — the maze is enclosed, so nothing
+      // can walk off one side and reappear on the other.
+      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return "#";
+      return grid[r]![c] ?? "#";
     }
     function solid(r: number, c: number, forGhost: boolean) {
       const t = cellAt(r, c);
@@ -185,7 +198,10 @@ export function FirstPerson() {
         keys[k] = true;
       }
       if ((e.key === " " || e.key === "Enter") && phase === "over") startBtn.click();
-      if (e.key === "Escape") {
+      // "p" is a second pause key for fullscreen play: the browser consumes Esc
+      // to leave fullscreen, so it never reaches this handler there (the
+      // fullscreenchange handler pauses in that case).
+      if (e.key === "Escape" || k === "p") {
         if (phase === "play") pauseGame();
         else if (phase === "paused") resumeGame();
       }
@@ -228,8 +244,6 @@ export function FirstPerson() {
       const ny = P.y + dy;
       if (!hitWall(nx, P.y)) P.x = nx;
       if (!hitWall(P.x, ny)) P.y = ny;
-      if (P.x < 0) P.x += COLS;
-      if (P.x >= COLS) P.x -= COLS;
     }
     function movePlayer(dt: number) {
       let rot = 0;
@@ -246,14 +260,14 @@ export function FirstPerson() {
         const dx = Math.cos(P.a) * f + Math.cos(P.a + Math.PI / 2) * s;
         const dy = Math.sin(P.a) * f + Math.sin(P.a + Math.PI / 2) * s;
         const len = Math.hypot(dx, dy) || 1;
-        const sp = (3.3 + (frT > 0 ? 0.4 : 0)) * dt / len;
+        const sp = ((3.3 + (frT > 0 ? 0.4 : 0)) * GAME_SPEED_SCALE * MOUSE_SPEED_SCALE * dt) / len;
         tryMove(dx * sp, dy * sp);
       }
     }
 
     /* ---- robot AI ---- */
     function botTarget(b: Bot) {
-      const mt = { r: Math.floor(P.y), c: (((Math.floor(P.x)) % COLS) + COLS) % COLS };
+      const mt = { r: Math.floor(P.y), c: Math.floor(P.x) };
       if (b.mode === "eyes") return { r: 7, c: 9 };
       const scatter = gT % 26 < 7;
       switch (b.name) {
@@ -264,7 +278,7 @@ export function FirstPerson() {
         case "CYBER":
           return scatter ? { r: 1, c: 17 } : mt;
         case "SERVO": {
-          const d = Math.hypot(b.y - P.y, wrapDx(b.x - P.x));
+          const d = Math.hypot(b.y - P.y, b.x - P.x);
           return d > 6 ? mt : { r: 19, c: 1 };
         }
       }
@@ -291,7 +305,7 @@ export function FirstPerson() {
         return;
       }
       const cr = Math.floor(b.y);
-      const cc = (((Math.floor(b.x)) % COLS) + COLS) % COLS;
+      const cc = Math.floor(b.x);
       if (b.mode === "eyes" && cr === 7 && cc === 9 && Math.abs(b.x - 9.5) < 0.1 && Math.abs(b.y - 7.5) < 0.1) {
         b.mode = "house";
         b.rel = 2;
@@ -330,8 +344,6 @@ export function FirstPerson() {
       const d = DIRS[b.dir];
       b.x += d.x * sp * dt;
       b.y += d.y * sp * dt;
-      if (b.x < 0) b.x += COLS;
-      if (b.x >= COLS) b.x -= COLS;
     }
 
     /* ---- game update ---- */
@@ -339,7 +351,7 @@ export function FirstPerson() {
       gT += dt;
       movePlayer(dt);
       const r = Math.floor(P.y);
-      const c = (((Math.floor(P.x)) % COLS) + COLS) % COLS;
+      const c = Math.floor(P.x);
       const t = grid[r]?.[c];
       if (t === "." || t === "o") {
         grid[r]![c] = " ";
@@ -368,7 +380,7 @@ export function FirstPerson() {
       }
       for (const b of bots) updBot(b, dt);
       for (const b of bots) {
-        const d = Math.hypot(b.y - P.y, wrapDx(b.x - P.x));
+        const d = Math.hypot(b.y - P.y, b.x - P.x);
         if (d < 0.55) {
           if (b.mode === "fright") {
             chain++;
@@ -388,6 +400,9 @@ export function FirstPerson() {
     }
     function over() {
       phase = "over";
+      // Hands the final run to the <Leaderboard> component, which owns the
+      // name-entry form and the score submission (see src/lib/leaderboard.ts).
+      window.dispatchEvent(new CustomEvent<GameOverDetail>(GAME_OVER_EVENT, { detail: { mode: "fp", score, level } }));
       ovTitle.textContent = "System Failure";
       ovText.innerHTML = `The robots caught the mouse! 🤖<br><br>Final score: <b style="color:${GOLD}">${score}</b> &nbsp;·&nbsp; High score: <b>${hi}</b>`;
       startBtn.textContent = "Reboot Mission";
@@ -594,14 +609,14 @@ export function FirstPerson() {
         for (let c = 0; c < COLS; c++) {
           const t = grid[r]![c];
           if (t !== "." && t !== "o") continue;
-          const dx = wrapDx(c + 0.5 - P.x);
+          const dx = c + 0.5 - P.x;
           const dy = r + 0.5 - P.y;
           if (dx * dx + dy * dy > 81) continue;
           list.push({ x: P.x + dx, y: P.y + dy, img: t === "." ? dotImg : cheeseImg, h: t === "." ? 0.13 : 0.3 });
         }
       const inv = 1 / (plX * dirY - dirX * plY);
       for (const s of list) {
-        const rx = wrapDx(s.x - P.x);
+        const rx = s.x - P.x;
         const ry = s.y - P.y;
         s.tx = inv * (dirY * rx - dirX * ry);
         s.ty = inv * (-plY * rx + plX * ry);
@@ -803,6 +818,9 @@ export function FirstPerson() {
     }
     function handleFullscreenChange() {
       fullscreenBtn.textContent = isFullscreen() ? "⤢" : "⛶";
+      // Leaving fullscreen mid-game is almost always the player hitting Esc,
+      // which the browser consumes before the keydown handler can pause.
+      if (!isFullscreen() && phase === "play") pauseGame();
       fit();
     }
     startBtn.addEventListener("click", handleStart);

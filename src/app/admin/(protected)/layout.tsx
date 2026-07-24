@@ -7,6 +7,7 @@ const NAV_LINKS = [
   { href: "/admin/faq", label: "FAQ" },
   { href: "/admin/register-form", label: "Register Form" },
   { href: "/admin/registrations", label: "Registrations" },
+  { href: "/admin/broadcasts", label: "Email Lists" },
   { href: "/admin/admins", label: "Admins" },
 ];
 

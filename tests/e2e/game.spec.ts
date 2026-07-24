@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Cheddar Mouse", () => {
+test.describe("Pac Mouse", () => {
   test("Classic Maze starts and responds to input", async ({ page }) => {
     await page.goto("/game");
-    await expect(page.getByRole("heading", { name: "Cheddar Mouse" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pac Mouse" })).toBeVisible();
 
     await page.getByRole("button", { name: "Start Mission" }).click();
     const canvas = page.getByRole("application", { name: "Classic Maze game" });

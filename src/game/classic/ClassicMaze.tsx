@@ -5,19 +5,22 @@ import {
   ROWS,
   COLS,
   TILE,
-  TUNNEL_ROW,
   DIRS,
   OPP,
   ROBOT_DEFS,
   isWall,
   buildMaze,
   countPellets,
+  GAME_SPEED_SCALE,
+  MOUSE_SPEED_SCALE,
+  ROBOT_SPEED_SCALE,
   GOLD,
   NEON,
   type Dir,
   type MazeGrid,
 } from "./shared";
 import { audioInit, sndMunch, sndCheese, sndEatRobot, sndDeath, sndLevel, sndStart, isMuted, toggleMute } from "./audio";
+import { GAME_OVER_EVENT, type GameOverDetail } from "@/lib/leaderboard";
 
 type Phase = "idle" | "ready" | "play" | "paused" | "dying" | "levelup" | "over";
 type RobotMode = "house" | "exit" | "scatter" | "chase" | "fright" | "eyes";
@@ -45,6 +48,8 @@ const HI_KEY = "mmrcClassicHi";
 
 export function ClassicMaze() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const hudRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const scoreRef = useRef<HTMLSpanElement>(null);
   const hiRef = useRef<HTMLSpanElement>(null);
@@ -67,6 +72,7 @@ export function ClassicMaze() {
   useEffect(() => {
     if (
       !canvasRef.current ||
+      !stageRef.current ||
       !wrapRef.current ||
       !overlayRef.current ||
       !ovTitleRef.current ||
@@ -90,6 +96,7 @@ export function ClassicMaze() {
     // Re-bound with explicit non-null types: TS's control-flow narrowing from
     // the guard above doesn't extend into the nested closures declared below.
     const canvas = canvasRef.current as HTMLCanvasElement;
+    const stage = stageRef.current as HTMLDivElement;
     const wrap = wrapRef.current as HTMLDivElement;
     const overlay = overlayRef.current as HTMLDivElement;
     const ovTitle = ovTitleRef.current as HTMLHeadingElement;
@@ -140,7 +147,12 @@ export function ClassicMaze() {
       return { x: c * TILE + TILE / 2, y: r * TILE + TILE / 2 };
     }
     function entTile(e: { x: number; y: number }) {
-      return { r: Math.floor(e.y / TILE), c: (((Math.floor(e.x / TILE)) % COLS) + COLS) % COLS };
+      // Clamped rather than wrapped: the maze is enclosed, so a position can
+      // only land outside the grid through float drift at the outer walls.
+      return {
+        r: Math.min(Math.max(Math.floor(e.y / TILE), 0), ROWS - 1),
+        c: Math.min(Math.max(Math.floor(e.x / TILE), 0), COLS - 1),
+      };
     }
     function atCenter(e: { x: number; y: number }) {
       const t = entTile(e);
@@ -148,7 +160,7 @@ export function ClassicMaze() {
       return Math.abs(e.x - ctr.x) < 1.5 && Math.abs(e.y - ctr.y) < 1.5;
     }
     function baseSpeed() {
-      return 2.0 + Math.min(level - 1, 5) * 0.12;
+      return (2.0 + Math.min(level - 1, 5) * 0.12) * GAME_SPEED_SCALE;
     }
 
     function resetActors(full: boolean) {
@@ -158,7 +170,7 @@ export function ClassicMaze() {
       mouse.dir = "left";
       mouse.want = "left";
       mouse.anim = 0;
-      mouse.speed = baseSpeed();
+      mouse.speed = baseSpeed() * MOUSE_SPEED_SCALE;
       robots = ROBOT_DEFS.map((d, i) => {
         const h = tileCenter(d.home.r, d.home.c);
         return {
@@ -169,7 +181,7 @@ export function ClassicMaze() {
           dir: d.house ? "up" : "left",
           mode: d.house ? "house" : "scatter",
           releaseAt: d.house ? i * 3.5 - (full ? 0 : 1.5) : 0,
-          speed: baseSpeed() * 0.85,
+          speed: baseSpeed() * ROBOT_SPEED_SCALE,
         };
       });
       frightT = 0;
@@ -276,8 +288,6 @@ export function ClassicMaze() {
       const d = DIRS[e.dir];
       e.x += d.x * e.speed;
       e.y += d.y * e.speed;
-      if (e.x < -TILE / 2) e.x += COLS * TILE;
-      if (e.x > COLS * TILE + TILE / 2) e.x -= COLS * TILE;
     }
 
     /* ---- robot AI ---- */
@@ -307,7 +317,9 @@ export function ClassicMaze() {
     }
     function updateRobot(rb: Robot, dt: number) {
       const t = entTile(rb);
-      rb.speed = baseSpeed() * (rb.mode === "eyes" ? 1.6 : rb.mode === "fright" ? 0.55 : t.r === TUNNEL_ROW && (t.c < 3 || t.c > 15) ? 0.55 : 0.85);
+      // The side-tunnel slowdown that used to apply on row 9 is gone with the
+      // tunnel itself — that row is now ordinary enclosed corridor.
+      rb.speed = baseSpeed() * (rb.mode === "eyes" ? 1.6 : rb.mode === "fright" ? 0.55 : ROBOT_SPEED_SCALE);
 
       if (rb.mode === "house") {
         rb.releaseAt -= dt;
@@ -379,7 +391,7 @@ export function ClassicMaze() {
     function update(dt: number) {
       globalT += dt;
       mouse.anim += dt * 10;
-      mouse.speed = baseSpeed() * (frightT > 0 ? 1.08 : 1);
+      mouse.speed = baseSpeed() * MOUSE_SPEED_SCALE * (frightT > 0 ? 1.08 : 1);
       stepEntity(mouse, false);
 
       const t = entTile(mouse);
@@ -437,6 +449,11 @@ export function ClassicMaze() {
     }
     function gameOver() {
       setPhase("over");
+      // Hands the final run to the <Leaderboard> component, which owns the
+      // name-entry form and the score submission (see src/lib/leaderboard.ts).
+      window.dispatchEvent(
+        new CustomEvent<GameOverDetail>(GAME_OVER_EVENT, { detail: { mode: "classic", score, level } }),
+      );
       ovTitle.textContent = "System Failure";
       ovText.innerHTML = `The robots caught the mouse! 🤖<br><br>Final score: <b style="color:${GOLD}">${score}</b> &nbsp;·&nbsp; High score: <b>${hiscore}</b>`;
       startBtn.textContent = "Reboot Mission";
@@ -455,37 +472,56 @@ export function ClassicMaze() {
       ctx.fillText(txt, canvas.width / 2, 9.5 * TILE);
       ctx.restore();
     }
+    /**
+     * Walls are drawn as glowing barrier outlines rather than filled blocks:
+     * each wall tile strokes only the edges that face open space, so a run of
+     * wall tiles reads as one continuous piped barrier (classic maze look)
+     * instead of a solid slab. Corners are filled in with short arcs where two
+     * stroked edges meet, which is what stops the outline breaking up at bends.
+     */
     function drawMazeLayer() {
       ctx.save();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
       for (let r = 0; r < ROWS; r++)
         for (let c = 0; c < COLS; c++) {
           const t = maze[r]![c];
           if (t === "#") {
             const x = c * TILE;
             const y = r * TILE;
-            ctx.fillStyle = "#180b22";
-            ctx.fillRect(x, y, TILE, TILE);
-            ctx.strokeStyle = "rgba(180,90,220,0.75)";
-            ctx.lineWidth = 1.5;
+            const IN = 3.5; // inset of the barrier line from the tile edge
+            const openUp = !wallAt(r - 1, c, true);
+            const openDown = !wallAt(r + 1, c, true);
+            const openLeft = !wallAt(r, c - 1, true);
+            const openRight = !wallAt(r, c + 1, true);
+
+            ctx.strokeStyle = "rgba(190,105,232,0.95)";
+            ctx.lineWidth = 2.5;
             ctx.shadowColor = NEON;
-            ctx.shadowBlur = 6;
+            ctx.shadowBlur = 9;
             ctx.beginPath();
-            if (!wallAt(r - 1, c, true) && r > 0) {
-              ctx.moveTo(x + 2, y + 2);
-              ctx.lineTo(x + TILE - 2, y + 2);
+
+            // Each face is drawn only where it borders open space. The ends
+            // extend to the tile corner when the neighbouring perpendicular
+            // side is also open (so the barrier turns a corner), and stop short
+            // when it isn't (so it butts cleanly into the adjoining wall run).
+            if (openUp) {
+              ctx.moveTo(x + (openLeft ? IN : 0), y + IN);
+              ctx.lineTo(x + TILE - (openRight ? IN : 0), y + IN);
             }
-            if (!wallAt(r + 1, c, true) && r < ROWS - 1) {
-              ctx.moveTo(x + 2, y + TILE - 2);
-              ctx.lineTo(x + TILE - 2, y + TILE - 2);
+            if (openDown) {
+              ctx.moveTo(x + (openLeft ? IN : 0), y + TILE - IN);
+              ctx.lineTo(x + TILE - (openRight ? IN : 0), y + TILE - IN);
             }
-            if (!wallAt(r, c - 1, true)) {
-              ctx.moveTo(x + 2, y + 2);
-              ctx.lineTo(x + 2, y + TILE - 2);
+            if (openLeft) {
+              ctx.moveTo(x + IN, y + (openUp ? IN : 0));
+              ctx.lineTo(x + IN, y + TILE - (openDown ? IN : 0));
             }
-            if (!wallAt(r, c + 1, true)) {
-              ctx.moveTo(x + TILE - 2, y + 2);
-              ctx.lineTo(x + TILE - 2, y + TILE - 2);
+            if (openRight) {
+              ctx.moveTo(x + TILE - IN, y + (openUp ? IN : 0));
+              ctx.lineTo(x + TILE - IN, y + TILE - (openDown ? IN : 0));
             }
+
             ctx.stroke();
           } else if (t === "-") {
             const x = c * TILE;
@@ -715,7 +751,10 @@ export function ClassicMaze() {
         mouse.want = dir;
       }
       if ((e.key === " " || e.key === "Enter") && phase === "over") startBtn.click();
-      if (e.key === "Escape") {
+      // "p" is a second pause key for fullscreen play: the browser consumes Esc
+      // to leave fullscreen, so it never reaches this handler there (the
+      // fullscreenchange handler pauses in that case).
+      if (e.key === "Escape" || e.key === "p" || e.key === "P") {
         if (phase === "play") pauseGame();
         else if (phase === "paused") resumeGame();
       }
@@ -754,18 +793,25 @@ export function ClassicMaze() {
       if (phase === "play") pauseGame();
       else if (phase === "paused") resumeGame();
     }
+    // Fullscreen targets the whole stage (score bar + board + touch pad), not
+    // just the canvas wrapper — going fullscreen on the wrapper alone dropped
+    // the HUD and pinned the board to the top-left corner of the screen.
     function isFullscreen() {
-      return document.fullscreenElement === wrap;
+      return document.fullscreenElement === stage;
     }
     function handleFullscreenToggle() {
       if (isFullscreen()) {
         document.exitFullscreen();
       } else {
-        wrap.requestFullscreen().catch(() => {});
+        stage.requestFullscreen().catch(() => {});
       }
     }
     function handleFullscreenChange() {
       fullscreenBtn.textContent = isFullscreen() ? "⤢" : "⛶";
+      // Leaving fullscreen mid-game is almost always the player hitting Esc,
+      // which the browser consumes before the keydown handler can pause. Pause
+      // for them so Esc means "pause" in both windowed and fullscreen play.
+      if (!isFullscreen() && phase === "play") pauseGame();
       fit();
     }
     startBtn.addEventListener("click", handleStart);
@@ -790,8 +836,16 @@ export function ClassicMaze() {
     function fit() {
       const fullscreen = isFullscreen();
       const availW = fullscreen ? window.innerWidth * 0.98 : Math.min(window.innerWidth * 0.94, 700);
+      // In fullscreen the board shares the screen with the score bar and touch
+      // pad, so subtract their measured heights. Deriving this from the stage's
+      // own height does not work: the stage is sized to the whole screen in
+      // fullscreen, which would count all the leftover space as chrome and keep
+      // the board pinned at its small windowed size.
+      const chrome = fullscreen
+        ? (hudRef.current?.offsetHeight ?? 0) + (dpadRef.current?.offsetHeight ?? 0) + 32
+        : 0;
       const availH = fullscreen
-        ? window.innerHeight * 0.98
+        ? window.innerHeight - chrome
         : window.innerHeight - wrap.getBoundingClientRect().top - 40;
       const cap = fullscreen ? 3 : 1.5;
       const s = Math.min(availW / 456, availH / 504, cap);
@@ -826,8 +880,8 @@ export function ClassicMaze() {
   }, []);
 
   return (
-    <div className="mx-auto flex flex-col items-center">
-      <div className="flex w-full max-w-[700px] items-center justify-between px-1 py-2 font-mono text-sm">
+    <div ref={stageRef} className="game-stage mx-auto flex flex-col items-center">
+      <div ref={hudRef} className="flex w-full max-w-[700px] items-center justify-between px-1 py-2 font-mono text-sm">
         <div>
           SCORE <span ref={scoreRef} data-testid="classic-score" className="text-[#F2A900]">0</span>
         </div>
@@ -861,6 +915,8 @@ export function ClassicMaze() {
             <br />
             <br />
             Arrow keys or WASD &mdash; swipe or use the on-screen pad on touch screens.
+            <br />
+            <b>Esc</b> or <b>P</b> to pause &middot; <b>⛶</b> for fullscreen.
           </p>
           <button ref={startBtnRef} type="button" className="rounded-full border-2 border-[#F2A900] bg-ras-crimson px-8 py-3 text-sm font-bold uppercase tracking-widest text-white">
             Start Mission

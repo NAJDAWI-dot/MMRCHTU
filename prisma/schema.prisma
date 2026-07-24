@@ -96,6 +96,71 @@ model FaqQuestion {
   @@index([status])
 }
 
+// A named audience the admin can broadcast email to. `kind` is a plain String
+// (SQLite has no enums, same tradeoff as Registration.status) constrained at
+// the application layer by BroadcastListKind in src/lib/broadcast.ts. CONFIRMED
+// and WAITING lists are seeded from registration status via the "import from
+// registrations" action, but stay ordinary editable lists afterwards — the
+// admin can always add or remove people by hand.
+model BroadcastList {
+  id          String   @id @default(cuid())
+  name        String
+  kind        String   @default("CUSTOM")
+  description String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  contacts   BroadcastContact[]
+  broadcasts Broadcast[]
+
+  @@index([kind])
+}
+
+model BroadcastContact {
+  id       String        @id @default(cuid())
+  listId   String
+  list     BroadcastList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  email    String
+  name     String        @default("")
+  // "MANUAL" for hand-entered rows, "REGISTRATION" for rows pulled in by the
+  // import action — lets a re-import top up a list without duplicating or
+  // clobbering people the admin added themselves.
+  source   String        @default("MANUAL")
+  addedAt  DateTime      @default(now())
+
+  @@unique([listId, email])
+  @@index([listId])
+}
+
+// Send log: one row per broadcast attempt, kept so the admin can see what was
+// already sent to a list rather than re-sending blind.
+model Broadcast {
+  id         String        @id @default(cuid())
+  listId     String
+  list       BroadcastList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  subject    String
+  body       String
+  sentCount  Int           @default(0)
+  failedCount Int          @default(0)
+  sentAt     DateTime      @default(now())
+
+  @@index([listId])
+}
+
+// Pac Mouse leaderboard. `mode` separates the Classic and First-Person boards
+// since their scoring pace differs enough that one combined board would be
+// dominated by a single mode.
+model GameScore {
+  id         String   @id @default(cuid())
+  playerName String
+  score      Int
+  level      Int      @default(1)
+  mode       String   @default("classic")
+  createdAt  DateTime @default(now())
+
+  @@index([mode, score])
+}
+
 // Singleton row (id is always "singleton") holding admin-editable copy for
 // the public register page.
 model RegisterFormConfig {

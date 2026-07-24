@@ -1,7 +1,7 @@
 # MMRC 26
 
 Website for the IEEE RAS HTU Student Chapter's Micro Mouse Robot Competition 2026 — competition
-info pages, registration, and the Cheddar Mouse browser game (Classic top-down + First-Person
+info pages, registration, and the Pac Mouse browser game (Classic top-down + First-Person
 raycaster modes).
 
 ## Stack
@@ -25,10 +25,35 @@ npm run test          # Vitest: game engine unit tests + component tests
 npx playwright test   # Playwright e2e (builds + serves a standalone build automatically)
 ```
 
-The Cheddar Mouse game (`src/game/classic/`) is an imperative canvas game ported directly from
+The Pac Mouse game (`src/game/classic/`) is an imperative canvas game ported directly from
 the standalone ieee-ras-mouse-maze site rather than a pure-function engine, so it isn't unit
 tested the way the original pure-function engine was; component/e2e tests cover the surrounding
 page (routing, registration, dark mode) and a Playwright smoke test drives the game itself.
+The pure parts that *are* unit tested live in `shared.ts` (maze enclosure, speed tuning) and
+`src/lib/leaderboard.ts` (player-name sanitising) — see `tests/component/game-maze.test.ts`.
+
+Game notes:
+
+- The maze is fully enclosed. There is no side tunnel and nothing wraps from one edge to the
+  other; `isWall()`/`cellAt()` treat out-of-bounds columns as solid.
+- Walls render as glowing barrier outlines (the edges facing open space) rather than filled
+  blocks.
+- Pace is tuned by `GAME_SPEED_SCALE`, `MOUSE_SPEED_SCALE`, and `ROBOT_SPEED_SCALE` in
+  `shared.ts`. Keep `MOUSE_SPEED_SCALE > ROBOT_SPEED_SCALE` or the game becomes unwinnable.
+- Both modes support fullscreen and pause. Fullscreen targets the whole `.game-stage` wrapper so
+  the HUD stays on screen; because the browser consumes Esc to leave fullscreen, leaving
+  fullscreen mid-game pauses, and `P` works as a second pause key.
+- Ending a run dispatches a `pacmouse:gameover` event that `Leaderboard.tsx` picks up to show the
+  name-entry form; scores POST to `/api/game/scores` and are boarded per mode. Scores are
+  client-reported and therefore not tamper-proof — the board is for fun, not ranking.
+
+## Email broadcast lists
+
+`/admin/broadcasts` groups people into lists (custom, confirmed, waiting) and sends each member
+their own copy of a message. Confirmed and waiting lists can import team members straight from
+registrations with a matching status; the import is re-runnable and never touches hand-added
+contacts. Sends are sequential to stay inside Resend's rate limit, and each run is logged to the
+`Broadcast` table.
 
 ## Production build
 
@@ -61,11 +86,12 @@ just needs the file paths updated.
 ## Project structure
 
 - `src/app/` — routes (home, `/game`, `/rules`, `/schedule`, `/register`, `/faq`, API routes)
-- `src/game/classic/` — Cheddar Mouse (Classic + First-Person modes), isolated behind
+- `src/game/classic/` — Pac Mouse (Classic + First-Person modes), isolated behind
   `GameTabs.tsx`; `shared.ts`/`audio.ts` hold the maze layout, robot defs, and sound effects
   common to both modes
 - `src/components/` — layout, brand, and shared UI components
-- `src/lib/` — Prisma client, content loader, registration logic
+- `src/lib/` — Prisma client, content loader, registration logic, broadcast-list and
+  leaderboard rules shared between the API routes and the client
 - `content/` — hand-authored rulebook/FAQ (MDX) and schedule (JSON); swap for a CMS later by
   changing only `src/lib/mdx.ts`
 - `prisma/` — schema, migrations, seed script

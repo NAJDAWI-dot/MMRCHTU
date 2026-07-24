@@ -68,6 +68,36 @@ function button(label: string, href: string): string {
   return `<a href="${href}" style="display:inline-block; margin-top:20px; padding:10px 24px; background-color:${CRIMSON}; color:#ffffff; text-decoration:none; font-weight:700; font-size:13px; letter-spacing:0.03em; border-radius:999px;">${escapeHtml(label)}</a>`;
 }
 
+export interface BroadcastEmailData {
+  subject: string;
+  /** Plain text written by the admin; newlines become <br> in the HTML part. */
+  body: string;
+  recipientName?: string | null;
+  siteUrl: string;
+}
+
+/**
+ * Admin-authored broadcast to a mailing list. The body is plain text rather
+ * than HTML on purpose — it goes through nl2br/escapeHtml so an admin can't
+ * accidentally (or deliberately) inject markup into outgoing mail.
+ */
+export function broadcastEmail(data: BroadcastEmailData): { subject: string; html: string; text: string } {
+  const greeting = data.recipientName?.trim() ? `Hi ${escapeHtml(data.recipientName.trim())},` : "Hi,";
+
+  const html = baseEmailHtml(
+    data.body.slice(0, 140),
+    `
+      <p style="margin:0 0 16px; color:${GRAY};">${greeting}</p>
+      <div style="margin:0 0 8px; color:#1a1a1a;">${nl2br(data.body)}</div>
+      ${button("Visit the MMRC 26 site", data.siteUrl)}
+    `,
+  );
+
+  const text = `${data.recipientName?.trim() ? `Hi ${data.recipientName.trim()},` : "Hi,"}\n\n${data.body}\n\n${data.siteUrl}`;
+
+  return { subject: data.subject, html, text };
+}
+
 export interface FaqNotificationData {
   question: string;
   askerEmail?: string | null;
