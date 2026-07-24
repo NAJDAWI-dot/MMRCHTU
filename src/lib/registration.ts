@@ -1,15 +1,12 @@
 import { prisma } from "@/lib/prisma";
+import { sendRegistrationConfirmation } from "@/lib/email";
+import { IEEE_STATUS_OPTIONS, type IeeeStatus } from "@/lib/ieee-status";
 
-// SQLite has no native enum support (see prisma/schema.prisma) — these are the
+export { IEEE_STATUS_OPTIONS, type IeeeStatus };
+
+// SQLite has no native enum support (see prisma/schema.prisma) — this is the
 // single source of truth for valid string-union values at the application layer.
 export type RegistrationStatus = "PENDING" | "CONFIRMED" | "WAITLISTED" | "CANCELLED";
-export type IeeeStatus = "IEEE_RAS_MEMBER" | "IEEE_MEMBER" | "NON_MEMBER";
-
-export const IEEE_STATUS_OPTIONS: { value: IeeeStatus; label: string }[] = [
-  { value: "IEEE_RAS_MEMBER", label: "IEEE Robotics and Automation Society (RAS) Member" },
-  { value: "IEEE_MEMBER", label: "IEEE Member" },
-  { value: "NON_MEMBER", label: "Non-Member" },
-];
 
 export interface TeamMemberInput {
   firstName: string;
@@ -163,6 +160,18 @@ export async function createRegistration(input: RegistrationInput) {
       create: { key: "registrations", value: 1 },
     });
 
+    return registration;
+  }).then(async (registration) => {
+    await sendRegistrationConfirmation(registration.submitterEmail, {
+      teamName: registration.teamName,
+      members: registration.members.map((m) => ({
+        order: m.order,
+        firstName: m.firstName,
+        lastName: m.lastName,
+        university: m.university,
+        major: m.major,
+      })),
+    });
     return registration;
   });
 }

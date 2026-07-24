@@ -34,12 +34,7 @@ export async function createFaqQuestion(input: FaqQuestionInput) {
     },
   });
 
-  await sendAdminNotification(
-    "New FAQ question submitted — MMRC 26",
-    `A visitor submitted a new question on the FAQ page:\n\n"${question.question}"\n\n${
-      question.askerEmail ? `Asker's email: ${question.askerEmail}` : "No email provided."
-    }\n\nReply from the admin panel: /admin/faq`,
-  );
+  await sendAdminNotification({ question: question.question, askerEmail: question.askerEmail });
 
   return question;
 }

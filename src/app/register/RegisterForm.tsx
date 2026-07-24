@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { registerTeam, type RegisterActionState } from "@/app/register/actions";
 import { Button } from "@/components/ui/Button";
-import { IEEE_STATUS_OPTIONS, type TeamMemberFieldErrors } from "@/lib/registration";
+import { IEEE_STATUS_OPTIONS } from "@/lib/ieee-status";
+import type { TeamMemberFieldErrors } from "@/lib/registration";
 import { UNIVERSITIES } from "@/lib/universities";
 
 const initialState: RegisterActionState = { status: "idle" };

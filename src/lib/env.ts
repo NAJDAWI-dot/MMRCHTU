@@ -16,4 +16,5 @@ export const env = {
 export const optionalEnv = {
   resendApiKey: process.env.RESEND_API_KEY,
   adminNotificationEmail: process.env.ADMIN_NOTIFICATION_EMAIL,
+  siteUrl: process.env.SITE_URL ?? "http://localhost:3000",
 };
