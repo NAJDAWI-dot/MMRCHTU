@@ -103,3 +103,68 @@ export function isWall(maze: MazeGrid, r: number, c: number, forGhost: boolean):
   if (t === "-") return !forGhost; // house door: robots only
   return false;
 }
+
+export function tileCenter(r: number, c: number): { x: number; y: number } {
+  return { x: c * TILE + TILE / 2, y: r * TILE + TILE / 2 };
+}
+
+/**
+ * The tile an entity currently occupies. Clamped rather than wrapped: the maze
+ * is enclosed, so a position can only land outside the grid through float drift
+ * at the outer walls.
+ */
+export function entTile(e: { x: number; y: number }): { r: number; c: number } {
+  return {
+    r: Math.min(Math.max(Math.floor(e.y / TILE), 0), ROWS - 1),
+    c: Math.min(Math.max(Math.floor(e.x / TILE), 0), COLS - 1),
+  };
+}
+
+export interface MazeEntity {
+  x: number;
+  y: number;
+  dir: Dir;
+  speed: number;
+}
+
+/**
+ * Advances an entity one frame, making its turn decision at the instant it
+ * crosses a tile centre.
+ *
+ * This deliberately does NOT ask "am I near a centre?". An earlier version did,
+ * snapping the entity back onto any centre within 1.5px before every move, which
+ * silently coupled that tolerance to the speed: once a per-frame step fell below
+ * 1.5px the entity was dragged back to the centre it had just left on the very
+ * next frame and never escaped its tile — it vibrated on the spot instead of
+ * travelling. Crossing detection holds at any speed and carries the leftover
+ * distance through the turn, so no movement is lost to the snap.
+ *
+ * `canGo` is evaluated against the entity's live position, so it must be called
+ * only after the snap. `chooseDir` is the entity's turn decision (the player's
+ * queued direction, or the robot AI) and runs at the centre, the only point in a
+ * tile where changing direction is legal.
+ */
+export function advance(e: MazeEntity, canGo: (dir: Dir) => boolean, chooseDir?: () => void): void {
+  const d0 = DIRS[e.dir];
+  const t = entTile(e);
+  const ctr = tileCenter(t.r, t.c);
+  // Signed distance to this tile's centre along the axis of travel: positive
+  // means the centre is still ahead of us this frame.
+  const toCentre = d0.x !== 0 ? (ctr.x - e.x) * d0.x : (ctr.y - e.y) * d0.y;
+
+  if (toCentre >= 0 && toCentre <= e.speed) {
+    e.x = ctr.x;
+    e.y = ctr.y;
+    chooseDir?.();
+    // Nothing ahead to move into — park on the centre facing the wall.
+    if (!canGo(e.dir)) return;
+    const d = DIRS[e.dir];
+    const remain = e.speed - toCentre;
+    e.x += d.x * remain;
+    e.y += d.y * remain;
+    return;
+  }
+
+  e.x += d0.x * e.speed;
+  e.y += d0.y * e.speed;
+}

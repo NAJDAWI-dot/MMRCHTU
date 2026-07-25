@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 const NAV_LINKS = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/schedule", label: "Schedule" },
+  { href: "/admin/competition-day", label: "Competition Day" },
   { href: "/admin/faq", label: "FAQ" },
   { href: "/admin/register-form", label: "Register Form" },
   { href: "/admin/registrations", label: "Registrations" },

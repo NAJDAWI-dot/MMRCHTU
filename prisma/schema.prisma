@@ -161,6 +161,30 @@ model GameScore {
   @@index([mode, score])
 }
 
+// Singleton row (id is always "singleton") holding admin-editable copy and
+// publication status for the public competition day page.
+//
+// `status` is a String because SQLite has no enums — the allowed values live in
+// src/lib/competition-day.ts, the same pattern as BroadcastList.kind.
+model CompetitionDayConfig {
+  id     String @id @default("singleton")
+  status String @default("COMING_SOON") // "HIDDEN" | "COMING_SOON" | "PUBLISHED"
+
+  headline String @default("Competition Day")
+  intro    String @default("Everything you need to know about the day itself.")
+
+  // Shown instead of the details below until the status is flipped to PUBLISHED.
+  comingSoonText String @default("Details will be released as soon as possible.")
+
+  // The real content, revealed when PUBLISHED. Plain text rather than HTML —
+  // blank lines separate paragraphs — so admin input can never inject markup.
+  dateText String @default("")
+  venue    String @default("")
+  details  String @default("")
+
+  updatedAt DateTime @updatedAt
+}
+
 // Singleton row (id is always "singleton") holding admin-editable copy for
 // the public register page.
 model RegisterFormConfig {

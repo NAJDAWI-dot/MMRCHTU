@@ -11,6 +11,9 @@ import {
   isWall,
   buildMaze,
   countPellets,
+  advance,
+  entTile,
+  tileCenter,
   GAME_SPEED_SCALE,
   MOUSE_SPEED_SCALE,
   ROBOT_SPEED_SCALE,
@@ -143,22 +146,6 @@ export function ClassicMaze() {
     const mouse: MouseEnt = { x: 0, y: 0, dir: "left", want: "left", speed: 0, anim: 0 };
     let robots: Robot[] = [];
 
-    function tileCenter(r: number, c: number) {
-      return { x: c * TILE + TILE / 2, y: r * TILE + TILE / 2 };
-    }
-    function entTile(e: { x: number; y: number }) {
-      // Clamped rather than wrapped: the maze is enclosed, so a position can
-      // only land outside the grid through float drift at the outer walls.
-      return {
-        r: Math.min(Math.max(Math.floor(e.y / TILE), 0), ROWS - 1),
-        c: Math.min(Math.max(Math.floor(e.x / TILE), 0), COLS - 1),
-      };
-    }
-    function atCenter(e: { x: number; y: number }) {
-      const t = entTile(e);
-      const ctr = tileCenter(t.r, t.c);
-      return Math.abs(e.x - ctr.x) < 1.5 && Math.abs(e.y - ctr.y) < 1.5;
-    }
     function baseSpeed() {
       return (2.0 + Math.min(level - 1, 5) * 0.12) * GAME_SPEED_SCALE;
     }
@@ -270,24 +257,8 @@ export function ClassicMaze() {
       const d = DIRS[dir];
       return !wallAt(t.r + d.y, t.c + d.x, forGhost);
     }
-    function stepEntity(e: MouseEnt | Robot, forGhost: boolean) {
-      if (atCenter(e)) {
-        const t = entTile(e);
-        const ctr = tileCenter(t.r, t.c);
-        if (e === mouse && e.want !== e.dir && canGo(e, e.want, false)) e.dir = e.want;
-        if (!canGo(e, e.dir, forGhost)) {
-          e.x = ctr.x;
-          e.y = ctr.y;
-          return;
-        }
-        e.x = ctr.x;
-        e.y = ctr.y;
-      } else if (e === mouse && e.want === OPP[e.dir]) {
-        e.dir = e.want;
-      }
-      const d = DIRS[e.dir];
-      e.x += d.x * e.speed;
-      e.y += d.y * e.speed;
+    function stepEntity(e: MouseEnt | Robot, forGhost: boolean, chooseDir?: () => void) {
+      advance(e, (dir) => canGo(e, dir, forGhost), chooseDir);
     }
 
     /* ---- robot AI ---- */
@@ -316,7 +287,6 @@ export function ClassicMaze() {
       }
     }
     function updateRobot(rb: Robot, dt: number) {
-      const t = entTile(rb);
       // The side-tunnel slowdown that used to apply on row 9 is gone with the
       // tunnel itself — that row is now ordinary enclosed corridor.
       rb.speed = baseSpeed() * (rb.mode === "eyes" ? 1.6 : rb.mode === "fright" ? 0.55 : ROBOT_SPEED_SCALE);
@@ -343,8 +313,10 @@ export function ClassicMaze() {
         return;
       }
       if (rb.mode === "eyes") {
+        // Reaching the door tile at all is enough — eyes travel fast enough
+        // that requiring them to land exactly on its centre can be missed.
         const t2 = entTile(rb);
-        if (t2.r === 7 && t2.c === 9 && atCenter(rb)) {
+        if (t2.r === 7 && t2.c === 9) {
           rb.mode = "house";
           rb.releaseAt = 2;
           const h = tileCenter(9, 9);
@@ -354,7 +326,10 @@ export function ClassicMaze() {
         }
       }
 
-      if (atCenter(rb)) {
+      // Runs from inside stepEntity at the instant the robot lands on a tile
+      // centre, which is the only point where changing direction is legal.
+      stepEntity(rb, rb.mode === "eyes", () => {
+        const here = entTile(rb);
         const choices: Dir[] = [];
         for (const dir of ["up", "left", "down", "right"] as Dir[]) {
           if (dir === OPP[rb.dir]) continue;
@@ -369,8 +344,8 @@ export function ClassicMaze() {
           let bd = 1e9;
           for (const dir of choices) {
             const d = DIRS[dir];
-            const nr = t.r + d.y;
-            const nc = t.c + d.x;
+            const nr = here.r + d.y;
+            const nc = here.c + d.x;
             const dist = (nr - tgt.r) ** 2 + (nc - tgt.c) ** 2;
             if (dist < bd) {
               bd = dist;
@@ -379,8 +354,7 @@ export function ClassicMaze() {
           }
           rb.dir = best;
         }
-      }
-      stepEntity(rb, rb.mode === "eyes");
+      });
     }
     function modeNow(): "scatter" | "chase" {
       const cycle = globalT % 27;
@@ -392,7 +366,12 @@ export function ClassicMaze() {
       globalT += dt;
       mouse.anim += dt * 10;
       mouse.speed = baseSpeed() * MOUSE_SPEED_SCALE * (frightT > 0 ? 1.08 : 1);
-      stepEntity(mouse, false);
+      // Doubling back is legal anywhere in a corridor, not just at a centre —
+      // the mouse came from that direction, so it is guaranteed to be open.
+      if (mouse.want === OPP[mouse.dir]) mouse.dir = mouse.want;
+      stepEntity(mouse, false, () => {
+        if (mouse.want !== mouse.dir && canGo(mouse, mouse.want, false)) mouse.dir = mouse.want;
+      });
 
       const t = entTile(mouse);
       const cell = maze[t.r]?.[t.c];
@@ -473,69 +452,103 @@ export function ClassicMaze() {
       ctx.restore();
     }
     /**
-     * Walls are drawn as glowing barrier outlines rather than filled blocks:
-     * each wall tile strokes only the edges that face open space, so a run of
-     * wall tiles reads as one continuous piped barrier (classic maze look)
-     * instead of a solid slab. Corners are filled in with short arcs where two
-     * stroked edges meet, which is what stops the outline breaking up at bends.
+     * Draws the walls as one continuous barrier outline rather than as a set of
+     * per-tile boxes.
+     *
+     * Each wall tile strokes only the faces that border open space, and a face
+     * runs all the way to the tile edge wherever the wall carries on into the
+     * neighbouring tile — so neighbouring tiles' strokes meet end to end and a
+     * run of wall reads as a single unbroken barrier. Where a face turns a
+     * corner instead, it stops at the inset and meets the perpendicular face at
+     * the same point.
+     *
+     * Inner (concave) bends need their own short elbow: if a tile has wall above
+     * and wall to the left but open space on the diagonal between them, neither
+     * neighbour's stroke reaches the bend, and without the elbow the outline
+     * would break there.
+     *
+     * The whole thing is one path stroked once, so the neon glow is uniform
+     * instead of stacking up where tiles overlap.
      */
     function drawMazeLayer() {
+      const IN = 4; // inset of the barrier line from the tile edge
+      // Outside the grid counts as open space, so the outer wall is outlined on
+      // both faces and frames the maze.
+      const solid = (r: number, c: number) =>
+        r >= 0 && r < ROWS && c >= 0 && c < COLS && maze[r]![c] === "#";
+
       ctx.save();
+      ctx.strokeStyle = "rgba(190,105,232,0.95)";
+      ctx.lineWidth = 2.5;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
+      ctx.shadowColor = NEON;
+      ctx.shadowBlur = 9;
+      ctx.beginPath();
+
       for (let r = 0; r < ROWS; r++)
         for (let c = 0; c < COLS; c++) {
-          const t = maze[r]![c];
-          if (t === "#") {
-            const x = c * TILE;
-            const y = r * TILE;
-            const IN = 3.5; // inset of the barrier line from the tile edge
-            const openUp = !wallAt(r - 1, c, true);
-            const openDown = !wallAt(r + 1, c, true);
-            const openLeft = !wallAt(r, c - 1, true);
-            const openRight = !wallAt(r, c + 1, true);
+          if (!solid(r, c)) continue;
+          const x = c * TILE;
+          const y = r * TILE;
+          const up = solid(r - 1, c);
+          const down = solid(r + 1, c);
+          const left = solid(r, c - 1);
+          const right = solid(r, c + 1);
 
-            ctx.strokeStyle = "rgba(190,105,232,0.95)";
-            ctx.lineWidth = 2.5;
-            ctx.shadowColor = NEON;
-            ctx.shadowBlur = 9;
-            ctx.beginPath();
+          if (!up) {
+            ctx.moveTo(x + (left ? 0 : IN), y + IN);
+            ctx.lineTo(x + TILE - (right ? 0 : IN), y + IN);
+          }
+          if (!down) {
+            ctx.moveTo(x + (left ? 0 : IN), y + TILE - IN);
+            ctx.lineTo(x + TILE - (right ? 0 : IN), y + TILE - IN);
+          }
+          if (!left) {
+            ctx.moveTo(x + IN, y + (up ? 0 : IN));
+            ctx.lineTo(x + IN, y + TILE - (down ? 0 : IN));
+          }
+          if (!right) {
+            ctx.moveTo(x + TILE - IN, y + (up ? 0 : IN));
+            ctx.lineTo(x + TILE - IN, y + TILE - (down ? 0 : IN));
+          }
 
-            // Each face is drawn only where it borders open space. The ends
-            // extend to the tile corner when the neighbouring perpendicular
-            // side is also open (so the barrier turns a corner), and stop short
-            // when it isn't (so it butts cleanly into the adjoining wall run).
-            if (openUp) {
-              ctx.moveTo(x + (openLeft ? IN : 0), y + IN);
-              ctx.lineTo(x + TILE - (openRight ? IN : 0), y + IN);
-            }
-            if (openDown) {
-              ctx.moveTo(x + (openLeft ? IN : 0), y + TILE - IN);
-              ctx.lineTo(x + TILE - (openRight ? IN : 0), y + TILE - IN);
-            }
-            if (openLeft) {
-              ctx.moveTo(x + IN, y + (openUp ? IN : 0));
-              ctx.lineTo(x + IN, y + TILE - (openDown ? IN : 0));
-            }
-            if (openRight) {
-              ctx.moveTo(x + TILE - IN, y + (openUp ? IN : 0));
-              ctx.lineTo(x + TILE - IN, y + TILE - (openDown ? IN : 0));
-            }
-
-            ctx.stroke();
-          } else if (t === "-") {
-            const x = c * TILE;
-            const y = r * TILE;
-            ctx.strokeStyle = GOLD;
-            ctx.lineWidth = 3;
-            ctx.shadowColor = GOLD;
-            ctx.shadowBlur = 6;
-            ctx.beginPath();
-            ctx.moveTo(x + 3, y + TILE / 2);
-            ctx.lineTo(x + TILE - 3, y + TILE / 2);
-            ctx.stroke();
+          if (up && left && !solid(r - 1, c - 1)) {
+            ctx.moveTo(x + IN, y);
+            ctx.lineTo(x + IN, y + IN);
+            ctx.lineTo(x, y + IN);
+          }
+          if (up && right && !solid(r - 1, c + 1)) {
+            ctx.moveTo(x + TILE - IN, y);
+            ctx.lineTo(x + TILE - IN, y + IN);
+            ctx.lineTo(x + TILE, y + IN);
+          }
+          if (down && left && !solid(r + 1, c - 1)) {
+            ctx.moveTo(x + IN, y + TILE);
+            ctx.lineTo(x + IN, y + TILE - IN);
+            ctx.lineTo(x, y + TILE - IN);
+          }
+          if (down && right && !solid(r + 1, c + 1)) {
+            ctx.moveTo(x + TILE - IN, y + TILE);
+            ctx.lineTo(x + TILE - IN, y + TILE - IN);
+            ctx.lineTo(x + TILE, y + TILE - IN);
           }
         }
+      ctx.stroke();
+
+      // Robot house door: a gold bar across the gap in the barrier.
+      ctx.strokeStyle = GOLD;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = GOLD;
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      for (let r = 0; r < ROWS; r++)
+        for (let c = 0; c < COLS; c++) {
+          if (maze[r]![c] !== "-") continue;
+          ctx.moveTo(c * TILE + 3, r * TILE + TILE / 2);
+          ctx.lineTo(c * TILE + TILE - 3, r * TILE + TILE / 2);
+        }
+      ctx.stroke();
       ctx.restore();
     }
     function drawCheese(x: number, y: number, s: number) {
