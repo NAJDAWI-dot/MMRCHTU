@@ -9,6 +9,7 @@ import {
   ROBOT_DEFS,
   buildMaze,
   countPellets,
+  isTypingTarget,
   GAME_SPEED_SCALE,
   MOUSE_SPEED_SCALE,
   GOLD,
@@ -192,6 +193,10 @@ export function FirstPerson() {
     /* ---- input ---- */
     const keys: Record<string, boolean> = {};
     function handleKeydown(e: KeyboardEvent) {
+      // Let the player type in the leaderboard name field without the game
+      // eating the keystroke (or Enter restarting the run). Deliberately not
+      // applied to keyup, so a key held when focus moves still gets released.
+      if (isTypingTarget(e.target)) return;
       const k = e.key.toLowerCase();
       if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) {
         e.preventDefault();

@@ -47,10 +47,14 @@ export const TILE = 24;
  * MOUSE_SPEED_SCALE slows the mouse a little further on top of that. It stays
  * above ROBOT_SPEED_SCALE so the mouse can still outrun a patrolling robot in
  * a straight line — dropping it below that makes the game unwinnable.
+ *
+ * The gap between the two is the main difficulty dial: the wider it is, the
+ * more room the player has to shake off a chase. ROBOT_SPEED_SCALE applies to
+ * the Classic Maze only — First-Person sets its own robot pace.
  */
 export const GAME_SPEED_SCALE = 0.75;
 export const MOUSE_SPEED_SCALE = 0.92;
-export const ROBOT_SPEED_SCALE = 0.85;
+export const ROBOT_SPEED_SCALE = 0.78;
 
 export type Dir = "up" | "down" | "left" | "right";
 
@@ -102,6 +106,34 @@ export function isWall(maze: MazeGrid, r: number, c: number, forGhost: boolean):
   if (t === "#") return true;
   if (t === "-") return !forGhost; // house door: robots only
   return false;
+}
+
+/**
+ * True when a key event came from somewhere the player is typing — the
+ * leaderboard's name field, say.
+ *
+ * Both game modes bind their controls on `window` and call preventDefault() on
+ * WASD and the arrow keys, which otherwise swallows every keystroke aimed at a
+ * text field on the same page (and makes Enter restart the game instead of
+ * submitting the form). Controls skip events that pass this check, so typing
+ * anywhere on the page is independent of the game.
+ */
+export function isTypingTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  // `window` is a plausible event target and has no tagName.
+  if (!el || typeof el.tagName !== "string") return false;
+
+  const tag = el.tagName.toLowerCase();
+  if (tag === "input" || tag === "textarea" || tag === "select") return true;
+
+  // isContentEditable is the native check and accounts for inheritance, but
+  // jsdom does not implement it — fall back to walking up for the attribute,
+  // which covers a nested element inside an editable region either way.
+  if (el.isContentEditable === true) return true;
+  return (
+    typeof el.closest === "function" &&
+    el.closest("[contenteditable]:not([contenteditable='false'])") !== null
+  );
 }
 
 export function tileCenter(r: number, c: number): { x: number; y: number } {

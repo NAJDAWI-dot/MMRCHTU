@@ -8,6 +8,7 @@ import {
   RAW,
   DIRS,
   advance,
+  isTypingTarget,
   entTile,
   tileCenter,
   GAME_SPEED_SCALE,
@@ -62,12 +63,60 @@ describe("speed tuning", () => {
     expect(MOUSE_SPEED_SCALE).toBeGreaterThan(ROBOT_SPEED_SCALE);
   });
 
+  it("leaves the mouse a workable margin over a chasing robot", () => {
+    // The size of this gap is the main difficulty dial. Too narrow and a chase
+    // is unshakeable; the maze played as "too hard" at a 0.07 margin.
+    expect(MOUSE_SPEED_SCALE - ROBOT_SPEED_SCALE).toBeGreaterThanOrEqual(0.1);
+  });
+
   it("keeps a per-frame step well inside one tile so nothing skips a wall", () => {
     // A step of a whole tile or more could jump clean over a wall tile between
     // two open ones. This is the only bound the movement model needs — there is
     // deliberately no *lower* bound, see the regression test below.
+    // 0.12 is a deliberate over-estimate of the per-level ramp (currently 0.1),
+    // so this stays a valid ceiling if the ramp is dialled back up again.
     const maxLevelBase = (2.0 + 5 * 0.12) * GAME_SPEED_SCALE;
     expect(maxLevelBase * MOUSE_SPEED_SCALE * 1.08).toBeLessThan(TILE / 2);
+  });
+});
+
+describe("isTypingTarget", () => {
+  // The games bind controls on window and preventDefault() WASD/arrows, so
+  // without this guard the leaderboard's name field could not be typed into.
+  const el = (tag: string) => document.createElement(tag);
+
+  it("recognises the fields a player types into", () => {
+    expect(isTypingTarget(el("input"))).toBe(true);
+    expect(isTypingTarget(el("textarea"))).toBe(true);
+    expect(isTypingTarget(el("select"))).toBe(true);
+  });
+
+  it("recognises contenteditable elements, including nested ones", () => {
+    // The attribute rather than the contentEditable property: jsdom does not
+    // implement the property, so assigning it would not reflect to the DOM.
+    const div = el("div") as HTMLDivElement;
+    expect(isTypingTarget(div)).toBe(false);
+    div.setAttribute("contenteditable", "true");
+    expect(isTypingTarget(div)).toBe(true);
+
+    const child = el("span");
+    div.appendChild(child);
+    expect(isTypingTarget(child)).toBe(true);
+  });
+
+  it("ignores an explicitly non-editable region", () => {
+    const div = el("div") as HTMLDivElement;
+    div.setAttribute("contenteditable", "false");
+    expect(isTypingTarget(div)).toBe(false);
+  });
+
+  it("leaves ordinary elements and a null target to the game controls", () => {
+    expect(isTypingTarget(el("canvas"))).toBe(false);
+    expect(isTypingTarget(el("button"))).toBe(false);
+    expect(isTypingTarget(document.body)).toBe(false);
+    expect(isTypingTarget(null)).toBe(false);
+    // window is a plausible event target and has no tagName.
+    expect(isTypingTarget(window)).toBe(false);
   });
 });
 

@@ -11,6 +11,7 @@ import {
   isWall,
   buildMaze,
   countPellets,
+  isTypingTarget,
   advance,
   entTile,
   tileCenter,
@@ -146,8 +147,19 @@ export function ClassicMaze() {
     const mouse: MouseEnt = { x: 0, y: 0, dir: "left", want: "left", speed: 0, anim: 0 };
     let robots: Robot[] = [];
 
+    /**
+     * Difficulty dials, tuned to make the Classic Maze a bit gentler:
+     * a shallower per-level speed ramp, robots that trickle out of the house
+     * more slowly, a longer scatter window before each chase, and cheese that
+     * keeps them frightened for longer. See also ROBOT_SPEED_SCALE in shared.ts.
+     */
+    const LEVEL_SPEED_STEP = 0.1; // per level, capped at 5 levels
+    const ROBOT_RELEASE_GAP = 4.5; // seconds between robots leaving the house
+    const MODE_CYCLE = 27; // seconds per scatter/chase cycle
+    const SCATTER_WINDOW = 10; // of those seconds spent scattering, not chasing
+
     function baseSpeed() {
-      return (2.0 + Math.min(level - 1, 5) * 0.12) * GAME_SPEED_SCALE;
+      return (2.0 + Math.min(level - 1, 5) * LEVEL_SPEED_STEP) * GAME_SPEED_SCALE;
     }
 
     function resetActors(full: boolean) {
@@ -167,7 +179,7 @@ export function ClassicMaze() {
           y: h.y,
           dir: d.house ? "up" : "left",
           mode: d.house ? "house" : "scatter",
-          releaseAt: d.house ? i * 3.5 - (full ? 0 : 1.5) : 0,
+          releaseAt: d.house ? i * ROBOT_RELEASE_GAP - (full ? 0 : 1.5) : 0,
           speed: baseSpeed() * ROBOT_SPEED_SCALE,
         };
       });
@@ -357,8 +369,8 @@ export function ClassicMaze() {
       });
     }
     function modeNow(): "scatter" | "chase" {
-      const cycle = globalT % 27;
-      return cycle < 7 ? "scatter" : "chase";
+      const cycle = globalT % MODE_CYCLE;
+      return cycle < SCATTER_WINDOW ? "scatter" : "chase";
     }
 
     /* ---- update ---- */
@@ -384,7 +396,7 @@ export function ClassicMaze() {
         } else {
           addScore(50);
           sndCheese();
-          frightT = Math.max(7 - level * 0.5, 3.5);
+          frightT = Math.max(8 - level * 0.4, 5);
           eatChain = 0;
           for (const rb of robots) if (rb.mode === "scatter" || rb.mode === "chase" || rb.mode === "fright") { rb.mode = "fright"; rb.dir = OPP[rb.dir]; }
         }
@@ -758,6 +770,9 @@ export function ClassicMaze() {
     /* ---- input ---- */
     const keyMap: Record<string, Dir> = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", w: "up", s: "down", a: "left", d: "right", W: "up", S: "down", A: "left", D: "right" };
     function handleKeydown(e: KeyboardEvent) {
+      // Let the player type in the leaderboard name field without the game
+      // eating the keystroke (or Enter restarting the run).
+      if (isTypingTarget(e.target)) return;
       const dir = keyMap[e.key];
       if (dir) {
         e.preventDefault();
