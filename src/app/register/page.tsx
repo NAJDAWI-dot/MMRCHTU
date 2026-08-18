@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
 import { RegisterForm } from "@/app/register/RegisterForm";
+import { getRegisterFormConfig } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
 
@@ -10,11 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RegisterPage() {
-  const config = await prisma.registerFormConfig.upsert({
-    where: { id: "singleton" },
-    update: {},
-    create: { id: "singleton" },
-  });
+  const config = await getRegisterFormConfig();
 
   return (
     <div className="mx-auto max-w-lg px-4 py-16">

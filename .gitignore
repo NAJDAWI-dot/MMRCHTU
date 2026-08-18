@@ -12,9 +12,12 @@
 .DS_Store
 *.pem
 
-# env
+# env — every variant, so a backup or a per-environment copy cannot be
+# committed by accident. This repository is public; .env.example is the only
+# env file that belongs in it.
 .env
-.env*.local
+.env.*
+!.env.example
 
 # prisma
 /prisma/dev.db

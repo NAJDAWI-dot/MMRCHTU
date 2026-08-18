@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { parseStatus, toParagraphs } from "@/lib/competition-day";
+import { getCompetitionDayConfig } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
 
@@ -13,11 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CompetitionDayPage() {
-  const config = await prisma.competitionDayConfig.upsert({
-    where: { id: "singleton" },
-    update: {},
-    create: { id: "singleton" },
-  });
+  const config = await getCompetitionDayConfig();
 
   const status = parseStatus(config.status);
   if (status === "HIDDEN") notFound();

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { getRegisterFormConfig } from "@/lib/site-config";
 import { updateFormConfig } from "./actions";
 
 export const metadata: Metadata = {
@@ -19,11 +19,7 @@ function toLocalInputValue(date: Date | null): string {
 }
 
 export default async function AdminRegisterFormPage() {
-  const config = await prisma.registerFormConfig.upsert({
-    where: { id: "singleton" },
-    update: {},
-    create: { id: "singleton" },
-  });
+  const config = await getRegisterFormConfig();
 
   return (
     <div>

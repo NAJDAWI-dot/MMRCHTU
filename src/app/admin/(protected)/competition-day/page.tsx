@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
@@ -9,6 +8,7 @@ import {
   COMPETITION_DAY_STATUS_LABELS,
   parseStatus,
 } from "@/lib/competition-day";
+import { getCompetitionDayConfig } from "@/lib/site-config";
 import { updateCompetitionDay } from "./actions";
 
 export const metadata: Metadata = {
@@ -20,11 +20,7 @@ const inputClass =
 const labelClass = "block text-xs font-medium text-ras-gray dark:text-white/70";
 
 export default async function AdminCompetitionDayPage() {
-  const config = await prisma.competitionDayConfig.upsert({
-    where: { id: "singleton" },
-    update: {},
-    create: { id: "singleton" },
-  });
+  const config = await getCompetitionDayConfig();
   const current = parseStatus(config.status);
 
   return (

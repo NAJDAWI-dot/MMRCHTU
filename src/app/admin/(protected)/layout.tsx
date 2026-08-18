@@ -1,6 +1,17 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 
+/**
+ * Never prerender anything under the admin area.
+ *
+ * These pages are per-session and show live database state, so a copy built at
+ * deploy time would be both stale and wrong. Without this the build tried to
+ * render them with no request behind them, which meant querying the database
+ * during `next build` — the reason a deploy against an empty database used to
+ * fail before the site was ever served.
+ */
+export const dynamic = "force-dynamic";
+
 const NAV_LINKS = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/schedule", label: "Schedule" },
