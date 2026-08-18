@@ -1,5 +1,5 @@
 /**
- * Competition day page rules. SQLite has no enums, so CompetitionDayConfig.status
+ * Competition day page rules. CompetitionDayConfig.status
  * is a plain String constrained here (same pattern as BroadcastList.kind in
  * src/lib/broadcast.ts).
  */

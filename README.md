@@ -6,17 +6,32 @@ raycaster modes).
 
 ## Stack
 
-Next.js (App Router) + TypeScript, Tailwind CSS, Prisma + SQLite, Vitest, Playwright, Docker.
+Next.js (App Router) + TypeScript, Tailwind CSS, Prisma + PostgreSQL (Supabase), Vitest,
+Playwright, Docker.
 
 ## Local development
 
+The app needs a PostgreSQL database to start — there is no file-based fallback. The simplest
+setup is to point local development at a Supabase project (use a separate one from production,
+so test registrations never land in the real table).
+
 ```bash
 npm install
-cp .env.example .env          # DATABASE_URL="file:./dev.db"
-npx prisma migrate dev        # creates prisma/dev.db and applies migrations
+cp .env.example .env          # then fill in DATABASE_URL and DIRECT_URL
+npx prisma migrate deploy     # applies migrations to that database
 npx prisma db seed            # seeds the initial Counter rows
 npm run dev                   # http://localhost:3000
 ```
+
+Both connection strings come from the Supabase dashboard, under
+**Project Settings → Database → Connection string**:
+
+| Variable       | Which string        | Port | Used for                       |
+| -------------- | ------------------- | ---- | ------------------------------ |
+| `DATABASE_URL` | Transaction pooler  | 6543 | Every query the app runs       |
+| `DIRECT_URL`   | Direct connection   | 5432 | Prisma migrations only         |
+
+Migrations need the direct connection because the pooler cannot run the statements they issue.
 
 ## Testing
 
@@ -70,10 +85,43 @@ docker compose run --rm --entrypoint "npx tsx prisma/seed.ts" migrate   # first 
 ```
 
 The Docker image is a plain 12-factor Next.js container — no AWS-specific code or config, so it
-runs unmodified on EC2, ECS/Fargate, App Runner, or any other Docker host. Only `DATABASE_URL`
-and where its data volume lives change between environments; swapping SQLite for Postgres later
-is a one-line change to `prisma/schema.prisma`'s `provider` plus `prisma migrate deploy` against
-the new database — no application code changes.
+runs unmodified on EC2, ECS/Fargate, App Runner, or any other Docker host. Only the connection
+strings change between environments.
+
+## Deploying
+
+The site renders on the server and writes to the database on nearly every page — registration,
+the admin panel, session login, the live stat counters, and the game leaderboard. **It cannot be
+served as static files, so GitHub Pages and similar static hosts will not run it.** It needs a
+host that executes Node.
+
+Any of these work, with Supabase as the database in each case:
+
+- **Vercel** — connect the repository, set the environment variables below, deploy. Free tier.
+- **Render / Railway** — same, as a web service.
+- **Any Docker host** — build the image above.
+
+Set these in the host's environment settings, never in the repository:
+
+| Variable                   | Notes                                                     |
+| -------------------------- | --------------------------------------------------------- |
+| `DATABASE_URL`             | Supabase pooled string, port 6543                          |
+| `DIRECT_URL`               | Supabase direct string, port 5432                          |
+| `SESSION_SECRET`           | Fresh random hex, different from any other environment     |
+| `ADMIN_BOOTSTRAP_USERNAME` | Creates the first admin on first run                       |
+| `ADMIN_BOOTSTRAP_PASSWORD` | Only used when no admin exists yet                         |
+| `RESEND_API_KEY`           | Outbound email                                             |
+| `ADMIN_NOTIFICATION_EMAIL` | Where FAQ questions are sent                               |
+| `SITE_URL`                 | Public URL, used for links inside emails                   |
+
+Then apply the schema once, from a machine holding the production connection strings:
+
+```bash
+npx prisma migrate deploy
+npx prisma db seed
+```
+
+Email will only reach the Resend account owner until a sending domain is verified in Resend.
 
 ## Brand assets
 

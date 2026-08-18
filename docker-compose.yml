@@ -1,29 +1,34 @@
+# The database is hosted (Supabase), so nothing here mounts a data volume —
+# both services read their connection strings from the environment. Put them in
+# a local .env file; compose picks that up automatically and never bakes them
+# into the image.
 services:
   app:
     build: .
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=file:/data/dev.db
-    volumes:
-      - sqlite-data:/data
+      - DATABASE_URL=${DATABASE_URL:?set DATABASE_URL in .env}
+      - DIRECT_URL=${DIRECT_URL:?set DIRECT_URL in .env}
+      - SESSION_SECRET=${SESSION_SECRET:?set SESSION_SECRET in .env}
+      - ADMIN_BOOTSTRAP_USERNAME=${ADMIN_BOOTSTRAP_USERNAME:-admin}
+      - ADMIN_BOOTSTRAP_PASSWORD=${ADMIN_BOOTSTRAP_PASSWORD:-}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - ADMIN_NOTIFICATION_EMAIL=${ADMIN_NOTIFICATION_EMAIL:-}
+      - SITE_URL=${SITE_URL:-}
 
   # One-off: `docker compose run --rm migrate` -- uses the "builder" stage,
   # which still has the Prisma CLI (a devDependency, so it's stripped from
   # the runtime "runner" image's standalone output).
+  #
+  # Migrations run against DIRECT_URL rather than the pooled connection, which
+  # cannot execute the statements a migration issues.
   migrate:
     build:
       context: .
       target: builder
     environment:
-      - DATABASE_URL=file:/data/dev.db
-    volumes:
-      - sqlite-data:/data
-    # Runs as root (the volume mountpoint is root-owned by default), then
-    # hands the file to the "app" service's non-root user (Dockerfile's
-    # nextjs, uid/gid 1001) so the running app can actually write to it.
-    entrypoint: ["sh", "-c", "npx prisma migrate deploy && chown -R 1001:1001 /data"]
+      - DATABASE_URL=${DATABASE_URL:?set DATABASE_URL in .env}
+      - DIRECT_URL=${DIRECT_URL:?set DIRECT_URL in .env}
+    entrypoint: ["sh", "-c", "npx prisma migrate deploy"]
     profiles: ["tools"]
-
-volumes:
-  sqlite-data:

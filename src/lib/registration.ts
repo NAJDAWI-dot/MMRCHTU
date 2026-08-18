@@ -4,8 +4,9 @@ import { IEEE_STATUS_OPTIONS, type IeeeStatus } from "@/lib/ieee-status";
 
 export { IEEE_STATUS_OPTIONS, type IeeeStatus };
 
-// SQLite has no native enum support (see prisma/schema.prisma) — this is the
-// single source of truth for valid string-union values at the application layer.
+// Status is constrained in the application rather than the database (see
+// prisma/schema.prisma) — this is the single source of truth for the valid
+// values.
 export type RegistrationStatus = "PENDING" | "CONFIRMED" | "WAITLISTED" | "CANCELLED";
 
 export interface TeamMemberInput {

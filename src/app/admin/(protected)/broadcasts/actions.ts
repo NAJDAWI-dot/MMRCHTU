@@ -18,10 +18,12 @@ import type { ActionState } from "./state";
 /**
  * Adds contacts to a list, skipping addresses already on it.
  *
- * Prisma's `createMany({ skipDuplicates })` is not supported on SQLite, so the
- * existing addresses are read and filtered out here. The @@unique([listId,
- * email]) constraint remains the real guard — this only avoids the write
- * throwing on the common "re-paste an overlapping batch" path.
+ * Reads the existing addresses and filters them out before writing. Postgres
+ * would also support `createMany({ skipDuplicates })`, but filtering here is
+ * what lets the action report an accurate added/skipped count back to the
+ * admin. The @@unique([listId, email]) constraint remains the real guard —
+ * this only avoids the write throwing on the common "re-paste an overlapping
+ * batch" path.
  */
 async function addUniqueContacts(
   listId: string,

@@ -1,16 +1,20 @@
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
+  // Supabase gives two connection strings. Application queries go through the
+  // pooled one (port 6543); migrations need the direct one (port 5432) because
+  // the pooler cannot run the statements a migration issues.
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
 }
 
-// SQLite has no native enum support, so status is a plain String constrained
-// at the application layer (see RegistrationStatus in src/lib/registration.ts).
-// Swapping to Postgres later can promote this to a real enum without an
-// application code change to the Prisma client call sites.
+// Status is a plain String constrained at the application layer (see
+// RegistrationStatus in src/lib/registration.ts), which keeps the allowed
+// values next to the code that reads them. Promoting it to a real Postgres
+// enum would be a schema-only change.
 model Registration {
   id                  String   @id @default(cuid())
   teamName            String
@@ -97,8 +101,8 @@ model FaqQuestion {
 }
 
 // A named audience the admin can broadcast email to. `kind` is a plain String
-// (SQLite has no enums, same tradeoff as Registration.status) constrained at
-// the application layer by BroadcastListKind in src/lib/broadcast.ts. CONFIRMED
+// (same tradeoff as Registration.status) constrained at the application
+// layer by BroadcastListKind in src/lib/broadcast.ts. CONFIRMED
 // and WAITING lists are seeded from registration status via the "import from
 // registrations" action, but stay ordinary editable lists afterwards — the
 // admin can always add or remove people by hand.
@@ -164,7 +168,7 @@ model GameScore {
 // Singleton row (id is always "singleton") holding admin-editable copy and
 // publication status for the public competition day page.
 //
-// `status` is a String because SQLite has no enums — the allowed values live in
+// `status` is a plain String — the allowed values live in
 // src/lib/competition-day.ts, the same pattern as BroadcastList.kind.
 model CompetitionDayConfig {
   id     String @id @default("singleton")

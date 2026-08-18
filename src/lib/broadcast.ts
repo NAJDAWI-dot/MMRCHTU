@@ -1,5 +1,5 @@
 /**
- * Broadcast list domain rules. SQLite has no enums, so BroadcastList.kind and
+ * Broadcast list domain rules. BroadcastList.kind and
  * BroadcastContact.source are plain Strings constrained here (same pattern as
  * RegistrationStatus in src/lib/registration.ts).
  */
