@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev --turbo",
     "build": "next build",
+    "// vercel-build": "Vercel runs this instead of `build` when it exists. Applying migrations here means a deploy that adds a table cannot ship before the table exists. Kept separate from `build` so local builds and CI never need database access.",
+    "vercel-build": "prisma migrate deploy && next build",
     "start": "next start",
     "build:standalone-serve": "next build && node scripts/copy-standalone-assets.mjs && node .next/standalone/server.js",
     "lint": "eslint .",
