@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbo --port 3001",
+    "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
     "build:standalone-serve": "next build && node scripts/copy-standalone-assets.mjs && node .next/standalone/server.js",
