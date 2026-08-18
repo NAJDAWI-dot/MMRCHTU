@@ -1,8 +1,8 @@
+@import "../styles/tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import "../styles/tokens.css";
 
 @keyframes fadeIn {
   from {
@@ -75,4 +75,135 @@
   height: 100%;
   padding: 0.75rem;
   background-color: #0d0715;
+}
+
+/* ---------------------------------------------------------------------------
+   Splash screen and route loader
+   --------------------------------------------------------------------------- */
+
+/*
+  The overlay is always in the server-rendered markup and hidden by default.
+  A pre-paint inline script adds .splash-pending to <html> only when the splash
+  is actually due, which is what reveals it. Doing it this way — rather than
+  mounting the overlay from an effect — means the real page never paints for a
+  frame behind it, and the server and client markup always agree.
+*/
+#mmrc-splash {
+  display: none;
+}
+
+.splash-pending #mmrc-splash {
+  display: flex;
+}
+
+/* Hold the page still underneath while the splash is up. */
+.splash-pending body {
+  overflow: hidden;
+}
+
+.splash-done #mmrc-splash {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 400ms ease;
+}
+
+/* Trail draw-on. 320 comfortably exceeds the path's ~280px length. */
+@keyframes mazeTrailDraw {
+  from {
+    stroke-dashoffset: 320;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes mazeMouseRun {
+  from {
+    offset-distance: 0%;
+  }
+  to {
+    offset-distance: 100%;
+  }
+}
+
+@keyframes mazeFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.maze-trail {
+  stroke-dasharray: 320;
+  stroke-dashoffset: 320;
+  filter: drop-shadow(0 0 4px var(--splash-accent, #f2a900));
+  animation: mazeTrailDraw 1500ms ease-in-out forwards;
+}
+
+.maze-mouse {
+  /* Same path the trail draws, so the mouse rides its leading edge. */
+  offset-path: path("M10 10 H50 V50 H10 V110 H70 V70");
+  offset-rotate: 0deg;
+  offset-distance: 0%;
+  filter: drop-shadow(0 0 5px var(--splash-accent, #f2a900));
+  animation: mazeMouseRun 1500ms ease-in-out forwards;
+}
+
+/* Loader variant: same motion, repeating, and quicker. */
+.maze-trail--loop {
+  animation: mazeTrailDraw 1200ms ease-in-out infinite;
+}
+
+.maze-mouse--loop {
+  animation: mazeMouseRun 1200ms ease-in-out infinite;
+}
+
+.splash-lockup {
+  opacity: 0;
+  animation: mazeFadeUp 500ms ease-out 1400ms forwards;
+}
+
+/*
+  prefers-reduced-motion exists largely for people whose vestibular disorders
+  are triggered by large moving imagery — which is exactly what a full-screen
+  animation is. Drop the travel entirely and show the finished state, rather
+  than merely shortening it.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .maze-trail,
+  .maze-trail--loop {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  .maze-mouse,
+  .maze-mouse--loop {
+    animation: none;
+    offset-distance: 100%;
+  }
+
+  .splash-lockup {
+    animation: none;
+    opacity: 1;
+  }
+
+  .splash-done #mmrc-splash {
+    transition: none;
+  }
+}
+
+/*
+  lockup-htu-chapter-white.png ships with a 1px semi-transparent lavender line
+  baked along its right and bottom edges (every interior row/column measures
+  alpha ~0, the final row and column measure ~87). It is invisible on the light
+  backgrounds the file is normally used on, but on the splash's dark purple it
+  reads as two faint lines boxing the mark. Trim the outer edge rather than
+  modify the brand asset, which is shared with the site's dark mode.
+*/
+.splash-lockup img {
+  clip-path: inset(0 0.6% 0.6% 0);
 }
