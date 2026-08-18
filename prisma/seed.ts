@@ -20,6 +20,12 @@ async function main() {
     create: { id: "singleton" },
   });
 
+  // Say which database this is touching. Seeding the wrong one — a local
+  // container instead of the deployed database — otherwise looks identical to
+  // success, since the interesting branches below print nothing.
+  const host = (process.env.DATABASE_URL ?? "").match(/@([^/:]+)/)?.[1] ?? "unknown host";
+  console.log(`Seeding database at ${host}`);
+
   const bootstrapUsername = process.env.ADMIN_BOOTSTRAP_USERNAME;
   const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD;
   if (bootstrapUsername && bootstrapPassword) {
@@ -32,6 +38,13 @@ async function main() {
         },
       });
       console.log(`Created bootstrap admin user "${bootstrapUsername}".`);
+    } else {
+      // Deliberately does not reset the password: re-running the seed must
+      // never silently change the credentials of a live admin account.
+      console.log(
+        `Admin user "${bootstrapUsername}" already exists on ${host} — left untouched. ` +
+          `ADMIN_BOOTSTRAP_PASSWORD only applies when the account is first created.`,
+      );
     }
   } else {
     console.warn(
