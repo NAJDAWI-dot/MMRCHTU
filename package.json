@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev --turbo",
     "build": "next build",
-    "// vercel-build": "Vercel runs this instead of `build` when it exists. Applying migrations here means a deploy that adds a table cannot ship before the table exists. Kept separate from `build` so local builds and CI never need database access.",
-    "vercel-build": "prisma migrate deploy && next build",
+    "// vercel-build": "Vercel runs this instead of `build` when it exists. Migrations run first so a deploy that adds a table cannot ship before the table exists. The seed follows and is idempotent — it tops up the counter rows and creates the bootstrap admin only when that account is missing, never touching an existing one. Running it here is what lets a deployment bootstrap itself, since Vercel marks the database credentials sensitive and they cannot be read back out to seed from a developer machine. Kept separate from `build` so local builds and CI never need database access.",
+    "vercel-build": "prisma migrate deploy && prisma db seed && next build",
     "start": "next start",
     "build:standalone-serve": "next build && node scripts/copy-standalone-assets.mjs && node .next/standalone/server.js",
     "lint": "eslint .",
