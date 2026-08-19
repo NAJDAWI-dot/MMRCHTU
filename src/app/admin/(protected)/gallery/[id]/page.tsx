@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { isStorageConfigured } from "@/lib/photo-storage";
+import { downloadUrlFor, isStorageConfigured } from "@/lib/photo-storage";
 import { PhotoUploader } from "../PhotoUploader";
 import { deleteAlbum, deletePhoto, movePhoto, updateAlbum, updatePhotoCaption } from "../actions";
 
@@ -185,6 +185,13 @@ export default async function AlbumPage({ params }: { params: { id: string } }) 
                         ↓ Later
                       </button>
                     </form>
+                    <a
+                      href={downloadUrlFor(photo.url)}
+                      download
+                      className="rounded border border-ras-gray/30 px-2 py-1 text-xs text-ras-gray hover:bg-ras-purple/10 dark:text-white/70"
+                    >
+                      ↓ Download
+                    </a>
                     <form action={deletePhoto}>
                       <input type="hidden" name="id" value={photo.id} />
                       <button type="submit" className="rounded px-2 py-1 text-xs font-semibold text-ras-crimson hover:bg-ras-crimson/10">

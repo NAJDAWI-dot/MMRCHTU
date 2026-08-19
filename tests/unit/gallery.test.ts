@@ -57,23 +57,30 @@ describe("uniqueSlug", () => {
 
 describe("storageKey", () => {
   it("keeps the extension and namespaces by album", () => {
-    expect(storageKey("finals", "IMG_1234.JPG", "abc")).toBe("gallery/finals/abc.jpg");
+    expect(storageKey("finals", "IMG_1234.JPG", "abc")).toBe("gallery/finals/finals-abc.jpg");
+  });
+
+  it("names the file after the album, since that is what a download is called", () => {
+    // Downloads are named from the file part only, so a bare id would land in
+    // someone's downloads folder as an unplaceable "abc.jpg".
+    const key = storageKey("mmrc-26-finals", "x.jpg", "k3f9a1");
+    expect(key.split("/").pop()).toBe("mmrc-26-finals-k3f9a1.jpg");
   });
 
   it("never lets a filename escape its folder", () => {
     // The original name is attacker-controllable in principle; only a
     // sanitised extension survives, and the name itself is ours.
     const key = storageKey("finals", "../../etc/passwd", "abc");
-    expect(key).toBe("gallery/finals/abc.jpg");
+    expect(key).toBe("gallery/finals/finals-abc.jpg");
     expect(key).not.toContain("..");
   });
 
   it("falls back to jpg when there is no usable extension", () => {
-    expect(storageKey("finals", "photo", "xyz")).toBe("gallery/finals/xyz.jpg");
+    expect(storageKey("finals", "photo", "xyz")).toBe("gallery/finals/finals-xyz.jpg");
   });
 
   it("sanitises the album segment too", () => {
-    expect(storageKey("../evil", "a.png", "k")).toBe("gallery/evil/k.png");
+    expect(storageKey("../evil", "a.png", "k")).toBe("gallery/evil/evil-k.png");
   });
 });
 

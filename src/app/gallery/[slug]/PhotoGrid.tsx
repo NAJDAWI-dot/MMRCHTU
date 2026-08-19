@@ -15,6 +15,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export interface GalleryPhotoView {
   id: string;
   url: string;
+  /** Same image, served so the browser saves it rather than opening it. */
+  downloadUrl: string;
   caption: string;
   width: number | null;
   height: number | null;
@@ -61,7 +63,9 @@ export function PhotoGrid({ photos, albumTitle }: { photos: GalleryPhotoView[]; 
         // Keep Tab inside the dialog; without this, focus walks off into the
         // page behind and the modal stops being a modal.
         const dialog = dialogRef.current;
-        const focusable = dialog?.querySelectorAll<HTMLElement>("button");
+        // Links as well as buttons: the download control is an anchor, and
+        // leaving it out of the cycle would strand focus on it.
+        const focusable = dialog?.querySelectorAll<HTMLElement>("button, a[href]");
         if (!dialog || !focusable || focusable.length === 0) return;
         const first = focusable[0]!;
         const last = focusable[focusable.length - 1]!;
@@ -107,14 +111,17 @@ export function PhotoGrid({ photos, albumTitle }: { photos: GalleryPhotoView[]; 
     <>
       <ul className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {photos.map((photo, index) => (
-          <li key={photo.id}>
+          // The download control is a sibling of the button, not a child:
+          // an anchor nested inside a button is invalid and browsers handle
+          // the resulting click target inconsistently.
+          <li key={photo.id} className="group relative">
             <button
               ref={(el) => {
                 triggersRef.current[index] = el;
               }}
               type="button"
               onClick={() => setOpenIndex(index)}
-              className="group relative block aspect-square w-full overflow-hidden rounded-md bg-ras-purple/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ras-purple"
+              className="relative block aspect-square w-full overflow-hidden rounded-md bg-ras-purple/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ras-purple"
             >
               <Image
                 src={photo.url}
@@ -125,6 +132,27 @@ export function PhotoGrid({ photos, albumTitle }: { photos: GalleryPhotoView[]; 
               />
               <span className="sr-only">Open photo {index + 1} of {photos.length}</span>
             </button>
+
+            {/*
+              Revealed on hover for pointer users, and always visible where
+              there is no hover at all — on a phone an opacity-0 control is
+              simply missing.
+
+              Visibility keys off :focus rather than :focus-visible. The latter
+              is a heuristic that does not always match, and when it misses,
+              the focused control is invisible — the worst possible state. The
+              focus ring still uses :focus-visible, which is what it is for.
+            */}
+            <a
+              href={photo.downloadUrl}
+              download
+              className="absolute bottom-2 right-2 rounded-md bg-black/65 px-2 py-1 text-xs font-semibold text-white opacity-0 transition-opacity hover:bg-black/85 focus:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
+            >
+              <span aria-hidden="true">↓</span>
+              <span className="sr-only">
+                Download photo {index + 1} of {photos.length}, full size
+              </span>
+            </a>
           </li>
         ))}
       </ul>
@@ -163,6 +191,13 @@ export function PhotoGrid({ photos, albumTitle }: { photos: GalleryPhotoView[]; 
               </span>
             </p>
             <div className="flex shrink-0 gap-2">
+              <a
+                href={open.downloadUrl}
+                download
+                className="rounded-md border border-white/30 px-3 py-2 text-sm font-semibold text-white hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                ↓ Download
+              </a>
               <button
                 type="button"
                 onClick={() => step(-1)}

@@ -1,5 +1,5 @@
 import "server-only";
-import { del, put } from "@vercel/blob";
+import { del, getDownloadUrl, put } from "@vercel/blob";
 
 /**
  * Where gallery photos physically live.
@@ -45,6 +45,31 @@ export function isStorageConfigured(): boolean {
 export interface StoredPhoto {
   url: string;
   key: string;
+}
+
+/**
+ * A URL that saves the file instead of opening it.
+ *
+ * The `download` attribute on a link is ignored when the file is on another
+ * origin, which blob storage always is — so a plain link would just navigate
+ * to the image and leave the visitor to save it by hand. This asks the store
+ * to send `Content-Disposition: attachment` instead, which browsers honour
+ * cross-origin, and the bytes still come straight from the CDN rather than
+ * through this app.
+ *
+ * The saved filename comes from the key, which is why keys are given readable
+ * names at upload rather than random ones.
+ *
+ * Derived rather than stored, so photos uploaded before this existed get the
+ * behaviour too. A malformed URL returns unchanged: a link that opens the
+ * image is a far better failure than one that goes nowhere.
+ */
+export function downloadUrlFor(url: string): string {
+  try {
+    return getDownloadUrl(url);
+  } catch {
+    return url;
+  }
 }
 
 /**

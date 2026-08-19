@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { downloadUrlFor } from "@/lib/photo-storage";
 import { PhotoGrid } from "./PhotoGrid";
 
 export const dynamic = "force-dynamic";
@@ -72,6 +73,7 @@ export default async function AlbumPage({ params }: { params: { slug: string } }
         photos={album.photos.map((photo) => ({
           id: photo.id,
           url: photo.url,
+          downloadUrl: downloadUrlFor(photo.url),
           caption: photo.caption,
           width: photo.width,
           height: photo.height,

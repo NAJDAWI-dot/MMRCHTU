@@ -71,10 +71,16 @@ export function uniqueSlug(title: string, taken: readonly string[]): string {
  * The original filename is never trusted: it can carry path separators, "..",
  * or arbitrary unicode, none of which belong in a storage key. Only a
  * sanitised extension is kept, and the name itself is generated.
+ *
+ * The album name is repeated in the file part rather than only in the folder,
+ * because downloads are named after the file alone — a visitor saving a photo
+ * should end up with "mmrc-26-finals-k3f9a1.jpg" in their downloads folder,
+ * not a bare timestamp they cannot place a week later.
  */
 export function storageKey(albumSlug: string, originalName: string, unique: string): string {
   const ext = (originalName.match(/\.([a-zA-Z0-9]{1,5})$/)?.[1] ?? "jpg").toLowerCase();
-  return `gallery/${slugify(albumSlug) || "album"}/${unique}.${ext}`;
+  const folder = slugify(albumSlug) || "album";
+  return `gallery/${folder}/${folder}-${unique}.${ext}`;
 }
 
 export interface UploadProblem {
