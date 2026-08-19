@@ -95,14 +95,30 @@ export default async function AlbumPage({ params }: { params: { id: string } }) 
         <h2 className="font-display text-base font-bold text-ras-purple dark:text-white">
           Add photos
         </h2>
-        <div className="mt-4">
-          {storageReady ? (
-            <PhotoUploader albumId={album.id} />
-          ) : (
-            <p className="text-sm text-ras-crimson">
-              Uploads need a Vercel Blob store. Create one in Storage → Create → Blob, then redeploy.
+        {!storageReady && (
+          <div className="mt-3 rounded-md border border-ras-crimson/40 bg-ras-crimson/5 p-3">
+            <p className="text-sm font-semibold text-ras-crimson">
+              This deployment cannot see a Blob storage token
             </p>
-          )}
+            <p className="mt-1 text-sm text-ras-gray dark:text-white/70">
+              If you have already created the store, <strong>redeploy</strong> — Vercel captures
+              environment variables when a deployment is built, so a store created afterwards is
+              invisible to the deployment already running. Check it is connected to this project
+              too, under Storage → your store → Projects.
+            </p>
+            <p className="mt-1 text-sm text-ras-gray dark:text-white/70">
+              Try uploading anyway: this is only a check, and the upload itself will report what
+              really happened.
+            </p>
+          </div>
+        )}
+        {/*
+          The uploader is shown either way. Gating it on the check above would
+          mean a wrong check leaves an admin with no way to proceed and no error
+          to act on; letting the attempt run surfaces the real reason.
+        */}
+        <div className="mt-4">
+          <PhotoUploader albumId={album.id} />
         </div>
       </Card>
 

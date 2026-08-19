@@ -16,17 +16,30 @@ const TOKEN_ENV = "BLOB_READ_WRITE_TOKEN";
 export class StorageNotConfiguredError extends Error {
   constructor() {
     super(
-      `Photo storage is not set up yet. Create a Blob store in the Vercel dashboard ` +
-        `and redeploy — that sets ${TOKEN_ENV} for you. Everything else about the ` +
-        `gallery works without it; only uploading needs it.`,
+      `Photo storage is not reachable: this deployment cannot see ${TOKEN_ENV}. ` +
+        `If you have just created the Blob store, redeploy — Vercel captures ` +
+        `environment variables when a deployment is built, so a store created ` +
+        `afterwards is invisible to the deployment already running.`,
     );
     this.name = "StorageNotConfiguredError";
   }
 }
 
-/** True when uploads can actually be accepted. */
+/**
+ * Whether this deployment can see a storage token.
+ *
+ * Advisory only, and deliberately never used to refuse an upload. The usual
+ * reason it reads false is that the Blob store was created after the running
+ * deployment was built — Vercel captures environment variables at build time,
+ * so the store exists but this process cannot see it until a redeploy. That
+ * is a true negative and the notice explains it.
+ *
+ * But a check like this can also be wrong, and when it is, gating on it leaves
+ * an admin with no way to proceed and no error to act on. So callers use it to
+ * explain, and let the upload attempt produce the real answer.
+ */
 export function isStorageConfigured(): boolean {
-  return Boolean(process.env[TOKEN_ENV]);
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
 export interface StoredPhoto {
@@ -42,14 +55,19 @@ export interface StoredPhoto {
  * is not the key we could later delete.
  */
 export async function storePhoto(key: string, file: Blob | ArrayBuffer): Promise<StoredPhoto> {
-  if (!isStorageConfigured()) throw new StorageNotConfiguredError();
-
   const result = await put(key, file, {
     access: "public",
     addRandomSuffix: false,
     // Photos are immutable once uploaded: a new picture gets a new key, so
     // these can be cached hard.
     cacheControlMaxAge: 31_536_000,
+  }).catch((error: unknown) => {
+    // The SDK's own "no token" failure is opaque. Translate it into the one
+    // instruction that actually fixes it, and let anything else through
+    // untouched so a real storage fault is not disguised as a setup problem.
+    const message = error instanceof Error ? error.message : String(error);
+    if (/token/i.test(message) && !isStorageConfigured()) throw new StorageNotConfiguredError();
+    throw error;
   });
 
   return { url: result.url, key: result.pathname };
@@ -64,8 +82,10 @@ export async function storePhoto(key: string, file: Blob | ArrayBuffer): Promise
  */
 export async function removePhoto(key: string): Promise<{ ok: boolean; error?: string }> {
   if (!key) return { ok: true };
-  if (!isStorageConfigured()) return { ok: false, error: "storage not configured" };
 
+  // Attempted regardless of what the advisory check thinks: if the token is
+  // there, the file should go, and refusing on a bad guess would leave files
+  // behind with nothing pointing at them.
   try {
     await del(key);
     return { ok: true };

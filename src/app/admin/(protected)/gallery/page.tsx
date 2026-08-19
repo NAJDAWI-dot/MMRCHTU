@@ -34,11 +34,21 @@ export default async function AdminGalleryPage() {
 
       {!storageReady && (
         <Card className="mt-6 border-ras-crimson/40">
-          <p className="text-sm font-semibold text-ras-crimson">Photo uploads are not set up yet</p>
+          <p className="text-sm font-semibold text-ras-crimson">
+            This deployment cannot see <code className="font-mono text-xs">BLOB_READ_WRITE_TOKEN</code>
+          </p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-ras-gray dark:text-white/70">
+            <li>Create a Blob store: Vercel dashboard → Storage → Create → Blob.</li>
+            <li>Connect it to this project (Storage → your store → Projects).</li>
+            <li>
+              <strong>Redeploy.</strong> Vercel captures environment variables when a deployment is
+              built, so a store created afterwards stays invisible to the deployment already running
+              — this is the step that is usually missed.
+            </li>
+          </ol>
           <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
-            Create a Blob store in your Vercel dashboard (Storage → Create → Blob) and redeploy.
-            That sets <code className="font-mono text-xs">BLOB_READ_WRITE_TOKEN</code> automatically.
-            You can still create and arrange albums now — only uploading needs it.
+            Uploading is not blocked by this notice. Try it and the error, if any, will say what
+            actually went wrong.
           </p>
         </Card>
       )}
