@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { StatCounter } from "@/components/ui/StatCounter";
 
 export default function HomePage() {
   return (
@@ -25,13 +24,6 @@ export default function HomePage() {
             <Link href="/game">Play Pac Mouse</Link>
           </Button>
         </div>
-      </section>
-
-      <section className="mt-20 grid grid-cols-2 gap-6 sm:grid-cols-4">
-        <StatCounter statKey="registrations" label="Teams registered" />
-        <StatCounter statKey="submissions" label="Submissions" />
-        <StatCounter statKey="game_plays" label="Pac Mouse plays" />
-        <StatCounter statKey="participants" label="Participants" />
       </section>
 
       <section className="mt-20 grid gap-6 sm:grid-cols-3">

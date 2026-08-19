@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 const NAV_LINKS = [
   { href: "/admin", label: "Dashboard" },
+  { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/schedule", label: "Schedule" },
   { href: "/admin/competition-day", label: "Competition Day" },
   { href: "/admin/faq", label: "FAQ" },
