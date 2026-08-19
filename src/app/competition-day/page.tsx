@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Countdown } from "@/components/brand/Countdown";
 import { parseStatus, toParagraphs } from "@/lib/competition-day";
+import { shouldShowCountdown } from "@/lib/countdown";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +22,10 @@ export default async function CompetitionDayPage() {
 
   const published = status === "PUBLISHED";
   const paragraphs = toParagraphs(config.details);
+  // Shown while the page is still COMING_SOON too: a clock ticking down is the
+  // most useful thing a holding page can offer, and it needs no details to be
+  // decided first.
+  const countdown = shouldShowCountdown(config.eventDate);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">
@@ -28,6 +34,17 @@ export default async function CompetitionDayPage() {
       </h1>
       {config.intro ? (
         <p className="mt-3 text-ras-gray dark:text-white/70">{config.intro}</p>
+      ) : null}
+
+      {countdown && config.eventDate ? (
+        <Card className="mt-8">
+          <p className="text-xs uppercase tracking-widest text-ras-gray dark:text-white/60">
+            Starts in
+          </p>
+          <div className="mt-3">
+            <Countdown target={config.eventDate} />
+          </div>
+        </Card>
       ) : null}
 
       {published ? (

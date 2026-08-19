@@ -186,7 +186,58 @@ model CompetitionDayConfig {
   venue    String @default("")
   details  String @default("")
 
+  // Machine-readable counterpart to dateText, and the only thing the countdown
+  // can use — "Saturday, 14 March" cannot be counted down to. Kept separate
+  // rather than replacing dateText, the same split RegisterFormConfig uses for
+  // deadlineText/deadlineDate: the prose can say "mid-March, exact time TBC"
+  // while the clock still has something exact to run against. Optional, so the
+  // countdown simply does not appear until a date is set.
+  eventDate DateTime?
+
   updatedAt DateTime @updatedAt
+}
+
+// A set of photos from one event — "MMRC 26 Finals", "Build Workshop". Albums
+// rather than one flat stream so each year's competition stays its own recap
+// instead of silting up a single endless feed.
+model GalleryAlbum {
+  id          String    @id @default(cuid())
+  title       String
+  // Used in the public URL, so it is unique and generated from the title.
+  slug        String    @unique
+  description String    @default("")
+  eventDate   DateTime?
+  // Albums start hidden so photos can be uploaded and ordered before anyone
+  // sees a half-filled album.
+  isPublished Boolean   @default(false)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  photos GalleryPhoto[]
+
+  @@index([isPublished])
+}
+
+model GalleryPhoto {
+  id      String       @id @default(cuid())
+  albumId String
+  album   GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+
+  // Public URL of the stored image.
+  url String
+  // Key in blob storage, kept so deleting the row can delete the file too and
+  // the store does not fill with orphans nobody can find.
+  storageKey String @default("")
+  caption    String @default("")
+  // Recorded at upload so the page can reserve the right space and avoid the
+  // layout jumping as each image arrives.
+  width     Int?
+  height    Int?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([albumId])
 }
 
 // Singleton row (id is always "singleton") holding admin-editable copy for

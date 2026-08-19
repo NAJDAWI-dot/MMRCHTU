@@ -1,8 +1,21 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Countdown } from "@/components/brand/Countdown";
+import { parseStatus } from "@/lib/competition-day";
+import { shouldShowCountdown } from "@/lib/countdown";
+import { getCompetitionDayConfig } from "@/lib/site-config";
 
-export default function HomePage() {
+// The countdown reads a live config row, so this page cannot be baked at
+// build time and still be right.
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const config = await getCompetitionDayConfig();
+  // Nothing is teased here that the Competition Day page itself is hiding.
+  const visible = parseStatus(config.status) !== "HIDDEN";
+  const showCountdown = visible && shouldShowCountdown(config.eventDate);
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
       <section className="text-center">
@@ -24,6 +37,23 @@ export default function HomePage() {
             <Link href="/game">Play Pac Mouse</Link>
           </Button>
         </div>
+
+        {showCountdown && config.eventDate ? (
+          <div className="mt-12 flex flex-col items-center">
+            <p className="text-xs uppercase tracking-widest text-ras-gray dark:text-white/60">
+              Competition day in
+            </p>
+            <div className="mt-3">
+              <Countdown target={config.eventDate} compact />
+            </div>
+            <Link
+              href="/competition-day"
+              className="mt-3 text-sm font-semibold text-ras-crimson hover:underline"
+            >
+              Competition day details →
+            </Link>
+          </div>
+        ) : null}
       </section>
 
       <section className="mt-20 grid gap-6 sm:grid-cols-3">

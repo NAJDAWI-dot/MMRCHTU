@@ -7,19 +7,30 @@ const LINKS = [
   { href: "/rules", label: "Rules" },
   { href: "/schedule", label: "Schedule" },
   { href: "/competition-day", label: "Competition Day" },
+  { href: "/gallery", label: "Gallery" },
   { href: "/faq", label: "FAQ" },
   { href: "/register", label: "Register" },
 ];
 
 /**
- * Hrefs to leave out of the menu. The Competition Day link is dropped while that
- * page's status is HIDDEN so the menu never points at a 404; admin saves call
- * revalidatePath("/", "layout") to pick the change up.
+ * Hrefs to leave out of the menu, so it never points at a 404 or a dead end.
+ *
+ * Competition Day goes while that page's status is HIDDEN. Gallery goes until
+ * at least one album is published with a photo in it — an empty gallery is a
+ * wasted click. Admin saves call revalidatePath("/", "layout") to pick either
+ * change up.
  */
 async function hiddenHrefs(): Promise<Set<string>> {
-  const config = await prisma.competitionDayConfig.findUnique({ where: { id: "singleton" } });
+  const [config, publishedAlbums] = await Promise.all([
+    prisma.competitionDayConfig.findUnique({ where: { id: "singleton" } }),
+    prisma.galleryAlbum.count({ where: { isPublished: true, photos: { some: {} } } }),
+  ]);
+
+  const hidden = new Set<string>();
   // No row yet means the schema defaults apply, and the default is not HIDDEN.
-  return parseStatus(config?.status) === "HIDDEN" ? new Set(["/competition-day"]) : new Set<string>();
+  if (parseStatus(config?.status) === "HIDDEN") hidden.add("/competition-day");
+  if (publishedAlbums === 0) hidden.add("/gallery");
+  return hidden;
 }
 
 export async function Nav() {

@@ -7,6 +7,7 @@ import {
   COMPETITION_DAY_STATUS_HINTS,
   COMPETITION_DAY_STATUS_LABELS,
   parseStatus,
+  toDateTimeLocal,
 } from "@/lib/competition-day";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import { updateCompetitionDay } from "./actions";
@@ -121,6 +122,25 @@ export default async function AdminCompetitionDayPage() {
                   className={inputClass}
                 />
               </div>
+            </div>
+
+            <div>
+              <label className={labelClass} htmlFor="eventDate">
+                Exact start (drives the countdown)
+              </label>
+              <input
+                id="eventDate"
+                name="eventDate"
+                type="datetime-local"
+                defaultValue={toDateTimeLocal(config.eventDate)}
+                className={inputClass}
+              />
+              <p className="mt-1 text-xs text-ras-gray dark:text-white/50">
+                Optional, and separate from the Date text above so that can stay
+                friendly (&ldquo;mid-April&rdquo;) while the clock has something exact. Set it and a
+                live countdown appears on the homepage and the competition day page; clear it and
+                the countdown disappears. Uses your own timezone.
+              </p>
             </div>
             <div>
               <label className={labelClass} htmlFor="details">

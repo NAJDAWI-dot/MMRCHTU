@@ -5,6 +5,19 @@ import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseStatus } from "@/lib/competition-day";
 
+/**
+ * Reads the datetime-local field that drives the countdown.
+ *
+ * Cleared or unparseable means null — no date rather than a wrong one, since
+ * the countdown simply hides itself when there is nothing to count to.
+ */
+function parseEventDate(value: FormDataEntryValue | null): Date | null {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export async function updateCompetitionDay(formData: FormData) {
   await requireAdmin();
 
@@ -17,6 +30,7 @@ export async function updateCompetitionDay(formData: FormData) {
     dateText: String(formData.get("dateText") ?? "").trim(),
     venue: String(formData.get("venue") ?? "").trim(),
     details: String(formData.get("details") ?? "").trim(),
+    eventDate: parseEventDate(formData.get("eventDate")),
   };
 
   await prisma.competitionDayConfig.upsert({

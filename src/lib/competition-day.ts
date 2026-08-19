@@ -29,6 +29,23 @@ export function parseStatus(value: unknown): CompetitionDayStatus {
 }
 
 /**
+ * Formats a date for a `datetime-local` input, which accepts only
+ * "YYYY-MM-DDTHH:mm" and silently renders blank for anything else.
+ *
+ * Built from local-time parts rather than `toISOString()`, which converts to
+ * UTC first — that would show an admin in Amman a time three hours off their
+ * own, and saving the form back would shift the event again each time.
+ */
+export function toDateTimeLocal(date: Date | null | undefined): string {
+  if (!date || Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
+}
+
+/**
  * Splits admin-authored plain text into paragraphs on blank lines. The result is
  * rendered as React children (never dangerouslySetInnerHTML), so the text is
  * escaped for us and an admin cannot inject markup into the public page.

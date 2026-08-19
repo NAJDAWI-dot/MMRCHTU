@@ -18,6 +18,7 @@ const NAV_LINKS = [
   { href: "/admin/schedule", label: "Schedule" },
   { href: "/admin/competition-day", label: "Competition Day" },
   { href: "/admin/faq", label: "FAQ" },
+  { href: "/admin/gallery", label: "Gallery" },
   { href: "/admin/register-form", label: "Register Form" },
   { href: "/admin/registrations", label: "Registrations" },
   { href: "/admin/broadcasts", label: "Email Lists" },
