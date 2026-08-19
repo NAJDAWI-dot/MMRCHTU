@@ -21,8 +21,26 @@ export const SPLASH_PENDING_CLASS = "splash-pending";
 /** Added alongside the pending class to trigger the fade-out transition. */
 export const SPLASH_DONE_CLASS = "splash-done";
 
-/** Long enough for the mouse to run the maze and the lockup to settle. */
-export const SPLASH_FULL_MS = 2200;
+/** Added once the maze exists, so the lockup starts with the run and not before. */
+export const SPLASH_READY_CLASS = "splash-ready";
+
+/**
+ * Fallback hold, used only if the maze never reports its length.
+ *
+ * The real duration is dynamic: a fresh maze is drawn on every visit and the
+ * mice run it at a fixed pace, so a longer carve genuinely takes longer. The
+ * component measures its own animation and hands the number back — see
+ * `splashHoldMs`.
+ */
+export const SPLASH_FULL_MS = 3400;
+
+/**
+ * Bounds on the reported duration. The maze generator already keeps the route
+ * length in a band, so these should never bind; they are here so a bug in the
+ * generator can strand nobody on an intro they cannot get past.
+ */
+export const SPLASH_MIN_MS = 2600;
+export const SPLASH_MAX_MS = 4400;
 /**
  * Reduced-motion visitors still get the brand moment, just as a static hold
  * rather than a trip through the maze.
@@ -50,10 +68,18 @@ export function splashMode({ seen, reducedMotion }: SplashConditions): SplashMod
   return reducedMotion ? "brief" : "full";
 }
 
-/** How long the overlay holds at full opacity before it starts fading. */
-export function splashHoldMs(mode: SplashMode): number {
+/**
+ * How long the overlay holds at full opacity before it starts fading.
+ *
+ * `runMs` is what the maze reported for the maze it actually drew. Omit it and
+ * the fallback applies — which is the right answer before the maze exists, and
+ * the only answer for reduced motion, where nothing runs.
+ */
+export function splashHoldMs(mode: SplashMode, runMs?: number): number {
   if (mode === "none") return 0;
-  return mode === "brief" ? SPLASH_BRIEF_MS : SPLASH_FULL_MS;
+  if (mode === "brief") return SPLASH_BRIEF_MS;
+  if (runMs === undefined) return SPLASH_FULL_MS;
+  return Math.min(SPLASH_MAX_MS, Math.max(SPLASH_MIN_MS, Math.round(runMs)));
 }
 
 /**

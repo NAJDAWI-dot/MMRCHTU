@@ -107,17 +107,174 @@
   transition: opacity 400ms ease;
 }
 
-/* Trail draw-on. 320 comfortably exceeds the path's ~280px length. */
-@keyframes mazeTrailDraw {
-  from {
-    stroke-dashoffset: 320;
+/*
+  The maze is generated fresh on every visit, so nothing below can assume a
+  length, a duration or a route. Every one of those arrives as a custom
+  property from MazeTrail, which derives them from whichever maze was drawn.
+  The animations start when the SVG is inserted on mount, which is also when
+  the splash starts counting — so the two cannot drift apart.
+*/
+
+/* The maze is the hero of the splash, so it scales with the viewport rather
+   than sitting at the fallback px size in the markup. */
+.splash-maze {
+  width: clamp(200px, 46vmin, 300px);
+  height: auto;
+}
+
+/* Walls fade in as bands sweeping out from the lead mouse's corner, so the
+   arena reads as being mapped rather than simply switched on. */
+.maze-band {
+  opacity: 0;
+  animation: mazeBandIn 420ms ease-out forwards;
+}
+.maze-band-0 { animation-delay: 20ms; }
+.maze-band-1 { animation-delay: 100ms; }
+.maze-band-2 { animation-delay: 180ms; }
+.maze-band-3 { animation-delay: 260ms; }
+.maze-band-4 { animation-delay: 340ms; }
+.maze-band-5 { animation-delay: 420ms; }
+
+@keyframes mazeBandIn {
+  to {
+    opacity: 1;
   }
+}
+
+/* Where each mouse is about to set off from, lit just before it does. */
+.maze-pip {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mazePipIn 500ms ease-out var(--pip-at) forwards;
+}
+
+@keyframes mazePipIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+  100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+}
+
+/*
+  Linear easing, deliberately. Duration already scales with route length so all
+  four mice move at one speed; a shared ease curve would quietly make the long
+  route travel faster than the short one and break the convergence.
+*/
+.maze-trail {
+  stroke-dasharray: var(--trail-len);
+  stroke-dashoffset: var(--trail-len);
+  filter: drop-shadow(0 0 4px var(--splash-accent, #f2a900));
+  animation: mazeTrailDraw var(--run-dur) linear var(--run-delay) forwards;
+}
+
+@keyframes mazeTrailDraw {
   to {
     stroke-dashoffset: 0;
   }
 }
 
+.maze-mouse {
+  /* The same path the trail draws, so the mouse rides its leading edge. */
+  offset-path: var(--route);
+  offset-rotate: auto;
+  offset-distance: 0%;
+  opacity: 0;
+  filter: drop-shadow(0 0 5px var(--splash-accent, #f2a900));
+  animation: mazeMouseRun var(--run-dur) linear var(--run-delay) forwards;
+}
+
 @keyframes mazeMouseRun {
+  0% {
+    opacity: 0;
+    offset-distance: 0%;
+  }
+  5% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    offset-distance: 100%;
+  }
+}
+
+/* The centre lights as the mice arrive, not before. */
+.maze-goal {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mazeGoalIgnite 900ms cubic-bezier(0.2, 0.8, 0.3, 1) var(--goal-at) forwards;
+}
+
+@keyframes mazeGoalIgnite {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+}
+
+.maze-goal-ring {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mazeGoalRipple 850ms ease-out var(--goal-at) forwards;
+}
+
+@keyframes mazeGoalRipple {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+
+/*
+  Loader variant. The dash has to trail the robot rather than drift against it:
+  with a gap the full length of the path only one dash is ever on screen, and
+  running the offset from +seg down to seg-length puts its leading edge at the
+  robot's position for the whole lap. Offsetting the other way — the obvious
+  length-to-zero — walks the dash backwards past the robot.
+*/
+.maze-loop-trail {
+  stroke-dasharray: var(--loop-seg) var(--loop-len);
+  animation: mazeLoopChase var(--lap) linear infinite;
+}
+
+@keyframes mazeLoopChase {
+  from {
+    stroke-dashoffset: var(--loop-seg);
+  }
+  to {
+    stroke-dashoffset: var(--loop-seg-end);
+  }
+}
+
+.maze-loop-mouse {
+  offset-path: var(--route);
+  offset-rotate: auto;
+  animation: mazeLoopLap var(--lap) linear infinite;
+}
+
+@keyframes mazeLoopLap {
   from {
     offset-distance: 0%;
   }
@@ -137,34 +294,21 @@
   }
 }
 
-.maze-trail {
-  stroke-dasharray: 320;
-  stroke-dashoffset: 320;
-  filter: drop-shadow(0 0 4px var(--splash-accent, #f2a900));
-  animation: mazeTrailDraw 1500ms ease-in-out forwards;
-}
+/*
+  The lockup waits for the mice, so its delay is handed down from the splash —
+  how long the run takes depends on the maze that was drawn.
 
-.maze-mouse {
-  /* Same path the trail draws, so the mouse rides its leading edge. */
-  offset-path: path("M10 10 H50 V50 H10 V110 H70 V70");
-  offset-rotate: 0deg;
-  offset-distance: 0%;
-  filter: drop-shadow(0 0 5px var(--splash-accent, #f2a900));
-  animation: mazeMouseRun 1500ms ease-in-out forwards;
-}
-
-/* Loader variant: same motion, repeating, and quicker. */
-.maze-trail--loop {
-  animation: mazeTrailDraw 1200ms ease-in-out infinite;
-}
-
-.maze-mouse--loop {
-  animation: mazeMouseRun 1200ms ease-in-out infinite;
-}
-
+  Gated on .splash-ready rather than starting on its own, because the lockup is
+  in the server-rendered markup while the maze only appears once the client has
+  generated one. Starting at page load would let the wordmark drift ahead of
+  the run by however long hydration took.
+*/
 .splash-lockup {
   opacity: 0;
-  animation: mazeFadeUp 500ms ease-out 1400ms forwards;
+}
+
+.splash-ready .splash-lockup {
+  animation: mazeFadeUp 620ms cubic-bezier(0.2, 0.7, 0.3, 1) var(--lockup-at, 2600ms) forwards;
 }
 
 /*
@@ -174,21 +318,41 @@
   than merely shortening it.
 */
 @media (prefers-reduced-motion: reduce) {
+  .maze-band,
+  .maze-pip,
   .maze-trail,
-  .maze-trail--loop {
+  .maze-mouse,
+  .maze-goal,
+  .maze-goal-ring,
+  .maze-loop-trail,
+  .maze-loop-mouse,
+  .splash-ready .splash-lockup {
     animation: none;
+  }
+
+  .maze-band,
+  .maze-pip,
+  .maze-goal,
+  .splash-lockup {
+    opacity: 1;
+  }
+
+  .maze-trail {
     stroke-dashoffset: 0;
   }
 
-  .maze-mouse,
-  .maze-mouse--loop {
-    animation: none;
+  .maze-loop-trail {
+    stroke-dasharray: none;
+  }
+
+  /* Parked at the goal: the finished state, which is the informative one. */
+  .maze-mouse {
+    opacity: 1;
     offset-distance: 100%;
   }
 
-  .splash-lockup {
-    animation: none;
-    opacity: 1;
+  .maze-goal-ring {
+    opacity: 0;
   }
 
   .splash-done #mmrc-splash {

@@ -13,7 +13,7 @@ export default function Loading() {
       role="status"
       aria-live="polite"
     >
-      <MazeTrail size={96} className="text-ras-purple dark:text-white" motion="loop" />
+      <MazeTrail size={120} className="text-ras-purple dark:text-white" motion="loop" />
       <p className="text-sm uppercase tracking-[0.2em] text-ras-gray dark:text-white/70">
         Loading…
       </p>

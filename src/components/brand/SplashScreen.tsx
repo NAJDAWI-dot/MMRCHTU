@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { MazeTrail } from "@/components/brand/MazeTrail";
+import type { MazeTiming } from "@/lib/maze";
 import {
   SPLASH_DONE_CLASS,
   SPLASH_FADE_MS,
   SPLASH_PENDING_CLASS,
+  SPLASH_READY_CLASS,
   SPLASH_SESSION_KEY,
   splashHoldMs,
   splashMode,
@@ -19,11 +21,28 @@ import {
  * So this component never decides *whether* to show — only when to take it
  * down. That split is what avoids both a hydration mismatch and a frame of
  * the real page showing through.
+ *
+ * How long it stays up is not a constant, because the maze is not a constant:
+ * a fresh one is generated on every visit and the mice run it at a fixed pace,
+ * so a longer carve takes longer to run. MazeTrail reports its own timing and
+ * this schedules against that, rather than the two agreeing on a number that
+ * could quietly drift apart.
  */
 export function SplashScreen() {
+  const [timing, setTiming] = useState<MazeTiming | null>(null);
+
+  // The maze is generated once, but React may invoke this callback from a
+  // remount in development. Keeping it stable stops it re-running generation.
+  const handleReady = useCallback((next: MazeTiming) => setTiming(next), []);
+
+  // Survives the effect re-running when the timing arrives, so the overlay is
+  // never torn down twice or resurrected after it has gone.
+  const finishedRef = useRef(false);
+
   useEffect(() => {
     const root = document.documentElement;
     if (!root.classList.contains(SPLASH_PENDING_CLASS)) return;
+    if (finishedRef.current) return;
 
     const mode = splashMode({
       seen: false, // the pre-paint script already ruled this out
@@ -33,6 +52,8 @@ export function SplashScreen() {
     let fadeTimer: number | undefined;
 
     const finish = () => {
+      if (finishedRef.current) return;
+      finishedRef.current = true;
       // Recording it here rather than on mount means a visitor who closes the
       // tab mid-animation still gets the intro next time.
       try {
@@ -47,7 +68,13 @@ export function SplashScreen() {
       }, SPLASH_FADE_MS);
     };
 
-    const holdTimer = window.setTimeout(finish, splashHoldMs(mode));
+    // Scheduled immediately with the fallback, then rescheduled a frame later
+    // when the maze reports. Waiting for the report instead would strand a
+    // visitor on a purple screen if generation ever threw.
+    const holdTimer = window.setTimeout(
+      finish,
+      splashHoldMs(mode, timing?.totalMs),
+    );
 
     // Any deliberate input skips ahead — nobody should be held on an intro.
     const skip = () => {
@@ -69,7 +96,7 @@ export function SplashScreen() {
       // Nothing needs the cleanup anyway — this lives in the root layout,
       // which never unmounts during client navigation.
     };
-  }, []);
+  }, [timing]);
 
   return (
     <div
@@ -78,9 +105,16 @@ export function SplashScreen() {
       // Decorative and self-dismissing: announcing it would interrupt a screen
       // reader before it reaches the real page content.
       aria-hidden="true"
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-8 bg-[#3f1546] bg-[radial-gradient(circle_at_50%_40%,#5f2167_0%,#3f1546_60%,#2a0e2f_100%)] text-white"
+      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center gap-8 bg-[#3f1546] bg-[radial-gradient(circle_at_50%_40%,#5f2167_0%,#3f1546_60%,#2a0e2f_100%)] text-white${
+        timing ? ` ${SPLASH_READY_CLASS}` : ""
+      }`}
+      style={
+        timing
+          ? ({ "--lockup-at": `${timing.lockupS.toFixed(2)}s` } as CSSProperties)
+          : undefined
+      }
     >
-      <MazeTrail size={168} className="text-white" motion="run" />
+      <MazeTrail size={280} className="splash-maze text-white" motion="run" onReady={handleReady} />
 
       <div className="splash-lockup flex flex-col items-center gap-3 px-6 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element -- brand asset, must paint immediately */}
