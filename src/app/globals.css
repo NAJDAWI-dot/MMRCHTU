@@ -26,6 +26,66 @@
     outline-offset: 2px;
   }
 
+  /*
+    iOS Safari zooms the whole page in when a form field smaller than 16px
+    takes focus, and does not zoom back out afterwards — the visitor is left
+    on a sideways-scrolling page mid-form. Most fields here are text-sm (14px),
+    so this raises them on narrow screens only; the desktop sizing is unchanged.
+  */
+  @media (max-width: 767px) {
+    /*
+      The :not() pairs are load-bearing, not decoration. Tailwind v3 emits
+      plain CSS with no real cascade layers, so a bare `input` selector loses
+      to the `text-sm` class on the field itself. Two attribute selectors lift
+      specificity above a single class, which beats text-sm without resorting
+      to !important — and excluding the boxes is right anyway, since they are
+      sized below.
+    */
+    input:not([type="checkbox"]):not([type="radio"]),
+    select:not([hidden]),
+    textarea:not([hidden]) {
+      font-size: 16px;
+    }
+  }
+
+  /*
+    Browsers render these at about 13px by default, which is small enough to
+    miss with a thumb. The wrapping label is usually the real hit area, but the
+    control should be findable on its own.
+  */
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 1.125rem;
+    height: 1.125rem;
+    accent-color: var(--color-ras-purple);
+    /*
+      These sit in flex rows next to their label text. Without this the box is
+      a flex item that shrinks to make room for a long label, so the same
+      control renders 13px wide beside one option and 18px beside another.
+    */
+    flex-shrink: 0;
+  }
+
+  /*
+    Stops iOS enlarging text of its own accord when the phone is turned to
+    landscape, which otherwise breaks carefully sized headings.
+  */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /*
+    With viewportFit: "cover" the page extends under the rounded corners and
+    the home indicator, so the horizontal insets are added back here. They
+    resolve to zero on every device without a notch, which is why this is
+    unconditional.
+  */
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
   .sr-only-live {
     position: absolute;
     width: 1px;

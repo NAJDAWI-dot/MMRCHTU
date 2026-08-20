@@ -48,7 +48,7 @@ export default async function HomePage() {
             </div>
             <Link
               href="/competition-day"
-              className="mt-3 text-sm font-semibold text-ras-crimson hover:underline"
+              className="-mx-2 mt-1 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline"
             >
               Competition day details →
             </Link>
@@ -64,7 +64,7 @@ export default async function HomePage() {
           <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
             Read the full MMRC 26 rulebook before you build.
           </p>
-          <Link href="/rules" className="mt-4 inline-block text-sm font-semibold text-ras-crimson">
+          <Link href="/rules" className="-mx-2 mt-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline">
             View rules →
           </Link>
         </Card>
@@ -75,7 +75,7 @@ export default async function HomePage() {
           <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
             Key dates from registration to the final run.
           </p>
-          <Link href="/schedule" className="mt-4 inline-block text-sm font-semibold text-ras-crimson">
+          <Link href="/schedule" className="-mx-2 mt-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline">
             View schedule →
           </Link>
         </Card>
@@ -86,7 +86,7 @@ export default async function HomePage() {
           <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
             Answers to common questions from past competitors.
           </p>
-          <Link href="/faq" className="mt-4 inline-block text-sm font-semibold text-ras-crimson">
+          <Link href="/faq" className="-mx-2 mt-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline">
             View FAQ →
           </Link>
         </Card>

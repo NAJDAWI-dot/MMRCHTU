@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/brand/ThemeProvider";
 import { SplashScreen } from "@/components/brand/SplashScreen";
@@ -22,6 +22,29 @@ export const metadata: Metadata = {
     apple: "/brand/favicon/apple-touch-icon.png",
   },
   manifest: "/site.webmanifest",
+};
+
+/**
+ * Next supplies a sensible default, but two things here are worth being
+ * explicit about.
+ *
+ * `viewportFit: "cover"` lets the page use the full screen on phones with a
+ * notch or rounded corners, and is what makes the safe-area insets in
+ * globals.css report real values rather than zero.
+ *
+ * Zoom is deliberately not capped. `maximumScale` or `userScalable: false`
+ * would stop anyone who needs to magnify the page from doing so, and the
+ * usual reason for reaching for them — iOS zooming on focused inputs — is
+ * fixed properly in globals.css by sizing those inputs at 16px instead.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#2a0e2f" },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

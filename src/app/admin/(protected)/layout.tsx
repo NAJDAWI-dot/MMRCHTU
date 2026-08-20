@@ -29,23 +29,33 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const admin = await requireAdmin();
 
   return (
-    <div className="mx-auto flex max-w-6xl gap-8 px-4 py-10">
-      <aside className="w-48 shrink-0">
-        <p className="mb-4 text-xs uppercase tracking-widest text-ras-gray dark:text-white/50">
+    // Stacked on a phone, side by side from md up. A fixed 192px column on a
+    // 375px screen left the actual admin content 136px wide.
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:flex-row md:gap-8 md:py-10">
+      <aside className="w-full shrink-0 md:w-48">
+        <p className="mb-3 text-xs uppercase tracking-widest text-ras-gray dark:text-white/50 md:mb-4">
           Signed in as {admin.username}
         </p>
-        <nav aria-label="Admin" className="flex flex-col gap-2">
+        {/*
+          A horizontal strip of chips on a phone, the usual column from md up.
+          Nine stacked links would push every admin page a screen and a half
+          down; scrolling them sideways keeps the page itself reachable.
+        */}
+        <nav
+          aria-label="Admin"
+          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-col md:overflow-visible md:px-0 md:pb-0"
+        >
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="rounded-md px-3 py-2 text-sm font-medium text-ras-gray transition-colors hover:bg-ras-purple/10 hover:text-ras-purple dark:text-white/80 dark:hover:bg-white/10 dark:hover:text-white"
+              className="shrink-0 whitespace-nowrap rounded-md border border-ras-gray/20 px-3 py-2 text-sm font-medium text-ras-gray transition-colors hover:bg-ras-purple/10 hover:text-ras-purple dark:text-white/80 dark:hover:bg-white/10 dark:hover:text-white md:border-0"
             >
               {link.label}
             </Link>
           ))}
         </nav>
-        <form action="/admin/logout" method="post" className="mt-4">
+        <form action="/admin/logout" method="post" className="mt-3 md:mt-4">
           <button
             type="submit"
             className="w-full rounded-md px-3 py-2 text-left text-sm font-medium text-ras-crimson transition-colors hover:bg-ras-crimson/10"
@@ -54,7 +64,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </button>
         </form>
       </aside>
-      <div className="flex-1">{children}</div>
+      {/*
+        min-w-0 is what actually stops the overflow: a flex child defaults to
+        min-width:auto, so wide content pushes the column past the screen
+        instead of shrinking and wrapping inside it.
+      */}
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
 }

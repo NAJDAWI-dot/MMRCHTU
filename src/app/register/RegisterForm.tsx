@@ -60,7 +60,7 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
         </legend>
         <div className="mt-2 flex gap-4">
           {[1, 2, 3].map((n) => (
-            <label key={n} className="flex items-center gap-2 text-sm text-ras-gray dark:text-white/80">
+            <label key={n} className="flex min-h-[44px] items-center gap-2 text-sm text-ras-gray dark:text-white/80">
               <input
                 type="radio"
                 name="memberCount"
@@ -165,7 +165,7 @@ function MemberFields({ index, isLeader, errors }: MemberFieldsProps) {
         <span className="block text-sm font-medium text-ras-gray dark:text-white/80">IEEE membership status</span>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:gap-4">
           {IEEE_STATUS_OPTIONS.map((opt) => (
-            <label key={opt.value} className="flex items-center gap-2 text-sm text-ras-gray dark:text-white/80">
+            <label key={opt.value} className="flex min-h-[44px] items-center gap-2 text-sm text-ras-gray dark:text-white/80">
               <input type="radio" name={`${prefix}IeeeStatus`} value={opt.value} />
               {opt.label}
             </label>

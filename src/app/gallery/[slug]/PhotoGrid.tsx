@@ -146,7 +146,10 @@ export function PhotoGrid({ photos, albumTitle }: { photos: GalleryPhotoView[]; 
             <a
               href={photo.downloadUrl}
               download
-              className="absolute bottom-2 right-2 rounded-md bg-black/65 px-2 py-1 text-xs font-semibold text-white opacity-0 transition-opacity hover:bg-black/85 focus:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
+              // A 44px square rather than a text-sized chip. It was 27x24,
+              // which is awkward to hit on the device most likely to be used
+              // for browsing photos in the first place.
+              className="absolute bottom-1.5 right-1.5 flex h-11 w-11 items-center justify-center rounded-md bg-black/65 text-lg font-semibold leading-none text-white opacity-0 transition-opacity hover:bg-black/85 focus:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
             >
               <span aria-hidden="true">↓</span>
               <span className="sr-only">
@@ -183,14 +186,20 @@ export function PhotoGrid({ photos, albumTitle }: { photos: GalleryPhotoView[]; 
             />
           </div>
 
-          <div className="mt-4 flex w-full max-w-5xl items-center justify-between gap-4">
-            <p className="min-w-0 flex-1 text-sm text-white/80">
+          {/*
+            Stacked on a phone: caption above, controls below. Four controls
+            and a caption on one row leaves each about 60px on a 375px screen.
+          */}
+          <div className="mt-4 flex w-full max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <p className="min-w-0 text-sm text-white/80 sm:flex-1">
               {open.caption}
               <span className="ml-2 whitespace-nowrap text-white/50">
                 {(openIndex ?? 0) + 1} / {photos.length}
               </span>
             </p>
-            <div className="flex shrink-0 gap-2">
+            {/* Wraps rather than overflowing, and each control keeps a 44px
+                hit area via the padding below. */}
+            <div className="flex flex-wrap gap-2 sm:shrink-0 sm:flex-nowrap">
               <a
                 href={open.downloadUrl}
                 download

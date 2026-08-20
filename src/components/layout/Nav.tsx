@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { parseStatus } from "@/lib/competition-day";
+import { MobileNav } from "@/components/layout/MobileNav";
 
 const LINKS = [
   { href: "/game", label: "Pac Mouse" },
@@ -33,20 +34,32 @@ async function hiddenHrefs(): Promise<Set<string>> {
   return hidden;
 }
 
+/**
+ * Renders both menus from one list.
+ *
+ * The row of links and the phone menu have to agree about which pages exist,
+ * including the ones hidden while unpublished — so the filtering happens once,
+ * here, and both are handed the result. Two separate copies of this list would
+ * drift the first time a link was added to one of them.
+ */
 export async function Nav() {
   const hidden = await hiddenHrefs();
+  const links = LINKS.filter((link) => !hidden.has(link.href));
 
   return (
-    <nav aria-label="Primary" className="flex items-center gap-6">
-      {LINKS.filter((link) => !hidden.has(link.href)).map((link) => (
-        <Link
-          key={link.href}
-          href={link.href}
-          className="text-sm font-medium text-ras-gray transition-colors hover:text-ras-purple dark:text-white/80 dark:hover:text-white"
-        >
-          {link.label}
-        </Link>
-      ))}
-    </nav>
+    <>
+      <nav aria-label="Primary" className="hidden items-center gap-6 md:flex">
+        {links.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="text-sm font-medium text-ras-gray transition-colors hover:text-ras-purple dark:text-white/80 dark:hover:text-white"
+          >
+            {link.label}
+          </Link>
+        ))}
+      </nav>
+      <MobileNav links={links} />
+    </>
   );
 }

@@ -46,7 +46,9 @@ export default async function SchedulePage() {
                 <a
                   href={`/api/schedule/${item.id}/ics`}
                   download
-                  className="text-xs font-semibold text-ras-crimson hover:underline"
+                  // A standalone action rather than a link inside a sentence,
+                  // so it gets a real 44px touch row instead of 16px of text.
+                  className="-mx-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline"
                 >
                   Add to calendar
                 </a>

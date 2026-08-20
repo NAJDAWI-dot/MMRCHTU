@@ -34,7 +34,7 @@ export default async function AlbumPage({ params }: { params: { id: string } }) 
 
   return (
     <div>
-      <Link href="/admin/gallery" className="text-sm font-semibold text-ras-crimson hover:underline">
+      <Link href="/admin/gallery" className="-mx-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline">
         ← All albums
       </Link>
       <h1 className="mt-2 font-display text-2xl font-extrabold text-ras-purple dark:text-white">

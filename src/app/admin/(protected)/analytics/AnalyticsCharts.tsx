@@ -37,7 +37,10 @@ export function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <Card>
+    // min-w-0 so a wide child (the day chart) scrolls inside its own box
+    // rather than stretching this grid track past the screen: a grid item
+    // defaults to min-width:auto, which refuses to shrink below its content.
+    <Card className="min-w-0">
       <h2 className="font-display text-base font-bold text-ras-purple dark:text-white">{title}</h2>
       {description && (
         <p className="mt-1 text-xs text-ras-gray dark:text-white/60">{description}</p>
@@ -97,7 +100,9 @@ export function DayChart({ data }: { data: DayBucket[] }) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    // 28 days at a legible width is wider than a phone, so the chart scrolls
+    // sideways on its own rather than squeezing each bar into a hairline.
+    <div className="-mx-1 overflow-x-auto px-1">
       <div className="flex min-w-full items-end gap-1" style={{ height: "96px" }}>
         {data.map((day) => (
           <div key={day.key} className="flex min-w-[14px] flex-1 flex-col items-center justify-end gap-1">
