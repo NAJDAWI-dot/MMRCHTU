@@ -16,9 +16,9 @@
  */
 
 /** Walls of a single cell, in [N, E, S, W] order. `true` means present. */
-type CellWalls = [boolean, boolean, boolean, boolean];
+export type CellWalls = [boolean, boolean, boolean, boolean];
 
-interface Cell {
+export interface Cell {
   x: number;
   y: number;
 }
@@ -40,15 +40,28 @@ export interface Maze {
   size: number;
   /** Wall segments, already merged into runs. */
   walls: string[];
+  /**
+   * Walls per cell, row-major, each in [N, E, S, W] order.
+   *
+   * `walls` above is merged for drawing and cannot be walked; this is the grid
+   * itself, for callers that need to move through the maze a cell at a time —
+   * the rules diagrams simulate a search run over it.
+   */
+  cells: CellWalls[];
   /** One route per corner, longest first. */
   routes: Route[];
   goal: { x: number; y: number; size: number };
 }
 
 /** Side of one cell in viewBox units. Walls land on multiples, paths on centres. */
-const CELL = 20;
+export const CELL = 20;
 
-const DIRS = [
+/**
+ * The four moves, indexed to match `CellWalls`. Exported so anything walking a
+ * maze agrees with the generator about which slot is which wall — getting that
+ * mapping wrong silently produces a route that passes through walls.
+ */
+export const DIRS = [
   { dx: 0, dy: -1, wall: 0, opp: 2 },
   { dx: 1, dy: 0, wall: 1, opp: 3 },
   { dx: 0, dy: 1, wall: 2, opp: 0 },
@@ -64,7 +77,7 @@ export type Rand = () => number;
  *
  * `size` must be even, since the goal is a 2x2 room centred on the grid.
  */
-export function generateMaze(size: number, rand: Rand = Math.random): Maze {
+export function generateMaze(size: number, rand: Rand = Math.random, braid = 0): Maze {
   if (size < 4 || size % 2 !== 0) {
     throw new Error(`maze size must be an even number of at least 4, got ${size}`);
   }
@@ -97,6 +110,34 @@ export function generateMaze(size: number, rand: Rand = Math.random): Maze {
     walls[idx(nx, ny)]![d.opp] = false;
     seen.add(idx(nx, ny));
     stack.push({ x: nx, y: ny });
+  }
+
+  // A depth-first carve leaves a *perfect* maze: exactly one route between any
+  // two cells. That is fine for the splash, and quietly wrong for teaching the
+  // rules — with a single route, exploring badly cannot cost you a slower speed
+  // run, because there is no second route to miss. Real competition mazes carry
+  // loops for exactly this reason, so knocking a few extra walls down is both
+  // more faithful and what makes the search-versus-speed lesson land.
+  //
+  // Off by default, so the splash keeps the long clean corridors it reads best
+  // with; the rules diagrams turn it on.
+  if (braid > 0) {
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        // North and east only. Every wall is shared by two cells, so
+        // considering all four directions would give each one two chances.
+        for (const d of [DIRS[0]!, DIRS[1]!]) {
+          const nx = x + d.dx;
+          const ny = y + d.dy;
+          // Never the outer boundary: the maze has to stay a closed box.
+          if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+          if (!walls[idx(x, y)]![d.wall]) continue;
+          if (rand() >= braid) continue;
+          walls[idx(x, y)]![d.wall] = false;
+          walls[idx(nx, ny)]![d.opp] = false;
+        }
+      }
+    }
   }
 
   // The goal is one open 2x2 room at the centre, per competition rules.
@@ -247,6 +288,7 @@ export function generateMaze(size: number, rand: Rand = Math.random): Maze {
     viewBox: `0 0 ${W * CELL} ${H * CELL}`,
     size: W,
     walls: mergeWallRuns(walls, W, H),
+    cells: walls,
     routes,
     goal: { x: G0 * CELL, y: G0 * CELL, size: 2 * CELL },
   };

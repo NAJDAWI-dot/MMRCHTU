@@ -8,6 +8,11 @@ up to four. Each team may enter at most one micromouse.
 The competition maze is a 16×16 grid of 18cm cells with 12cm walls, built to IEEE micromouse
 standard dimensions. The start cell is in a corner; the goal is a 2×2 block at the maze center.
 
+The layout is not published in advance. Every maze below is a fresh one, generated the moment
+you loaded this page — press **New maze** to see another.
+
+<MazeAnatomy />
+
 ## Runs
 
 Each team gets up to five runs. A run ends when the mouse reaches the goal, hits the time
@@ -19,11 +24,18 @@ limit (10 minutes), or the team retires the run. The fastest successful run coun
 - **Speed runs** must use only cells already discovered on a prior run for that team.
 - Final ranking is by best speed-run time; ties are broken by best search-run time.
 
+That second point decides more places than any other rule, so it is worth seeing rather than
+reading: a speed run is only ever as good as the search that came before it.
+
+<RunComparison />
+
 ## Robot rules
 
 - Maximum footprint: 25cm × 25cm at any rotation.
 - No jumping, climbing, or damaging maze walls.
 - Autonomous operation only — no remote control or manual intervention once a run starts.
+
+<RobotFootprint />
 
 ## Conduct
 

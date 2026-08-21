@@ -210,6 +210,45 @@ describe("generateMaze", () => {
   });
 });
 
+describe("braiding", () => {
+  /** How many of the four walls around each cell are open, across the grid. */
+  const openings = (maze: ReturnType<typeof generateMaze>) =>
+    maze.cells.reduce((n, cell) => n + cell.filter((wall) => !wall).length, 0);
+
+  it("leaves the maze untouched when it is off, so the splash is unaffected", () => {
+    const plain = generateMaze(16, mulberry32(7));
+    const braidless = generateMaze(16, mulberry32(7), 0);
+    expect(braidless.cells).toEqual(plain.cells);
+    expect(braidless.walls).toEqual(plain.walls);
+  });
+
+  it("opens the maze up, creating the loops a perfect carve cannot have", () => {
+    const plain = generateMaze(16, mulberry32(3));
+    const braided = generateMaze(16, mulberry32(3), 0.15);
+    expect(openings(braided)).toBeGreaterThan(openings(plain));
+  });
+
+  it("never opens the outer boundary — the maze stays a closed box", () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const maze = generateMaze(16, mulberry32(seed), 0.35);
+      const at = (x: number, y: number) => maze.cells[y * maze.size + x]!;
+      for (let i = 0; i < maze.size; i++) {
+        expect(at(i, 0)[0], `north edge open at ${i} (seed ${seed})`).toBe(true);
+        expect(at(i, maze.size - 1)[2], `south edge open at ${i} (seed ${seed})`).toBe(true);
+        expect(at(0, i)[3], `west edge open at ${i} (seed ${seed})`).toBe(true);
+        expect(at(maze.size - 1, i)[1], `east edge open at ${i} (seed ${seed})`).toBe(true);
+      }
+    }
+  });
+
+  it("still never routes a mouse through a wall, over 200 braided mazes", () => {
+    for (let seed = 0; seed < 200; seed++) {
+      const maze = generateMaze(16, mulberry32(seed), 0.12);
+      expect(crossings(maze), `seed ${seed} crosses a wall`).toBe(0);
+    }
+  });
+});
+
 describe("pickMaze", () => {
   it("keeps the lead route inside the requested band", () => {
     for (let seed = 0; seed < 30; seed++) {
