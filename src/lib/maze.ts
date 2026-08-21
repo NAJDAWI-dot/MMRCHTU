@@ -371,7 +371,15 @@ export function pickMaze(
   return best;
 }
 
-/** Competition-standard grid. Reads well at splash scale. */
+/**
+ * The splash grid, which is deliberately not the competition grid.
+ *
+ * The competition maze is 10x10 (see RULES.mazeGrid). This stays denser
+ * because the splash is an abstract intro — four mice racing in from four
+ * corners, which is not the competition format either — and a sparse grid at
+ * that scale reads as a diagram rather than a maze. Changing it would also
+ * shorten every route enough to bump the pacing floor in mazeTiming.
+ */
 export const SPLASH_GRID = 16;
 /**
  * The loader is a fraction of the splash's size, where a 16x16 grid collapses

@@ -205,21 +205,21 @@ describe("the lesson the run figure teaches", () => {
     // One route between any two cells, so any search that reached the goal
     // walked the only route there and the speed run is always ideal.
     for (let i = 0; i < 40; i++) {
-      expect(compareRuns(generateMaze(16)).cellsLost).toBe(0);
+      expect(compareRuns(generateMaze(RULES.mazeGrid)).cellsLost).toBe(0);
     }
   });
 
   it("shows a real cost in most braided mazes", () => {
     let costly = 0;
     for (let i = 0; i < 120; i++) {
-      const maze = generateMaze(16, Math.random, DIAGRAM_BRAID);
+      const maze = generateMaze(RULES.mazeGrid, Math.random, DIAGRAM_BRAID);
       const cmp = compareRuns(maze);
       assertWalkable(maze, cmp.speed);
       assertWalkable(maze, cmp.optimal);
       if (cmp.cellsLost > 0) costly++;
     }
-    // Measured at ~81% over 300 mazes; the bound is loose enough not to be
-    // flaky and tight enough to catch the diagram going inert again.
+    // Measured at ~76% over 300 mazes at the 10x10 grid; the bound is loose
+    // enough not to be flaky and tight enough to catch the diagram going inert.
     expect(costly).toBeGreaterThan(60);
   });
 });
@@ -329,7 +329,7 @@ describe("the checklist against the rulebook", () => {
 
     expect(rulebook).toContain(`${RULES.mazeGrid}×${RULES.mazeGrid}`);
     expect(rulebook).toContain(`${RULES.cellSizeCm}cm cells`);
-    expect(rulebook).toContain(`${RULES.wallHeightCm}cm walls`);
+    expect(rulebook).toContain(`${RULES.wallThicknessMm}mm-thick walls`);
     expect(rulebook).toContain(`${RULES.maxFootprintCm}cm × ${RULES.maxFootprintCm}cm`);
     expect(rulebook).toContain(`${RULES.runLimitMinutes} minutes`);
 

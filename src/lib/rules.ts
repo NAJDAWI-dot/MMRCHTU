@@ -18,11 +18,17 @@ import { CELL, DIRS, type Cell, type Maze } from "@/lib/maze";
 /** The measurable rules, in one place so no two diagrams can disagree. */
 export const RULES = {
   /** Cells per side of the competition maze. */
-  mazeGrid: 16,
+  mazeGrid: 10,
   /** Side of one cell, in centimetres. */
   cellSizeCm: 18,
-  /** Wall height, in centimetres. */
-  wallHeightCm: 12,
+  /**
+   * How thick a wall is, in millimetres — not how tall it stands.
+   *
+   * The distinction matters to anyone sizing a chassis: the thickness is what
+   * eats into the gap a mouse drives through, so the clear width between two
+   * walls is less than the 18cm cell pitch by roughly one wall.
+   */
+  wallThicknessMm: 12,
   /** Neither side of the mouse may exceed this, in centimetres. */
   maxFootprintCm: 25,
   maxTeamSize: 4,
@@ -39,11 +45,15 @@ export const RULES = {
  * figure would have shown "nothing lost" every single time and quietly taught
  * the opposite of the rule.
  *
- * Real competition mazes carry loops, so the diagrams add some back. Measured
- * over 300 mazes, 12% leaves the grid clearly maze-shaped while making a
- * careless search cost something about four times in five.
+ * Real competition mazes carry loops, so the diagrams add some back.
+ *
+ * Retuned when the grid moved to 10x10. A smaller maze holds fewer alternative
+ * routes, so the same 12% that cost a careless search something four times in
+ * five at 16x16 managed it only three times in five here. Measured over 300
+ * mazes at each setting, 18% restores it to about three in four while leaving
+ * the grid clearly maze-shaped.
  */
-export const DIAGRAM_BRAID = 0.12;
+export const DIAGRAM_BRAID = 0.18;
 
 /* -------------------------------------------------------------------------- */
 /* Robot dimensions                                                            */

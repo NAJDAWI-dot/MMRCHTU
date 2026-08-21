@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { generateMaze } from "@/lib/maze";
+import { DIAGRAM_BRAID, RULES } from "@/lib/rules";
 
 /**
  * The card that appears when the site is shared.
@@ -49,7 +50,7 @@ function seededRandom(seed: number): () => number {
 export default async function Image() {
   // Braided, like the diagrams on the rules page: a perfect carve reads as
   // long empty corridors at this scale, where a few loops read as a maze.
-  const maze = generateMaze(16, seededRandom(20260821), 0.1);
+  const maze = generateMaze(RULES.mazeGrid, seededRandom(20260821), DIAGRAM_BRAID);
 
   return new ImageResponse(
     (

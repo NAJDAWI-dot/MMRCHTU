@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { RULES } from "@/lib/rules";
 import {
   highlight,
   rulebookSections,
@@ -153,7 +154,7 @@ describe("rulebookSections", () => {
 
   it("keeps the prose but strips the embedded diagram components", () => {
     const maze = sections.find((s) => s.title === "The maze")!;
-    expect(maze.body).toContain("16×16");
+    expect(maze.body).toContain(`${RULES.mazeGrid}×${RULES.mazeGrid}`);
     expect(maze.body).not.toContain("<MazeAnatomy");
     expect(maze.body).not.toContain("/>");
   });

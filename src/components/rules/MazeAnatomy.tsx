@@ -147,7 +147,7 @@ export function MazeAnatomy() {
           <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Stat label="Grid" value={`${RULES.mazeGrid}×${RULES.mazeGrid}`} />
             <Stat label="Cell" value={`${RULES.cellSizeCm}cm`} />
-            <Stat label="Walls" value={`${RULES.wallHeightCm}cm`} />
+            <Stat label="Wall thickness" value={`${RULES.wallThicknessMm}mm`} />
             <Stat label="Shortest route" value={`${route.length} cells`} />
           </dl>
         </>
