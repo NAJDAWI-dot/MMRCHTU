@@ -22,8 +22,17 @@ import { Figure, Legend, Stat } from "@/components/rules/Figure";
 export function RunComparison() {
   const [maze, setMaze] = useState<Maze | null>(null);
   const [view, setView] = useState<"search" | "speed">("search");
+  // See MazeAnatomy for why this exists: a `key` needs a value that actually
+  // changes to replay the entrance animation, and neither a fresh maze object
+  // nor a flipped view is guaranteed to differ from the last one by identity.
+  const [generation, setGeneration] = useState(0);
 
-  useEffect(() => setMaze(generateMaze(RULES.mazeGrid, Math.random, DIAGRAM_BRAID)), []);
+  const roll = () => {
+    setMaze(generateMaze(RULES.mazeGrid, Math.random, DIAGRAM_BRAID));
+    setGeneration((g) => g + 1);
+  };
+
+  useEffect(roll, []);
 
   const runs = useMemo(() => (maze ? compareRuns(maze) : null), [maze]);
   const totalCells = RULES.mazeGrid * RULES.mazeGrid;
@@ -41,7 +50,7 @@ export function RunComparison() {
                 type="button"
                 aria-pressed={view === mode}
                 onClick={() => setView(mode)}
-                className={`min-h-[44px] rounded px-3 text-sm font-semibold transition-colors ${
+                className={`min-h-[44px] rounded px-3 text-sm font-semibold transition-all active:scale-95 ${
                   view === mode
                     ? "bg-ras-purple text-white"
                     : "text-ras-purple hover:bg-ras-purple/10 dark:text-white dark:hover:bg-white/10"
@@ -53,8 +62,8 @@ export function RunComparison() {
           </div>
           <Button
             variant="ghost"
-            className="min-h-[44px]"
-            onClick={() => setMaze(generateMaze(RULES.mazeGrid, Math.random, DIAGRAM_BRAID))}
+            className="min-h-[44px] transition-transform active:scale-95"
+            onClick={roll}
             disabled={!maze}
           >
             New maze
@@ -78,6 +87,10 @@ export function RunComparison() {
     >
       {maze && runs ? (
         <>
+          {/* Keyed on the maze generation and the view together, so either a
+              new maze or flipping between search and speed replays the same
+              entrance — a crossfade in place of the hard cut a toggle usually is. */}
+          <div key={`${generation}-${view}`} className="figure-in">
           <MazeCanvas
             maze={maze}
             label={
@@ -188,6 +201,7 @@ export function RunComparison() {
               tone={runs.cellsLost ? "bad" : "good"}
             />
           </dl>
+          </div>
         </>
       ) : (
         <div

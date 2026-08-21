@@ -22,8 +22,17 @@ import { Figure, Legend, Stat } from "@/components/rules/Figure";
 export function MazeAnatomy() {
   const [maze, setMaze] = useState<Maze | null>(null);
   const [showRoute, setShowRoute] = useState(false);
+  // Bumped on every new maze, including the first, so the entrance animation
+  // below has a `key` that actually changes — the maze object's own identity
+  // changing isn't enough to tell a keyed element to remount.
+  const [generation, setGeneration] = useState(0);
 
-  useEffect(() => setMaze(generateMaze(RULES.mazeGrid, Math.random, DIAGRAM_BRAID)), []);
+  const roll = () => {
+    setMaze(generateMaze(RULES.mazeGrid, Math.random, DIAGRAM_BRAID));
+    setGeneration((g) => g + 1);
+  };
+
+  useEffect(roll, []);
 
   const route = maze ? shortestPath(maze, startCell(maze)) : [];
 
@@ -35,7 +44,7 @@ export function MazeAnatomy() {
         <>
           <Button
             variant="ghost"
-            className="min-h-[44px]"
+            className="min-h-[44px] transition-transform active:scale-95"
             aria-pressed={showRoute}
             onClick={() => setShowRoute((v) => !v)}
             disabled={!maze}
@@ -44,8 +53,8 @@ export function MazeAnatomy() {
           </Button>
           <Button
             variant="ghost"
-            className="min-h-[44px]"
-            onClick={() => setMaze(generateMaze(RULES.mazeGrid, Math.random, DIAGRAM_BRAID))}
+            className="min-h-[44px] transition-transform active:scale-95"
+            onClick={roll}
             disabled={!maze}
           >
             New maze
@@ -62,38 +71,54 @@ export function MazeAnatomy() {
     >
       {maze ? (
         <>
-          <MazeCanvas
-            maze={maze}
-            label={`A ${RULES.mazeGrid} by ${RULES.mazeGrid} micromouse maze, with the start cell in the bottom-left corner and the goal room at the centre.`}
-            beneath={
-              <>
-                <GoalBlock maze={maze} className="fill-ras-purple/20 dark:fill-white/25" />
-                <CellTint
-                  cell={startCell(maze)}
-                  className="fill-ras-crimson/70 dark:fill-rose-400/80"
-                />
-              </>
-            }
-          >
-            {showRoute ? (
+          {/* Keyed on the generation counter so a fresh maze plays the same
+              entrance the first one did, rather than snapping into place. */}
+          <div key={generation} className="figure-in">
+            <MazeCanvas
+              maze={maze}
+              label={`A ${RULES.mazeGrid} by ${RULES.mazeGrid} micromouse maze, with the start cell in the bottom-left corner and the goal room at the centre.`}
+              beneath={
+                <>
+                  <GoalBlock maze={maze} className="fill-ras-purple/20 dark:fill-white/25" />
+                  <CellTint
+                    cell={startCell(maze)}
+                    className="fill-ras-crimson/70 dark:fill-rose-400/80"
+                  />
+                </>
+              }
+            >
+              {/* Always mounted, opacity-toggled, so the reveal is a transition
+                  rather than a pop. A conditionally-rendered element cannot
+                  transition its own arrival. */}
               <path
                 d={pathData(route)}
                 fill="none"
                 strokeWidth={3.5}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="stroke-ras-crimson dark:stroke-rose-400"
+                className={`stroke-ras-crimson transition-opacity duration-300 dark:stroke-rose-400 ${
+                  showRoute ? "opacity-100" : "opacity-0"
+                }`}
               />
-            ) : null}
-            {/* Drawn last so the marker sits above the route rather than under it. */}
-            <circle
-              cx={cellCentre(startCell(maze)).x}
-              cy={cellCentre(startCell(maze)).y}
-              r={CELL / 5}
-              className="fill-white stroke-ras-crimson dark:stroke-rose-400"
-              strokeWidth={2}
-            />
-          </MazeCanvas>
+              {/* A soft pulse radiating from the start cell — the one thing on
+                  the diagram that moves before anyone touches a control. */}
+              <circle
+                cx={cellCentre(startCell(maze)).x}
+                cy={cellCentre(startCell(maze)).y}
+                r={CELL / 5}
+                className="marker-pulse fill-none stroke-ras-crimson dark:stroke-rose-400"
+                strokeWidth={2}
+              />
+              {/* Drawn last so the solid marker sits above the pulse and the route. */}
+              <circle
+                cx={cellCentre(startCell(maze)).x}
+                cy={cellCentre(startCell(maze)).y}
+                r={CELL / 5}
+                className="fill-white stroke-ras-crimson dark:stroke-rose-400"
+                strokeWidth={2}
+              />
+            </MazeCanvas>
+          </div>
 
           <Legend
             items={[

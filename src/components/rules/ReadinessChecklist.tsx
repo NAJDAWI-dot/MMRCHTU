@@ -110,7 +110,11 @@ export function ReadinessChecklist() {
       })}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button variant="ghost" className="min-h-[44px]" onClick={copyReport}>
+        <Button
+          variant="ghost"
+          className="min-h-[44px] transition-transform active:scale-95"
+          onClick={copyReport}
+        >
           {copied === "done"
             ? "Copied"
             : copied === "failed"
@@ -119,7 +123,7 @@ export function ReadinessChecklist() {
         </Button>
         <Button
           variant="ghost"
-          className="min-h-[44px]"
+          className="min-h-[44px] transition-transform active:scale-95"
           onClick={() => {
             if (!confirmingReset) {
               setConfirmingReset(true);
@@ -150,7 +154,7 @@ function ProgressSummary({ summary }: { summary: ReturnType<typeof checklistSumm
         : "border-ras-gray/20 bg-[var(--color-surface)]";
 
   return (
-    <div className={`rounded-lg border p-4 sm:p-6 ${tone}`}>
+    <div className={`rounded-lg border p-4 transition-colors duration-300 sm:p-6 ${tone}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <p className="font-display text-lg font-bold text-ras-purple dark:text-white">
           {/* Announced as a whole so a screen reader gets the verdict with the
@@ -181,7 +185,9 @@ function ProgressSummary({ summary }: { summary: ReturnType<typeof checklistSumm
       </div>
 
       {summary.state === "blocked" ? (
-        <div className="mt-4">
+        // Genuinely mounting for the first time when it appears — unlike the
+        // maze figures, this one needs no key trick to replay the entrance.
+        <div className="figure-in mt-4">
           <p className="text-sm font-semibold text-ras-crimson dark:text-rose-300">
             Still to settle before you can compete:
           </p>
@@ -194,7 +200,7 @@ function ProgressSummary({ summary }: { summary: ReturnType<typeof checklistSumm
       ) : null}
 
       {summary.state === "ready" ? (
-        <p className="mt-4 text-sm text-ras-gray dark:text-white/70">
+        <p className="figure-in mt-4 text-sm text-ras-gray dark:text-white/70">
           Nothing left to check.{" "}
           <Link href="/schedule" className="font-semibold text-ras-crimson hover:underline">
             Check the schedule
@@ -216,7 +222,7 @@ function Row({
   onToggle: (id: string) => void;
 }) {
   return (
-    <div className="flex items-start gap-3 p-3 sm:p-4">
+    <div className="flex items-start gap-3 p-3 transition-colors hover:bg-ras-purple/5 sm:p-4 dark:hover:bg-white/5">
       {/* The label wraps the box and the text together, so the whole line is a
           target rather than the 18px square alone. */}
       <label className="flex min-h-[44px] flex-1 cursor-pointer items-start gap-3">
@@ -228,7 +234,7 @@ function Row({
         />
         <span className="min-w-0">
           <span
-            className={`block text-sm font-medium ${
+            className={`block text-sm font-medium transition-colors duration-200 ${
               checked
                 ? "text-ras-gray line-through dark:text-white/50"
                 : "text-ras-purple dark:text-white"

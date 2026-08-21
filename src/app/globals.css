@@ -431,3 +431,69 @@
 .splash-lockup img {
   clip-path: inset(0 0.6% 0.6% 0);
 }
+
+/*
+  Entrance animations for the rules-page figures (MazeAnatomy, RunComparison,
+  ReadinessChecklist). Each figure regenerates its content on a button press —
+  a new maze, a switched view, a changed verdict — and without these the
+  content simply replaces itself mid-frame. Applied via a `key` change on the
+  regenerated subtree so React remounts it and the animation replays.
+*/
+@keyframes figure-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* The start-cell marker on the maze diagram, so the still frame is not dead. */
+@keyframes marker-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(2.1);
+  }
+}
+
+.figure-in {
+  animation: figure-in 320ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.pop-in {
+  animation: pop-in 220ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.marker-pulse {
+  animation: marker-pulse 2200ms ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .figure-in,
+  .pop-in {
+    animation: none;
+  }
+
+  .marker-pulse {
+    animation: none;
+    opacity: 0;
+  }
+}

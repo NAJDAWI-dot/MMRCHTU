@@ -88,11 +88,15 @@ export function RobotFootprint() {
                 fill="none"
                 strokeWidth={0.2}
                 strokeDasharray="0.6 0.6"
-                className={
+                // `transition-all` covers the SVG geometry properties (r here,
+                // width/height/x/y on the rect below) as well as colour — since
+                // SVG2, those are CSS properties too, so the browser tweens the
+                // shape itself as the sliders move rather than snapping to it.
+                className={`transition-all duration-150 ease-out motion-reduce:transition-none ${
                   check.turnsInsideCell
                     ? "stroke-ras-purple/50 dark:stroke-white/40"
                     : "stroke-ras-crimson dark:stroke-rose-400"
-                }
+                }`}
               />
               <rect
                 x={centred(w)}
@@ -100,11 +104,11 @@ export function RobotFootprint() {
                 width={w}
                 height={l}
                 rx={0.6}
-                className={
+                className={`transition-all duration-150 ease-out motion-reduce:transition-none ${
                   check.withinFootprint
                     ? "fill-ras-purple/30 stroke-ras-purple dark:fill-white/25 dark:stroke-white"
                     : "fill-ras-crimson/30 stroke-ras-crimson dark:fill-rose-400/30 dark:stroke-rose-400"
-                }
+                }`}
                 strokeWidth={0.4}
               />
             </>
@@ -136,7 +140,7 @@ export function RobotFootprint() {
                     step={0.5}
                     value={field.value}
                     onChange={(event) => field.set(event.target.value)}
-                    className="w-20 min-h-[44px] rounded-md border border-ras-gray/30 bg-[var(--color-bg)] px-2 py-1 text-ras-purple dark:text-white"
+                    className="w-20 min-h-[44px] rounded-md border border-ras-gray/30 bg-[var(--color-bg)] px-2 py-1 text-ras-purple transition-colors focus-visible:border-ras-purple focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ras-purple/40 dark:text-white dark:focus-visible:border-white dark:focus-visible:ring-white/30"
                   />
                   <input
                     type="range"
@@ -146,7 +150,7 @@ export function RobotFootprint() {
                     step={0.5}
                     value={Number.isFinite(Number(field.value)) ? Number(field.value) : 0}
                     onChange={(event) => field.set(event.target.value)}
-                    className="h-11 min-w-0 flex-1 accent-ras-purple"
+                    className="h-11 min-w-0 flex-1 accent-ras-purple focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ras-purple/40 dark:focus-visible:ring-white/30"
                   />
                 </div>
               </div>
@@ -210,11 +214,13 @@ function Verdict({
 }) {
   return (
     <p
-      className={`flex items-start gap-2 text-sm font-medium ${
+      className={`flex items-start gap-2 text-sm font-medium transition-colors duration-200 ${
         ok ? "text-ras-purple dark:text-white" : "text-ras-crimson dark:text-rose-300"
       }`}
     >
-      <span aria-hidden="true" className="mt-px font-bold">
+      {/* Keyed on the verdict itself, so crossing the line replays the pop —
+          not just a colour swap on a symbol that was already sitting there. */}
+      <span key={String(ok)} aria-hidden="true" className="pop-in mt-px font-bold">
         {ok ? "✓" : "✕"}
       </span>
       <span>
