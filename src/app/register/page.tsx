@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { RegisterForm } from "@/app/register/RegisterForm";
 import { getRegisterFormConfig } from "@/lib/site-config";
+import { isPaymentConfigured } from "@/lib/payment";
 
 // Only the form's configuration comes from the database, and closing
 // registration revalidates this path immediately.
@@ -22,7 +23,12 @@ export default async function RegisterPage() {
       <p className="mt-2 text-sm text-ras-gray dark:text-white/70">{config.deadlineText}</p>
       <div className="mt-8">
         {config.isOpen ? (
-          <RegisterForm feeInfoText={config.feeInfoText} />
+          <RegisterForm
+            feeInfoText={config.feeInfoText}
+            // Null unless an admin has switched payment on *and* entered an
+            // alias — a panel with a blank alias would send money nowhere.
+            cliq={isPaymentConfigured(config) ? config : null}
+          />
         ) : (
           <div
             role="status"

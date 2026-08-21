@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createRegistration, validateRegistration, hasFieldErrors } from "@/lib/registration";
 import { clientKey, createRateLimiter } from "@/lib/rate-limit";
+import { hasPaymentErrors, validatePayment } from "@/lib/payment";
 
 /**
  * Module scope, so the counter survives between requests handled by the same
@@ -37,6 +38,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ errors }, { status: 422 });
   }
 
+  // Reported separately from the registration fields because it is optional as
+  // a whole: a team that leaves both boxes empty is registering now and paying
+  // later, which is allowed. Only a half-filled report is an error.
+  const paymentInput = {
+    reference: typeof body.paymentReference === "string" ? body.paymentReference : "",
+    amount: typeof body.paymentAmount === "string" ? body.paymentAmount : "",
+  };
+  const paymentErrors = validatePayment(paymentInput);
+  if (hasPaymentErrors(paymentErrors)) {
+    return NextResponse.json({ paymentErrors }, { status: 422 });
+  }
+
   const registration = await createRegistration({
     teamName: body.teamName,
     submitterEmail: body.submitterEmail,
@@ -44,6 +57,7 @@ export async function POST(request: Request) {
     technicalExperience: body.technicalExperience,
     motivation: body.motivation,
     members: body.members,
+    payment: paymentInput,
   });
 
   return NextResponse.json({ registration }, { status: 201 });

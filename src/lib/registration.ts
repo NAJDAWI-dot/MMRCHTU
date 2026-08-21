@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { sendRegistrationConfirmation } from "@/lib/email";
 import { IEEE_STATUS_OPTIONS, type IeeeStatus } from "@/lib/ieee-status";
+import { parsePayment, type PaymentInput } from "@/lib/payment";
 
 export { IEEE_STATUS_OPTIONS, type IeeeStatus };
 
@@ -21,6 +22,13 @@ export interface TeamMemberInput {
 }
 
 export interface RegistrationInput {
+  /**
+   * What the team says they transferred over CliQ, if anything yet.
+   *
+   * Optional throughout: a team may register now and pay later. Validation of
+   * the pair lives in `validatePayment`; this only records what came in.
+   */
+  payment?: PaymentInput;
   teamName: string;
   submitterEmail: string;
   memberCount: number;
@@ -130,6 +138,8 @@ export function hasFieldErrors(errors: FieldErrors): boolean {
 }
 
 export async function createRegistration(input: RegistrationInput) {
+  const payment = parsePayment(input.payment ?? {});
+
   return prisma.$transaction(async (tx) => {
     const registration = await tx.registration.create({
       data: {
@@ -138,6 +148,12 @@ export async function createRegistration(input: RegistrationInput) {
         memberCount: input.memberCount,
         technicalExperience: input.technicalExperience.trim(),
         motivation: input.motivation.trim(),
+        // A reference alone is not a payment — it is a claim, and it stays
+        // SUBMITTED until a human matches it against the account.
+        paymentStatus: payment.submitted ? "SUBMITTED" : "UNPAID",
+        paymentReference: payment.reference,
+        paymentAmountFils: payment.amountFils,
+        paymentSubmittedAt: payment.submitted ? new Date() : null,
         members: {
           create: input.members.map((member, i) => ({
             order: i + 1,

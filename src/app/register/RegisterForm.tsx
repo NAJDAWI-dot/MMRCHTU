@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { registerTeam, type RegisterActionState } from "@/app/register/actions";
 import { Button } from "@/components/ui/Button";
+import { CliqPanel } from "@/components/payment/CliqPanel";
 import { IEEE_STATUS_OPTIONS } from "@/lib/ieee-status";
+import type { CliqDetails } from "@/lib/payment";
 import type { TeamMemberFieldErrors } from "@/lib/registration";
 import { UNIVERSITIES } from "@/lib/universities";
 
@@ -12,9 +14,11 @@ const initialState: RegisterActionState = { status: "idle" };
 
 interface RegisterFormProps {
   feeInfoText: string;
+  /** Null when an admin has not switched CliQ on, or has not entered an alias. */
+  cliq: CliqDetails | null;
 }
 
-export function RegisterForm({ feeInfoText }: RegisterFormProps) {
+export function RegisterForm({ feeInfoText, cliq }: RegisterFormProps) {
   const [state, formAction] = useFormState(registerTeam, initialState);
   const [memberCount, setMemberCount] = useState(1);
 
@@ -28,15 +32,26 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
         <p className="mt-1 text-sm">
           We&apos;ll email your team with next steps as the competition date approaches.
         </p>
+        {cliq ? (
+          <p className="mt-3 text-sm">
+            {state.paymentReported
+              ? "We have your CliQ reference and will confirm once it is matched against the account."
+              : "The registration fee is still outstanding — send it over CliQ and email us the reference when you have it."}
+          </p>
+        ) : null}
       </div>
     );
   }
 
   return (
     <form action={formAction} noValidate className="space-y-6">
-      <p className="rounded-md bg-ras-purple/5 p-3 text-xs text-ras-gray dark:bg-white/5 dark:text-white/70">
-        {feeInfoText}
-      </p>
+      {cliq ? (
+        <CliqPanel config={cliq} feeInfoText={feeInfoText} />
+      ) : (
+        <p className="rounded-md bg-ras-purple/5 p-3 text-xs text-ras-gray dark:bg-white/5 dark:text-white/70">
+          {feeInfoText}
+        </p>
+      )}
 
       <Field
         id="teamName"
@@ -102,6 +117,32 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
         error={state.errors?.motivation}
         textarea
       />
+
+      {cliq ? (
+        <fieldset className="rounded-md border border-ras-gray/25 p-4">
+          <legend className="px-1 text-sm font-semibold text-ras-purple dark:text-white">
+            Already paid? (optional)
+          </legend>
+          <p className="text-xs text-ras-gray dark:text-white/70">
+            Leave both blank if you have not transferred the fee yet — you can send it afterwards.
+          </p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <Field
+              id="paymentReference"
+              name="paymentReference"
+              label="CliQ transaction reference"
+              error={state.paymentErrors?.reference}
+            />
+            <Field
+              id="paymentAmount"
+              name="paymentAmount"
+              label="Amount transferred (JD)"
+              inputMode="decimal"
+              error={state.paymentErrors?.amount}
+            />
+          </div>
+        </fieldset>
+      ) : null}
 
       <SubmitButton />
     </form>
@@ -206,6 +247,7 @@ interface FieldProps {
   error?: string;
   type?: string;
   autoComplete?: string;
+  inputMode?: "text" | "decimal" | "numeric";
   textarea?: boolean;
 }
 

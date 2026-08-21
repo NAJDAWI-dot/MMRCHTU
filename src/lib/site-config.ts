@@ -40,6 +40,14 @@ const REGISTER_FORM_FALLBACK: RegisterFormConfig = {
   deadlineDate: null,
   feeInfoText: "35 JD (non-member) / 25 JD (IEEE member) / 15 JD (IEEE RAS member) per team.",
   isOpen: true,
+  // Payment stays off until an admin fills the details in. There is no sensible
+  // default for a CliQ alias, and a blank one would send transfers nowhere.
+  paymentEnabled: false,
+  cliqAlias: "",
+  cliqAliasType: "ALIAS",
+  cliqBankName: "",
+  cliqAccountName: "",
+  paymentNote: "",
   updatedAt: NEVER_SAVED,
 };
 

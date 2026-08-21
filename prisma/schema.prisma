@@ -1,5 +1,5 @@
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   // Supabase gives two connection strings. Application queries go through the
   // pooled one (port 6543); migrations need the direct one (port 5432) because
   // the pooler cannot run the statements a migration issues.
@@ -25,9 +25,23 @@ model Registration {
   status              String   @default("PENDING")
   createdAt           DateTime @default(now())
 
+  /// Payment is tracked separately from `status`: a team can be CONFIRMED on
+  /// merit while its fee is still outstanding, and refusing a payment must not
+  /// silently cancel a registration. See PaymentStatus in src/lib/payment.ts.
+  paymentStatus      String    @default("UNPAID")
+  /// The CliQ transaction reference the team reports, normalised on the way in.
+  paymentReference   String?
+  /// Stored in fils (1 JOD = 1000) so money is never a float.
+  paymentAmountFils  Int?
+  paymentSubmittedAt DateTime?
+  paymentVerifiedAt  DateTime?
+  /// Admin-facing: why a payment was refused, or any reconciliation note.
+  paymentNote        String?
+
   members TeamMember[]
 
   @@index([status])
+  @@index([paymentStatus])
 }
 
 model TeamMember {
@@ -121,16 +135,16 @@ model BroadcastList {
 }
 
 model BroadcastContact {
-  id       String        @id @default(cuid())
-  listId   String
-  list     BroadcastList @relation(fields: [listId], references: [id], onDelete: Cascade)
-  email    String
-  name     String        @default("")
+  id      String        @id @default(cuid())
+  listId  String
+  list    BroadcastList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  email   String
+  name    String        @default("")
   // "MANUAL" for hand-entered rows, "REGISTRATION" for rows pulled in by the
   // import action — lets a re-import top up a list without duplicating or
   // clobbering people the admin added themselves.
-  source   String        @default("MANUAL")
-  addedAt  DateTime      @default(now())
+  source  String        @default("MANUAL")
+  addedAt DateTime      @default(now())
 
   @@unique([listId, email])
   @@index([listId])
@@ -139,14 +153,14 @@ model BroadcastContact {
 // Send log: one row per broadcast attempt, kept so the admin can see what was
 // already sent to a list rather than re-sending blind.
 model Broadcast {
-  id         String        @id @default(cuid())
-  listId     String
-  list       BroadcastList @relation(fields: [listId], references: [id], onDelete: Cascade)
-  subject    String
-  body       String
-  sentCount  Int           @default(0)
-  failedCount Int          @default(0)
-  sentAt     DateTime      @default(now())
+  id          String        @id @default(cuid())
+  listId      String
+  list        BroadcastList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  subject     String
+  body        String
+  sentCount   Int           @default(0)
+  failedCount Int           @default(0)
+  sentAt      DateTime      @default(now())
 
   @@index([listId])
 }
@@ -225,17 +239,17 @@ model GalleryPhoto {
   album   GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
 
   // Public URL of the stored image.
-  url String
+  url        String
   // Key in blob storage, kept so deleting the row can delete the file too and
   // the store does not fill with orphans nobody can find.
-  storageKey String @default("")
-  caption    String @default("")
+  storageKey String   @default("")
+  caption    String   @default("")
   // Recorded at upload so the page can reserve the right space and avoid the
   // layout jumping as each image arrives.
-  width     Int?
-  height    Int?
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
+  width      Int?
+  height     Int?
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
 
   @@index([albumId])
 }
@@ -248,5 +262,21 @@ model RegisterFormConfig {
   deadlineDate DateTime?
   feeInfoText  String    @default("35 JD (non-member) / 25 JD (IEEE member) / 15 JD (IEEE RAS member) per team.")
   isOpen       Boolean   @default(true)
-  updatedAt    DateTime  @updatedAt
+
+  /// CliQ payment details, all admin-supplied.
+  ///
+  /// Off by default and blank: nobody but the committee knows the chapter's
+  /// alias, and a payment panel showing a placeholder would send money to
+  /// nowhere. The register page shows nothing until this is filled in and
+  /// switched on.
+  paymentEnabled  Boolean @default(false)
+  cliqAlias       String  @default("")
+  /// ALIAS or MOBILE — banking apps ask which kind of CliQ identifier this is.
+  cliqAliasType   String  @default("ALIAS")
+  cliqBankName    String  @default("")
+  cliqAccountName String  @default("")
+  /// Anything else the team needs to know, shown under the details.
+  paymentNote     String  @default("")
+
+  updatedAt DateTime @updatedAt
 }
