@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { GAME_MODES, MAX_NAME_LENGTH, isGameMode, sanitisePlayerName } from "@/lib/leaderboard";
+import { clientKey, createRateLimiter } from "@/lib/rate-limit";
 
 // The board changes on every submission, so it must never be statically cached.
 export const dynamic = "force-dynamic";
@@ -14,6 +15,15 @@ const TOP_N = 20;
 // authoritative record.
 const MAX_SCORE = 10_000_000;
 const MAX_LEVEL = 999;
+
+/**
+ * The caps above keep a single absurd value out; this keeps a loop out.
+ *
+ * Ten a minute is far more than anyone finishing real games can produce — a
+ * round takes minutes — while still leaving room for a player retrying after a
+ * validation error without being locked out of their own score.
+ */
+const limiter = createRateLimiter({ limit: 10, windowMs: 60 * 1000 });
 
 export async function GET(request: NextRequest) {
   const modeParam = request.nextUrl.searchParams.get("mode") ?? "classic";
@@ -30,6 +40,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const limit = limiter.check(clientKey(request.headers));
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many submissions. Play another round and try again shortly." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(limit.retryAfterMs / 1000)) } },
+    );
+  }
+
   let payload: unknown;
   try {
     payload = await request.json();

@@ -9,7 +9,10 @@ import {
   type ScheduleItem,
 } from "@/lib/schedule";
 
-export const dynamic = "force-dynamic";
+// States and "in 6 hours" are computed against the server's clock, so this
+// cannot be cached for long without the page quietly lying. A minute is
+// finer than anything it displays.
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Schedule",

@@ -7,8 +7,12 @@ import { shouldShowCountdown } from "@/lib/countdown";
 import { buildTimeline, focusEvent } from "@/lib/schedule";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import { prisma } from "@/lib/prisma";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { eventJsonLd } from "@/lib/structured-data";
 
-export const dynamic = "force-dynamic";
+// Carries a relative time for the next event, so it ages like the schedule
+// does. Admin saves revalidate it immediately regardless.
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Competition Day",
@@ -34,6 +38,17 @@ export default async function CompetitionDayPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16">
+      {/* Described here rather than in the layout because this is the page that
+          holds the date and the venue — the two facts that make an Event entry
+          worth emitting at all. */}
+      <JsonLd
+        data={eventJsonLd({
+          name: config.headline,
+          description: config.intro || metadata.description || "",
+          startDate: config.eventDate,
+          venue: config.venue,
+        })}
+      />
       {/*
         The hero carries the two facts everyone comes for — when and where —
         against something with depth, rather than opening on a heading and a

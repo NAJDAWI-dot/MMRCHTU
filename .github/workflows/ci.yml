@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  # Lets a run be kicked off by hand from the Actions tab, which is useful when
+  # a failure looked environmental rather than real.
+  workflow_dispatch:
+
+# A second push to the same branch makes the first run pointless, so cancel it
+# rather than queueing behind it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    # `next build` prerenders the static pages, and every page renders the root
+    # layout — which renders the header, which queries the database for which
+    # nav links to show. So the build needs a real Postgres, not a stub URL.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: mmrc
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:ci@localhost:5432/mmrc
+      # Supabase splits pooled and direct connections; a local Postgres is both.
+      DIRECT_URL: postgresql://postgres:ci@localhost:5432/mmrc
+      # src/lib/env.ts throws when this is missing. Value is irrelevant to a
+      # build — it only has to exist — and it is not a real secret.
+      SESSION_SECRET: ci-not-a-real-secret-used-only-to-satisfy-env-validation
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # `npm ci` runs postinstall, which runs `prisma generate` — so the client
+      # exists before anything below tries to import it.
+      - name: Install
+        run: npm ci
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      # Each step runs even if an earlier one failed, so one push surfaces every
+      # problem at once instead of one per re-run.
+      - name: Typecheck
+        if: always()
+        run: npm run typecheck
+
+      - name: Lint
+        if: always()
+        run: npm run lint
+
+      - name: Test
+        if: always()
+        run: npm test
+
+      - name: Build
+        if: always()
+        run: npm run build

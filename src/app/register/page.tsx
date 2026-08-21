@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { RegisterForm } from "@/app/register/RegisterForm";
 import { getRegisterFormConfig } from "@/lib/site-config";
 
-export const dynamic = "force-dynamic";
+// Only the form's configuration comes from the database, and closing
+// registration revalidates this path immediately.
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Register",

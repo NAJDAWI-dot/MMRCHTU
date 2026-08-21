@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Offline | MMRC 26</title>
+    <!--
+      Everything inline. This page is served precisely when the network is
+      unavailable, so a stylesheet or a font it had to fetch would be the one
+      thing guaranteed not to load.
+    -->
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 2rem;
+        text-align: center;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: #ffffff;
+        color: #57565b;
+      }
+      h1 { margin: 0; font-size: 1.75rem; color: #5f2167; }
+      p { margin: 0; max-width: 32rem; font-size: 1rem; line-height: 1.6; }
+      a {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 1.25rem;
+        border-radius: 6px;
+        background: #5f2167;
+        color: #fff;
+        font-weight: 600;
+        font-size: 1rem;
+        text-decoration: none;
+      }
+      .hint { font-size: 0.75rem; opacity: 0.7; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #2a0e2f; color: rgba(255, 255, 255, 0.75); }
+        h1 { color: #ffffff; }
+        a { background: #862633; }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>You are offline</h1>
+    <p>
+      This page has not been opened on this device yet, so there is no copy saved to show you.
+      Pages you have already visited will still work.
+    </p>
+    <a href="/">Try the homepage</a>
+    <p class="hint">MMRC 26 &middot; IEEE RAS HTU Student Chapter</p>
+  </body>
+</html>

@@ -9,7 +9,7 @@
     "vercel-build": "prisma migrate deploy && prisma db seed && next build",
     "start": "next start",
     "build:standalone-serve": "next build && node scripts/copy-standalone-assets.mjs && node .next/standalone/server.js",
-    "lint": "eslint .",
+    "lint": "eslint . --ext .ts,.tsx,.js,.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

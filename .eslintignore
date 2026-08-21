@@ -1,0 +1,8 @@
+node_modules
+.next
+.vercel
+coverage
+playwright-report
+test-results
+prisma/migrations
+scripts/copy-standalone-assets.mjs

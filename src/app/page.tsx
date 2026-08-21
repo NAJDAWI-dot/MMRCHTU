@@ -8,7 +8,10 @@ import { getCompetitionDayConfig } from "@/lib/site-config";
 
 // The countdown reads a live config row, so this page cannot be baked at
 // build time and still be right.
-export const dynamic = "force-dynamic";
+// The only database-backed thing here is the competition date, and the
+// clock itself ticks in the browser. Admin saves call revalidatePath("/",
+// "layout"), so a changed date appears at once rather than in five minutes.
+export const revalidate = 300;
 
 export default async function HomePage() {
   const config = await getCompetitionDayConfig();

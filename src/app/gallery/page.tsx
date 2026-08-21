@@ -5,7 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { sortAlbums } from "@/lib/gallery";
 
-export const dynamic = "force-dynamic";
+// Albums change when photos are uploaded, and that action revalidates this
+// path directly.
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Gallery",

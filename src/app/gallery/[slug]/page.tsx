@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { downloadUrlFor } from "@/lib/photo-storage";
 import { PhotoGrid } from "./PhotoGrid";
 
-export const dynamic = "force-dynamic";
+// As with the album index: uploads revalidate this path by slug.
+export const revalidate = 300;
 
 async function getAlbum(slug: string) {
   return prisma.galleryAlbum.findFirst({
