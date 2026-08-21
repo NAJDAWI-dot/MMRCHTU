@@ -12,9 +12,17 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const config = await getCompetitionDayConfig();
-  // Nothing is teased here that the Competition Day page itself is hiding.
-  const visible = parseStatus(config.status) !== "HIDDEN";
-  const showCountdown = visible && shouldShowCountdown(config.eventDate);
+  /*
+    Whether the Competition Day *page* is reachable. It gates the link below,
+    not the clock.
+
+    The clock used to be gated on it too, so a page still marked HIDDEN while
+    its running order was being written left the homepage saying nothing at all
+    about when the competition was. The date is the single most useful fact
+    here, and it is not a secret — only the details behind it are.
+  */
+  const dayPageVisible = parseStatus(config.status) !== "HIDDEN";
+  const showCountdown = shouldShowCountdown(config.eventDate);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
@@ -39,19 +47,34 @@ export default async function HomePage() {
         </div>
 
         {showCountdown && config.eventDate ? (
-          <div className="mt-12 flex flex-col items-center">
-            <p className="text-xs uppercase tracking-widest text-ras-gray dark:text-white/60">
-              Competition day in
-            </p>
-            <div className="mt-3">
-              <Countdown target={config.eventDate} compact />
+          <div className="mt-14">
+            <div className="relative mx-auto max-w-2xl overflow-hidden rounded-2xl border border-ras-purple/25 bg-gradient-to-br from-ras-purple/10 via-transparent to-ras-crimson/10 px-5 py-7 sm:px-8">
+              {/* A faint sweep across the panel, so the one live thing on the
+                  page sits on something that is not flat. */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-ras-crimson/10 blur-3xl"
+              />
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-ras-crimson dark:text-mood-rose">
+                Competition day in
+              </p>
+              <div className="mt-4 flex justify-center">
+                <Countdown target={config.eventDate} />
+              </div>
+              {config.dateText || config.venue ? (
+                <p className="mt-5 text-sm text-ras-gray dark:text-white/70">
+                  {[config.dateText, config.venue].filter(Boolean).join(" · ")}
+                </p>
+              ) : null}
+              {dayPageVisible ? (
+                <Link
+                  href="/competition-day"
+                  className="-mx-2 mt-1 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline dark:text-mood-rose"
+                >
+                  Competition day details →
+                </Link>
+              ) : null}
             </div>
-            <Link
-              href="/competition-day"
-              className="-mx-2 mt-1 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline"
-            >
-              Competition day details →
-            </Link>
           </div>
         ) : null}
       </section>

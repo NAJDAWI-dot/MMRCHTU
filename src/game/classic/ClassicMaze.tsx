@@ -863,7 +863,13 @@ export function ClassicMaze() {
 
     function fit() {
       const fullscreen = isFullscreen();
-      const availW = fullscreen ? window.innerWidth * 0.98 : Math.min(window.innerWidth * 0.94, 700);
+      // Measured against the container rather than the window: sizing to the
+      // viewport ignores the page's own padding and max width, which lets the
+      // board grow wider than the column holding it and scroll a phone
+      // sideways. Same fix as FirstPerson.
+      const container = wrap.parentElement;
+      const containerW = container ? container.clientWidth : window.innerWidth;
+      const availW = fullscreen ? window.innerWidth * 0.98 : Math.min(containerW, 700);
       // In fullscreen the board shares the screen with the score bar and touch
       // pad, so subtract their measured heights. Deriving this from the stage's
       // own height does not work: the stage is sized to the whole screen in
@@ -876,11 +882,22 @@ export function ClassicMaze() {
         ? window.innerHeight - chrome
         : window.innerHeight - wrap.getBoundingClientRect().top - 40;
       const cap = fullscreen ? 3 : 1.5;
-      const s = Math.min(availW / 456, availH / 504, cap);
+      // Height is a hard limit only where the page cannot scroll — see the note
+      // in FirstPerson.fit(). On a phone, fitting the leftover height leaves a
+      // board too small to aim with; scrolling is the cheaper cost.
+      const narrow = !fullscreen && containerW < 640;
+      const s = narrow
+        ? Math.min(availW / 456, cap)
+        : Math.min(availW / 456, availH / 504, cap);
       canvas.style.width = 456 * s + "px";
       canvas.style.height = 504 * s + "px";
     }
     window.addEventListener("resize", fit);
+    // The board mounts on a tab switch, mid layout-settle, so the first fit()
+    // can measure a width that is about to change. Watching the container
+    // corrects that, and orientation changes with it.
+    const fitObserver = new ResizeObserver(fit);
+    if (wrap.parentElement) fitObserver.observe(wrap.parentElement);
     fit();
 
     resetMaze();
@@ -895,6 +912,7 @@ export function ClassicMaze() {
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("resize", fit);
+      fitObserver.disconnect();
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       startBtn.removeEventListener("click", handleStart);
       muteBtn.removeEventListener("click", handleMute);

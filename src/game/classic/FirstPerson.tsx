@@ -63,6 +63,8 @@ export function FirstPerson() {
   const restartBtnRef = useRef<HTMLButtonElement>(null);
   const exitBtnRef = useRef<HTMLButtonElement>(null);
   const liveRef = useRef<HTMLDivElement>(null);
+  const stickRef = useRef<HTMLDivElement>(null);
+  const knobRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (
@@ -83,6 +85,8 @@ export function FirstPerson() {
       !hiRef.current ||
       !levelRef.current ||
       !livesRef.current ||
+      !stickRef.current ||
+      !knobRef.current ||
       !canvasRef.current.getContext("2d")
     ) {
       return;
@@ -107,6 +111,8 @@ export function FirstPerson() {
     const lvlEl = levelRef.current as HTMLSpanElement;
     const livesEl = livesRef.current as HTMLDivElement;
     const liveEl = liveRef.current;
+    const stick = stickRef.current as HTMLDivElement;
+    const knob = knobRef.current as HTMLDivElement;
     const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 
     let disposed = false;
@@ -220,22 +226,90 @@ export function FirstPerson() {
     function handleMouseMove(e: MouseEvent) {
       if (document.pointerLockElement === canvas && phase === "play") P.a += e.movementX * 0.0032;
     }
-    let tPrev: { x: number; y: number } | null = null;
-    function handleTouchStart(e: TouchEvent) {
-      const t = e.touches[0];
-      if (!t) return;
-      tPrev = { x: t.clientX, y: t.clientY };
+    /* ---- touch controls ----------------------------------------------------
+      The old scheme was a single drag on the canvas that both turned and moved:
+      it called tryMove once per touchmove event, so the mouse only travelled
+      while a finger was physically sliding. Walking down a corridor meant
+      swiping over and over, speed depended on how fast you swiped, and the one
+      finger had to steer at the same time.
+
+      Replaced with the pattern every mobile shooter uses: a thumbstick that
+      holds a direction, and a separate drag to look. The stick writes into
+      `touchAxis`, which movePlayer reads every frame — so holding it walks, and
+      the speed is frame-rate independent like the keyboard already was.
+
+      X is turn rather than strafe. This is a maze seen through corridors:
+      turning is what you need constantly and strafing almost never, and a stick
+      that strafes leaves a player who never discovers look-drag unable to round
+      a corner at all.
+    */
+    const touchAxis = { fwd: 0, turn: 0 };
+    // Below this the stick reads as centred, so a thumb resting on the pad does
+    // not creep the mouse forward.
+    const STICK_DEADZONE = 0.14;
+    let stickPointer: number | null = null;
+    let lookPointer: number | null = null;
+    let lookPrevX = 0;
+
+    function stickVector(e: PointerEvent) {
+      const r = stick.getBoundingClientRect();
+      const max = r.width / 2;
+      let dx = e.clientX - (r.left + max);
+      let dy = e.clientY - (r.top + r.height / 2);
+      const dist = Math.hypot(dx, dy);
+      if (dist > max) {
+        dx = (dx / dist) * max;
+        dy = (dy / dist) * max;
+      }
+      knob.style.transform = `translate(${dx}px, ${dy}px)`;
+      const nx = dx / max;
+      const ny = -dy / max;
+      touchAxis.turn = Math.abs(nx) < STICK_DEADZONE ? 0 : nx;
+      touchAxis.fwd = Math.abs(ny) < STICK_DEADZONE ? 0 : ny;
+    }
+    function releaseStick() {
+      stickPointer = null;
+      touchAxis.fwd = 0;
+      touchAxis.turn = 0;
+      knob.style.transform = "";
+    }
+    function handleStickDown(e: PointerEvent) {
+      if (stickPointer !== null) return;
+      stickPointer = e.pointerId;
+      // Capture so the axis keeps updating if the thumb slides off the pad,
+      // and so releasing outside it still recentres rather than sticking on.
+      stick.setPointerCapture(e.pointerId);
+      audioInit();
+      stickVector(e);
+      e.preventDefault();
+    }
+    function handleStickMove(e: PointerEvent) {
+      if (e.pointerId !== stickPointer) return;
+      stickVector(e);
+      e.preventDefault();
+    }
+    function handleStickUp(e: PointerEvent) {
+      if (e.pointerId !== stickPointer) return;
+      releaseStick();
+    }
+
+    function handleLookDown(e: PointerEvent) {
+      // Mouse look is already handled by pointer lock on click; this is for
+      // fingers and styluses only.
+      if (e.pointerType === "mouse" || lookPointer !== null) return;
+      lookPointer = e.pointerId;
+      lookPrevX = e.clientX;
+      canvas.setPointerCapture(e.pointerId);
       audioInit();
     }
-    function handleTouchMove(e: TouchEvent) {
-      const t = e.touches[0];
-      if (!tPrev || !t || phase !== "play") return;
-      const dx = t.clientX - tPrev.x;
-      const dy = t.clientY - tPrev.y;
-      P.a += dx * 0.006;
-      const fwd = -dy * 0.015;
-      tryMove(Math.cos(P.a) * fwd, Math.sin(P.a) * fwd);
-      tPrev = { x: t.clientX, y: t.clientY };
+    function handleLookMove(e: PointerEvent) {
+      if (e.pointerId !== lookPointer) return;
+      if (phase === "play") P.a += (e.clientX - lookPrevX) * 0.006;
+      lookPrevX = e.clientX;
+    }
+    function handleLookUp(e: PointerEvent) {
+      if (e.pointerId !== lookPointer) return;
+      lookPointer = null;
     }
 
     function hitWall(x: number, y: number) {
@@ -254,6 +328,7 @@ export function FirstPerson() {
       let rot = 0;
       if (keys["arrowleft"]) rot -= 1;
       if (keys["arrowright"]) rot += 1;
+      rot += touchAxis.turn;
       P.a += rot * 2.7 * dt;
       let f = 0;
       let s = 0;
@@ -261,11 +336,17 @@ export function FirstPerson() {
       if (keys["s"] || keys["arrowdown"]) f -= 1;
       if (keys["a"]) s -= 1;
       if (keys["d"]) s += 1;
+      f += touchAxis.fwd;
       if (f || s) {
         const dx = Math.cos(P.a) * f + Math.cos(P.a + Math.PI / 2) * s;
         const dy = Math.sin(P.a) * f + Math.sin(P.a + Math.PI / 2) * s;
         const len = Math.hypot(dx, dy) || 1;
-        const sp = ((3.3 + (frT > 0 ? 0.4 : 0)) * GAME_SPEED_SCALE * MOUSE_SPEED_SCALE * dt) / len;
+        // Scaled by how far the stick is pushed, so a gentle nudge creeps and a
+        // full push runs. Capped at 1 so this cannot outrun the keyboard, which
+        // always supplies a whole unit and is unaffected by the change.
+        const throttle = Math.min(1, Math.hypot(f, s));
+        const sp =
+          ((3.3 + (frT > 0 ? 0.4 : 0)) * GAME_SPEED_SCALE * MOUSE_SPEED_SCALE * dt * throttle) / len;
         tryMove(dx * sp, dy * sp);
       }
     }
@@ -752,8 +833,14 @@ export function FirstPerson() {
     window.addEventListener("keyup", handleKeyup);
     canvas.addEventListener("click", handleCanvasClick);
     document.addEventListener("mousemove", handleMouseMove);
-    canvas.addEventListener("touchstart", handleTouchStart, { passive: true });
-    canvas.addEventListener("touchmove", handleTouchMove, { passive: true });
+    canvas.addEventListener("pointerdown", handleLookDown);
+    canvas.addEventListener("pointermove", handleLookMove);
+    canvas.addEventListener("pointerup", handleLookUp);
+    canvas.addEventListener("pointercancel", handleLookUp);
+    stick.addEventListener("pointerdown", handleStickDown);
+    stick.addEventListener("pointermove", handleStickMove);
+    stick.addEventListener("pointerup", handleStickUp);
+    stick.addEventListener("pointercancel", handleStickUp);
 
     function handleStart() {
       audioInit();
@@ -840,16 +927,48 @@ export function FirstPerson() {
 
     function fit() {
       const fullscreen = isFullscreen();
-      const availW = fullscreen ? window.innerWidth * 0.98 : Math.min(window.innerWidth * 0.94, 840);
+      /*
+        Measured against the container, not the window.
+
+        Sizing to `window.innerWidth * 0.94` ignored the page's own padding and
+        max width, so on a narrow phone the board came out wider than the column
+        holding it: the view hung off the left edge, the page scrolled sideways,
+        and the joystick anchored to the board's bottom-left went with it — half
+        of it off-screen, which is no way to steer.
+      */
+      const container = wrap.parentElement;
+      const containerW = container ? container.clientWidth : window.innerWidth;
+      const availW = fullscreen ? window.innerWidth * 0.98 : Math.min(containerW, 840);
       const availH = fullscreen
         ? window.innerHeight * 0.98
         : window.innerHeight - wrap.getBoundingClientRect().top - 60;
       const cap = fullscreen ? 3 : 1.4;
-      const s = Math.min(availW / W, availH / H, cap);
+      /*
+        Height is a hard limit only where the page cannot scroll.
+
+        Keeping the board inside the fold is right on a desktop. On a phone the
+        title, blurb, mode tabs and score bar eat most of a 568px screen, and
+        obeying the leftover height shrank the view to 182px across — technically
+        on screen, and far too small to play. Vertical scrolling costs a thumb
+        flick; an unreadable view costs the game.
+      */
+      const narrow = !fullscreen && containerW < 640;
+      const s = narrow
+        ? Math.min(availW / W, cap)
+        : Math.min(availW / W, availH / H, cap);
       canvas.style.width = W * s + "px";
       canvas.style.height = H * s + "px";
     }
     window.addEventListener("resize", fit);
+    /*
+      A resize event is not the only thing that changes the space available.
+      This board mounts when the game tab is switched, mid layout- and
+      animation-settle, so the first fit() can measure a width that is about to
+      change and nothing would correct it. Watching the container catches that,
+      along with orientation changes and late font loads.
+    */
+    const fitObserver = new ResizeObserver(fit);
+    if (wrap.parentElement) fitObserver.observe(wrap.parentElement);
     fit();
 
     resetGrid();
@@ -864,9 +983,16 @@ export function FirstPerson() {
       window.removeEventListener("keyup", handleKeyup);
       canvas.removeEventListener("click", handleCanvasClick);
       document.removeEventListener("mousemove", handleMouseMove);
-      canvas.removeEventListener("touchstart", handleTouchStart);
-      canvas.removeEventListener("touchmove", handleTouchMove);
+      canvas.removeEventListener("pointerdown", handleLookDown);
+      canvas.removeEventListener("pointermove", handleLookMove);
+      canvas.removeEventListener("pointerup", handleLookUp);
+      canvas.removeEventListener("pointercancel", handleLookUp);
+      stick.removeEventListener("pointerdown", handleStickDown);
+      stick.removeEventListener("pointermove", handleStickMove);
+      stick.removeEventListener("pointerup", handleStickUp);
+      stick.removeEventListener("pointercancel", handleStickUp);
       window.removeEventListener("resize", fit);
+      fitObserver.disconnect();
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       startBtn.removeEventListener("click", handleStart);
       muteBtn.removeEventListener("click", handleMute);
@@ -895,7 +1021,10 @@ export function FirstPerson() {
       </div>
 
       <div ref={wrapRef} className="relative leading-none">
-        <canvas ref={canvasRef} width={W} height={H} role="application" aria-label="First-person maze view" className="rounded-lg border-2 border-ras-purple bg-[#140b1e] shadow-[0_0_30px_rgba(95,33,103,.45)]" />
+        {/* touch-none: without it, dragging to look scrolls the page instead
+            and the view barely turns. The overlay above is not touch-none, so
+            the page still scrolls normally while the menu is up. */}
+        <canvas ref={canvasRef} width={W} height={H} role="application" aria-label="First-person maze view" className="touch-none rounded-lg border-2 border-ras-purple bg-[#140b1e] shadow-[0_0_30px_rgba(95,33,103,.45)]" />
         <button ref={muteBtnRef} type="button" title="Mute" className="absolute left-2 top-2 h-9 w-9 rounded-md border border-ras-purple/40 bg-black/40 text-lg">
           🔊
         </button>
@@ -905,6 +1034,35 @@ export function FirstPerson() {
         <button ref={pauseBtnRef} type="button" title="Pause (Esc)" className="absolute left-24 top-2 h-9 w-9 rounded-md border border-ras-purple/40 bg-black/40 text-lg">
           ⏸
         </button>
+        {/*
+          Touch controls. Declared before the overlay so that, sharing a
+          stacking context, the overlay paints on top and swallows the taps —
+          the stick is inert on the menu and the pause screen without needing
+          to be toggled.
+
+          Only on devices that cannot hover: on a laptop it would sit over the
+          view for no reason, and the keyboard is better there anyway.
+        */}
+        <div
+          ref={stickRef}
+          aria-hidden="true"
+          // Sized against the view it sits on: the board is about 180px tall on
+          // a small phone, so a larger pad would hide most of the corridor the
+          // player is trying to walk down. Kept translucent for the same reason.
+          className="absolute bottom-2 left-2 hidden h-24 w-24 touch-none select-none place-items-center rounded-full border-2 border-[#F2A900]/40 bg-black/30 backdrop-blur-sm [@media(hover:none)]:grid"
+        >
+          <div
+            ref={knobRef}
+            className="pointer-events-none h-10 w-10 rounded-full border-2 border-[#F2A900] bg-ras-crimson/70 shadow-[0_0_10px_rgba(242,169,0,.45)]"
+          />
+        </div>
+        <p
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-4 right-3 hidden max-w-[9rem] text-right text-[10px] leading-tight text-white/60 [@media(hover:none)]:block"
+        >
+          Stick to walk and turn · drag the view to look
+        </p>
+
         <div ref={overlayRef} className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-black/85 p-5 text-center">
           <div className="text-5xl">🐭</div>
           <h2 ref={ovTitleRef} className="font-display text-2xl font-bold uppercase tracking-widest text-[#F2A900]">
@@ -915,7 +1073,15 @@ export function FirstPerson() {
             <b>minimap</b>. Grab cheese to overclock and hunt the robots.
             <br />
             <br />
-            W/S move &middot; A/D strafe &middot; Left/Right or mouse-look (click the view) &middot; minimap top-right
+            {/* Captured into READY_HTML on mount and restored when returning to
+                the menu, so both variants have to live inside this element. */}
+            <span className="[@media(hover:none)]:hidden">
+              W/S move &middot; A/D strafe &middot; Left/Right or mouse-look (click the view) &middot; minimap
+              top-right
+            </span>
+            <span className="hidden [@media(hover:none)]:inline">
+              Hold the stick to walk and turn &middot; drag the view to look around &middot; minimap top-right
+            </span>
           </p>
           <button ref={startBtnRef} type="button" className="rounded-full border-2 border-[#F2A900] bg-ras-crimson px-8 py-3 text-sm font-bold uppercase tracking-widest text-white">
             Enter the Maze
@@ -935,7 +1101,12 @@ export function FirstPerson() {
       </div>
 
       <p className="mt-2 text-center text-xs text-ras-gray dark:text-white/60">
-        W/S move &middot; A/D strafe &middot; Left/Right or mouse-look (click view) &middot; minimap top-right
+        <span className="[@media(hover:none)]:hidden">
+          W/S move &middot; A/D strafe &middot; Left/Right or mouse-look (click view) &middot; minimap top-right
+        </span>
+        <span className="hidden [@media(hover:none)]:inline">
+          Hold the stick to walk and turn &middot; drag the view to look around &middot; minimap top-right
+        </span>
       </p>
 
       <div ref={liveRef} className="sr-only-live" aria-live="polite" />
