@@ -13,6 +13,14 @@ export function Footer() {
           © {new Date().getFullYear()} IEEE RAS HTU Student Chapter.
         </p>
       </div>
+
+      {/* The last line on every page. Separated from the chapter's own credit
+          above it so the two are not read as one sentence. */}
+      <div className="border-t border-ras-gray/10 px-4 py-4 text-center">
+        <p className="font-display text-sm font-bold tracking-[0.35em] text-ras-purple dark:text-white/80">
+          NAJDAWI
+        </p>
+      </div>
     </footer>
   );
 }
