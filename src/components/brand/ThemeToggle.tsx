@@ -10,7 +10,7 @@ export function ThemeToggle() {
       type="button"
       onClick={toggleTheme}
       aria-pressed={resolvedTheme === "dark"}
-      className="rounded-md border border-ras-gray/30 px-3 py-1.5 text-sm font-medium text-ras-purple transition-colors hover:bg-ras-purple/10 dark:text-white dark:hover:bg-white/10"
+      className="rounded-md border border-ras-gray/30 px-3 py-1.5 text-sm font-medium text-ras-purple transition-[background-color,transform] duration-200 hover:bg-ras-purple/10 active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 dark:text-white dark:hover:bg-white/10"
     >
       {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
     </button>

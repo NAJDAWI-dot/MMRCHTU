@@ -18,10 +18,10 @@ export default async function SchedulePage() {
       <h1 className="font-display text-3xl font-extrabold text-ras-purple dark:text-white">
         Schedule
       </h1>
-      <ol className="mt-8 space-y-4">
+      <ol className="stagger mt-8 space-y-4">
         {schedule.map((item) => (
           <li key={item.id}>
-            <Card className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Card interactive className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="font-display font-bold text-ras-purple dark:text-white">
                   {item.title}

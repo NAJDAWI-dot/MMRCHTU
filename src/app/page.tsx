@@ -56,8 +56,8 @@ export default async function HomePage() {
         ) : null}
       </section>
 
-      <section className="mt-20 grid gap-6 sm:grid-cols-3">
-        <Card>
+      <section className="stagger mt-20 grid gap-6 sm:grid-cols-3">
+        <Card interactive>
           <h2 className="font-display text-lg font-bold text-ras-purple dark:text-white">
             Rules &amp; scoring
           </h2>
@@ -68,7 +68,7 @@ export default async function HomePage() {
             View rules →
           </Link>
         </Card>
-        <Card>
+        <Card interactive>
           <h2 className="font-display text-lg font-bold text-ras-purple dark:text-white">
             Schedule
           </h2>
@@ -79,7 +79,7 @@ export default async function HomePage() {
             View schedule →
           </Link>
         </Card>
-        <Card>
+        <Card interactive>
           <h2 className="font-display text-lg font-bold text-ras-purple dark:text-white">
             FAQ
           </h2>

@@ -486,9 +486,71 @@
   animation: marker-pulse 2200ms ease-out infinite;
 }
 
+/*
+  Site-wide motion.
+
+  Every page arrived fully formed and completely still — correct, and inert.
+  These do the bulk of the work of making it feel otherwise, and they are
+  deliberately applied through the layout and the shared primitives rather than
+  page by page, so a page added later gets them without anyone remembering to.
+*/
+
+/* Each route fades up as it arrives. Applied by PageTransition, which keys on
+   the pathname so the animation replays on every navigation. */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.page-enter {
+  animation: page-enter 260ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+/*
+  Children arrive in sequence rather than all at once. Capped at eight steps:
+  beyond that the last item waits long enough to read as a fault, and a gallery
+  album holds far more than eight photos.
+*/
+.stagger > * {
+  animation: figure-in 380ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 30ms; }
+.stagger > *:nth-child(2) { animation-delay: 75ms; }
+.stagger > *:nth-child(3) { animation-delay: 120ms; }
+.stagger > *:nth-child(4) { animation-delay: 165ms; }
+.stagger > *:nth-child(5) { animation-delay: 210ms; }
+.stagger > *:nth-child(6) { animation-delay: 255ms; }
+.stagger > *:nth-child(7) { animation-delay: 300ms; }
+.stagger > *:nth-child(n + 8) { animation-delay: 345ms; }
+
+/* A digit replacing itself on the countdown, so the clock visibly ticks. */
+@keyframes tick-in {
+  from {
+    opacity: 0;
+    transform: translateY(-40%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.tick-in {
+  animation: tick-in 280ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .figure-in,
-  .pop-in {
+  .pop-in,
+  .page-enter,
+  .tick-in,
+  .stagger > * {
     animation: none;
   }
 

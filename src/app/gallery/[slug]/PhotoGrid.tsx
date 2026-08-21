@@ -109,7 +109,7 @@ export function PhotoGrid({ photos, albumTitle }: { photos: GalleryPhotoView[]; 
 
   return (
     <>
-      <ul className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <ul className="stagger mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {photos.map((photo, index) => (
           // The download control is a sibling of the button, not a child:
           // an anchor nested inside a button is invalid and browsers handle
@@ -168,7 +168,7 @@ export function PhotoGrid({ photos, albumTitle }: { photos: GalleryPhotoView[]; 
           aria-label={open.caption || `${albumTitle} photo ${(openIndex ?? 0) + 1}`}
           // Focusable so opening can land here, but not a tab stop of its own.
           tabIndex={-1}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 p-4 focus:outline-none"
+          className="page-enter fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 p-4 focus:outline-none"
           // Clicking the backdrop closes; clicks on the image itself must not.
           onClick={(event) => {
             if (event.target === event.currentTarget) close();

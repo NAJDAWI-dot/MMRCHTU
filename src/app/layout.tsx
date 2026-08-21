@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/brand/ThemeProvider";
 import { SplashScreen } from "@/components/brand/SplashScreen";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { PageTransition } from "@/components/layout/PageTransition";
 import { splashPrePaintScript } from "@/lib/splash";
 import "./globals.css";
 
@@ -62,7 +63,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             Skip to content
           </a>
           <Header />
-          <main id="main-content">{children}</main>
+          <main id="main-content">
+            <PageTransition>{children}</PageTransition>
+          </main>
           <Footer />
         </ThemeProvider>
       </body>

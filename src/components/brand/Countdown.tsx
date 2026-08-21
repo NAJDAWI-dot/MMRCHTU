@@ -81,8 +81,14 @@ export function Countdown({
       <div className="flex flex-wrap items-end gap-3 sm:gap-4" aria-hidden="true">
         {units.map((unit) => (
           <div key={unit.label} className="text-center">
+            {/*
+              Keyed on the value, so a digit that changes is a new element and
+              replays the tick. Without it the clock silently swaps numbers and
+              the one genuinely live thing on the page reads as static text.
+            */}
             <div
-              className={`font-display font-extrabold tabular-nums text-ras-purple dark:text-white ${
+              key={unit.value}
+              className={`tick-in font-display font-extrabold tabular-nums text-ras-purple dark:text-white ${
                 compact ? "text-3xl" : "text-5xl"
               }`}
             >

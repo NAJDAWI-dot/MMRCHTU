@@ -53,7 +53,10 @@ export async function Nav() {
           <Link
             key={link.href}
             href={link.href}
-            className="text-sm font-medium text-ras-gray transition-colors hover:text-ras-purple dark:text-white/80 dark:hover:text-white"
+            // The underline wipes in from the left rather than appearing whole,
+            // which is the difference between the menu reacting to the pointer
+            // and merely recolouring under it.
+            className="relative text-sm font-medium text-ras-gray transition-colors after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-200 hover:text-ras-purple hover:after:scale-x-100 motion-reduce:after:transition-none dark:text-white/80 dark:hover:text-white"
           >
             {link.label}
           </Link>

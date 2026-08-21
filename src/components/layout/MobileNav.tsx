@@ -61,7 +61,7 @@ export function MobileNav({ links }: { links: NavLink[] }) {
         type="button"
         // 44px square: the smallest comfortable touch target, and the reason
         // this is a button with padding rather than a bare icon.
-        className="flex h-11 w-11 items-center justify-center rounded-md text-ras-purple transition-colors hover:bg-ras-purple/10 dark:text-white dark:hover:bg-white/10"
+        className="flex h-11 w-11 items-center justify-center rounded-md text-ras-purple transition-[background-color,transform] duration-200 hover:bg-ras-purple/10 active:scale-90 motion-reduce:transition-none motion-reduce:active:scale-100 dark:text-white dark:hover:bg-white/10"
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={open ? "Close menu" : "Open menu"}
@@ -81,7 +81,9 @@ export function MobileNav({ links }: { links: NavLink[] }) {
           id={panelId}
           // Anchored to the header rather than the button so it spans the full
           // width; a narrow dropdown would put the links in a cramped column.
-          className="absolute left-0 right-0 top-full z-50 border-b border-ras-gray/15 bg-[var(--color-bg)] shadow-lg"
+          // page-enter doubles as the panel's own drop-in: it mounts fresh on
+          // every open, so the animation replays without needing a key.
+          className="page-enter absolute left-0 right-0 top-full z-50 border-b border-ras-gray/15 bg-[var(--color-bg)] shadow-lg"
         >
           <nav aria-label="Site" className="mx-auto max-w-6xl px-4 py-2">
             <ul className="flex flex-col">

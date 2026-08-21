@@ -47,7 +47,7 @@ export default async function GalleryPage() {
           </p>
         </Card>
       ) : (
-        <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="stagger mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {ordered.map((album) => {
             const cover = album.photos[0];
             return (

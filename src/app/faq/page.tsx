@@ -20,7 +20,7 @@ export default async function FaqPage() {
       <h1 className="font-display text-3xl font-extrabold text-ras-purple dark:text-white">
         Frequently asked questions
       </h1>
-      <div className="prose prose-headings:font-display prose-headings:text-ras-purple dark:prose-invert mt-8 max-w-none">
+      <div className="stagger prose prose-headings:font-display prose-headings:text-ras-purple dark:prose-invert mt-8 max-w-none">
         {entries.map((entry) => (
           <div key={entry.id}>
             <h2>{entry.question}</h2>

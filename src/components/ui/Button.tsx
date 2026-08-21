@@ -23,7 +23,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   return (
     <Comp
       ref={ref}
-      className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${VARIANT_CLASSES[variant]} ${className}`}
+      // active:scale is the whole reason this transitions transform as well as
+      // colour: it gives every button on the site the sense of being pressed
+      // rather than merely re-coloured. Excluded under reduced motion, where a
+      // control that moves under the pointer is exactly what is unwanted.
+      className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold transition-[background-color,color,box-shadow,transform] duration-200 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100 ${VARIANT_CLASSES[variant]} ${className}`}
       {...props}
     />
   );
