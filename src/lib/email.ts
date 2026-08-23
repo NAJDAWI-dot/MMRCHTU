@@ -32,7 +32,7 @@ function getSiteUrl(): string {
 // is set up (e.g. "MMRC 26 <notifications@mmrc26.org>") so mail reaches
 // arbitrary recipients (registrants, FAQ askers) rather than just the
 // account owner.
-const FROM_ADDRESS = "MMRC 26 <onboarding@resend.dev>";
+const FROM_ADDRESS = "MMRC HTU 26 <support@mmrchtu.tech>";
 
 /**
  * Best-effort email send via the Resend HTTP API. Silently no-ops (with a
