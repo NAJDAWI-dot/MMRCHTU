@@ -27,13 +27,6 @@ function getSiteUrl(): string {
   }
 }
 
-// resend.dev's shared test sender only delivers to the Resend account's own
-// verified email — swap this for a verified custom domain address once one
-// is set up (e.g. "MMRC 26 <notifications@mmrc26.org>") so mail reaches
-// arbitrary recipients (registrants, FAQ askers) rather than just the
-// account owner.
-const FROM_ADDRESS = "MMRC HTU 26 <support@mmrchtu.tech>";
-
 /**
  * Best-effort email send via the Resend HTTP API. Silently no-ops (with a
  * console log) if RESEND_API_KEY isn't configured yet — a missing key must
@@ -41,16 +34,21 @@ const FROM_ADDRESS = "MMRC HTU 26 <support@mmrchtu.tech>";
  * question).
  */
 async function sendEmail(to: string, subject: string, html: string, text: string): Promise<boolean> {
-  const { resendApiKey } = optionalEnv;
+  const { resendApiKey, resendFromEmail } = optionalEnv;
 
   if (!resendApiKey) {
     console.warn(`[email] Skipped "${subject}" to ${to} — RESEND_API_KEY not configured.`);
     return false;
   }
 
+  if (!resendFromEmail) {
+    console.warn(`[email] Skipped "${subject}" to ${to} — RESEND_FROM_EMAIL not configured.`);
+    return false;
+  }
+
   try {
     const resend = new Resend(resendApiKey);
-    const { error } = await resend.emails.send({ from: FROM_ADDRESS, to, subject, html, text });
+    const { error } = await resend.emails.send({ from: resendFromEmail, to, subject, html, text });
     if (error) {
       console.error(`[email] Failed to send "${subject}" to ${to}:`, error);
       return false;
