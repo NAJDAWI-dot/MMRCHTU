@@ -15,6 +15,7 @@ export const env = {
 // the app when these aren't set yet.
 export const optionalEnv = {
   resendApiKey: process.env.RESEND_API_KEY,
+  resendFromEmail: process.env.RESEND_FROM_EMAIL,
   adminNotificationEmail: process.env.ADMIN_NOTIFICATION_EMAIL,
   // Fallback only — prefer getSiteUrl() below, which reads the actual
   // request host so links stay correct even when the dev server picks a
