@@ -63,7 +63,9 @@ test("prices the team from the team leader's IEEE status", async ({ page }) => {
   await page.getByRole("button", { name: /next: payment/i }).click();
 
   await expect(page.getByText("Total due")).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText("25 JD")).toBeVisible();
+  // Exact: the admin's fee-info prose also contains "25 JD", and it is still in
+  // the DOM (hidden) behind step one.
+  await expect(page.getByText("25 JD", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Early bird discount")).toBeVisible();
   await expect(page.getByText("20 JD", { exact: true }).first()).toBeVisible();
 
