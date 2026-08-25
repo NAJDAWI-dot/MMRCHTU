@@ -1,13 +1,8 @@
 import type { Metadata } from "next";
 import { RegisterForm } from "@/app/register/RegisterForm";
 import { PaymentBadge } from "@/components/payment/PaymentBadge";
-import { getPaymentConfig, getRegisterFormConfig } from "@/lib/site-config";
-import {
-  PAYMENT_STATUS_BLURB,
-  formatFils,
-  isPaymentConfigured,
-  isPaymentStatus,
-} from "@/lib/payment";
+import { getRegisterFormConfig } from "@/lib/site-config";
+import { PAYMENT_STATUS_BLURB, formatFils, isPaymentStatus } from "@/lib/payment";
 import { VERIFICATION_WINDOW_TEXT } from "@/lib/payment-proof";
 import { normaliseResumeCode } from "@/lib/registration-code";
 import { prisma } from "@/lib/prisma";
@@ -26,14 +21,10 @@ export default async function RegisterPage({
 }: {
   searchParams: { code?: string };
 }) {
-  const [config, paymentConfig] = await Promise.all([
-    getRegisterFormConfig(),
-    getPaymentConfig(),
-  ]);
-
-  // Null unless an admin has switched payment on *and* entered an alias — a
-  // panel with a blank alias would send money nowhere.
-  const cliq = isPaymentConfigured(paymentConfig) ? paymentConfig : null;
+  // Payment configuration is not read here on purpose. It reaches the form with
+  // the response to Next, so that step one's page source says nothing about how
+  // to pay.
+  const config = await getRegisterFormConfig();
 
   // Someone checking on a registration they already completed. Resolved here
   // rather than in the browser so an unknown reference reads as a plain
@@ -102,7 +93,7 @@ export default async function RegisterPage({
   return (
     <Shell heading="Register your team" subheading={config.deadlineText}>
       {config.isOpen ? (
-        <RegisterForm feeInfoText={config.feeInfoText} cliq={cliq} />
+        <RegisterForm feeInfoText={config.feeInfoText} />
       ) : (
         <div
           role="status"

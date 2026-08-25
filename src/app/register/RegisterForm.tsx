@@ -33,16 +33,17 @@ const CACHE_KEY = "mmrc26.registration.draft";
 
 interface RegisterFormProps {
   feeInfoText: string;
-  /** Null when an admin has not switched CliQ on, or has not entered an alias. */
-  cliq: CliqDetails | null;
 }
 
-export function RegisterForm({ feeInfoText, cliq }: RegisterFormProps) {
+export function RegisterForm({ feeInfoText }: RegisterFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [step, setStep] = useState<1 | 2>(1);
   const [memberCount, setMemberCount] = useState(1);
   const [teamErrors, setTeamErrors] = useState<FieldErrors | undefined>();
   const [fee, setFee] = useState<FeeBreakdown | undefined>();
+  // Arrives with the Next response rather than as a prop, so step one's page
+  // source carries nothing about how to pay.
+  const [cliq, setCliq] = useState<CliqDetails | null>(null);
   const [checking, setChecking] = useState(false);
   const [draft, setDraft] = useState<Record<string, string> | null>(null);
 
@@ -113,6 +114,7 @@ export function RegisterForm({ feeInfoText, cliq }: RegisterFormProps) {
 
       setTeamErrors(undefined);
       setFee(result.fee);
+      setCliq(result.cliq ?? null);
 
       const toSave: Record<string, string> = {};
       for (const [key, value] of formData.entries()) {

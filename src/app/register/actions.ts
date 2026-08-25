@@ -12,7 +12,7 @@ import {
   type IeeeStatus,
   type TeamMemberInput,
 } from "@/lib/registration";
-import { validatePayment } from "@/lib/payment";
+import { isPaymentConfigured, validatePayment, type CliqDetails } from "@/lib/payment";
 import { computeFee, type FeeBreakdown } from "@/lib/pricing";
 import { getPaymentConfig } from "@/lib/site-config";
 import { paymentScreenshotKey } from "@/lib/payment-proof";
@@ -51,8 +51,17 @@ function readTeam(formData: FormData) {
 export interface TeamCheckState {
   status: "idle" | "ok" | "error";
   errors?: FieldErrors;
-  /** What the team will owe, so stage two can show it without a second round trip. */
+  /** What the team will owe, so step two can show it without a second round trip. */
   fee?: FeeBreakdown;
+  /**
+   * How to pay, sent only once step one has passed.
+   *
+   * Deliberately returned here rather than passed into the form as a prop: a
+   * prop would be serialised into step one's payload, putting the chapter's
+   * CliQ alias in the page source of a step that is supposed to be about the
+   * team and nothing else. Null when an admin has not configured payment.
+   */
+  cliq?: CliqDetails | null;
 }
 
 /**
@@ -78,7 +87,13 @@ export async function checkTeamDetails(
   const config = await getPaymentConfig();
   const fee = computeFee(feeTierForTeam(input.members), config, config);
 
-  return { status: "ok", fee };
+  return {
+    status: "ok",
+    fee,
+    // Null unless an admin has switched payment on *and* entered an alias — a
+    // panel with a blank alias would send money nowhere.
+    cliq: isPaymentConfigured(config) ? config : null,
+  };
 }
 
 export interface CompleteRegistrationErrors {
