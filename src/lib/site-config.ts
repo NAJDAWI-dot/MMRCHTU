@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import type { CompetitionDayConfig, RegisterFormConfig } from "@prisma/client";
+import type { CompetitionDayConfig, PaymentConfig, RegisterFormConfig } from "@prisma/client";
 
 /**
- * Read access to the two admin-editable singleton config rows.
+ * Read access to the admin-editable singleton config rows.
  *
  * Pages used to call `upsert` to fetch these, which made every page view a
  * write and, on a database where the row did not exist yet, let two pages
@@ -40,6 +40,11 @@ const REGISTER_FORM_FALLBACK: RegisterFormConfig = {
   deadlineDate: null,
   feeInfoText: "35 JD (non-member) / 25 JD (IEEE member) / 15 JD (IEEE RAS member) per team.",
   isOpen: true,
+  updatedAt: NEVER_SAVED,
+};
+
+const PAYMENT_CONFIG_FALLBACK: PaymentConfig = {
+  id: SINGLETON_ID,
   // Payment stays off until an admin fills the details in. There is no sensible
   // default for a CliQ alias, and a blank one would send transfers nowhere.
   paymentEnabled: false,
@@ -48,6 +53,14 @@ const REGISTER_FORM_FALLBACK: RegisterFormConfig = {
   cliqBankName: "",
   cliqAccountName: "",
   paymentNote: "",
+  // The prices the site has advertised all along, so a team sees the expected
+  // figure even before an admin has opened the Payments tab.
+  priceRasMemberFils: 15_000,
+  priceIeeeMemberFils: 25_000,
+  priceNonMemberFils: 35_000,
+  earlyBirdEnabled: false,
+  earlyBirdPercent: 0,
+  earlyBirdCutoff: null,
   updatedAt: NEVER_SAVED,
 };
 
@@ -59,4 +72,9 @@ export async function getCompetitionDayConfig(): Promise<CompetitionDayConfig> {
 export async function getRegisterFormConfig(): Promise<RegisterFormConfig> {
   const row = await prisma.registerFormConfig.findUnique({ where: { id: SINGLETON_ID } });
   return row ?? REGISTER_FORM_FALLBACK;
+}
+
+export async function getPaymentConfig(): Promise<PaymentConfig> {
+  const row = await prisma.paymentConfig.findUnique({ where: { id: SINGLETON_ID } });
+  return row ?? PAYMENT_CONFIG_FALLBACK;
 }

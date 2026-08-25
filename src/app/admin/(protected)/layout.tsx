@@ -21,6 +21,7 @@ const NAV_LINKS = [
   { href: "/admin/gallery", label: "Gallery" },
   { href: "/admin/register-form", label: "Register Form" },
   { href: "/admin/registrations", label: "Registrations" },
+  { href: "/admin/payments", label: "Payments" },
   { href: "/admin/broadcasts", label: "Email Lists" },
   { href: "/admin/admins", label: "Admins" },
 ];

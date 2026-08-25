@@ -20,6 +20,14 @@ async function main() {
     create: { id: "singleton" },
   });
 
+  // Created empty so the Payments tab always has a row to edit. `update: {}` on
+  // purpose: re-running the seed must never reset prices an admin has changed.
+  await prisma.paymentConfig.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+
   // Say which database this is touching. Seeding the wrong one — a local
   // container instead of the deployed database — otherwise looks identical to
   // success, since the interesting branches below print nothing.

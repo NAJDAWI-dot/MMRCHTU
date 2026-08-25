@@ -150,21 +150,44 @@ export interface ParsedPayment {
   submitted: boolean;
 }
 
+export interface ValidatePaymentOptions {
+  /**
+   * Treat an entirely blank report as an error rather than as "not yet".
+   *
+   * The payment stage sets this: a team only reaches that form after saying
+   * they have paid, so two empty fields there are a mistake. Left off, the
+   * original behaviour holds — blank means nothing has been reported.
+   */
+  required?: boolean;
+}
+
 /**
  * Validates and parses what the team reported.
  *
- * Reporting a payment is optional — a team may register now and pay later, and
- * blocking the form on a bank transfer that has not cleared would lose entries.
- * But a half-filled report is worse than none: a reference with no amount, or
- * an amount with no reference, cannot be reconciled, so both are required
- * together once either is given.
+ * A half-filled report is worse than none: a reference with no amount, or an
+ * amount with no reference, cannot be reconciled, so both are required together
+ * once either is given.
+ *
+ * Whether *neither* is acceptable depends on where the form sits, which is what
+ * `options.required` selects. One function with a flag rather than two nearly
+ * identical ones, because the interesting rules — reference length, how an
+ * amount parses — must not be allowed to drift between the two callers.
  */
-export function validatePayment(input: PaymentInput): PaymentFieldErrors {
+export function validatePayment(
+  input: PaymentInput,
+  options: ValidatePaymentOptions = {},
+): PaymentFieldErrors {
   const rawReference = (input.reference ?? "").trim();
   const rawAmount = (input.amount ?? "").trim();
   const errors: PaymentFieldErrors = {};
 
-  if (!rawReference && !rawAmount) return errors;
+  if (!rawReference && !rawAmount) {
+    if (!options.required) return errors;
+    return {
+      reference: "Enter the transaction reference from your banking app.",
+      amount: "Enter the amount you transferred.",
+    };
+  }
 
   const reference = normaliseReference(rawReference);
   if (!reference) {

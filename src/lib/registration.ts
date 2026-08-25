@@ -1,9 +1,21 @@
 import { prisma } from "@/lib/prisma";
 import { sendRegistrationConfirmation } from "@/lib/email";
 import { IEEE_STATUS_OPTIONS, type IeeeStatus } from "@/lib/ieee-status";
-import { parsePayment, type PaymentInput } from "@/lib/payment";
+import { computeFee, isFeeTier, type FeeTier } from "@/lib/pricing";
+import { createUniqueResumeCode } from "@/lib/registration-code";
+import { getPaymentConfig } from "@/lib/site-config";
 
 export { IEEE_STATUS_OPTIONS, type IeeeStatus };
+
+/**
+ * Which revision of the legal pages a registration agreed to.
+ *
+ * Stored per registration so rewriting the terms later never retroactively
+ * changes what somebody consented to. Bump this by hand whenever the wording in
+ * content/legal changes materially — a typo fix does not count, a new clause
+ * about refunds does.
+ */
+export const CONSENT_VERSION = "2026-08-25";
 
 // Status is constrained in the application rather than the database (see
 // prisma/schema.prisma) — this is the single source of truth for the valid
@@ -23,12 +35,14 @@ export interface TeamMemberInput {
 
 export interface RegistrationInput {
   /**
-   * What the team says they transferred over CliQ, if anything yet.
+   * The single membership tier the whole team is priced at.
    *
-   * Optional throughout: a team may register now and pay later. Validation of
-   * the pair lives in `validatePayment`; this only records what came in.
+   * Separate from each member's own `ieeeStatus`: that stays a record of who
+   * the people are, while this decides one flat fee for the team.
    */
-  payment?: PaymentInput;
+  feeTier: FeeTier;
+  /** Whether the team ticked the box agreeing to the terms and policies. */
+  consentAccepted: boolean;
   teamName: string;
   submitterEmail: string;
   memberCount: number;
@@ -54,6 +68,8 @@ export interface FieldErrors {
   memberCount?: string;
   technicalExperience?: string;
   motivation?: string;
+  feeTier?: string;
+  consentAccepted?: string;
   members?: (TeamMemberFieldErrors | undefined)[];
 }
 
@@ -118,6 +134,14 @@ export function validateRegistration(input: RegistrationValidationInput): FieldE
   if (!input.motivation || input.motivation.trim().length < 1) {
     errors.motivation = "Tell us your motivation to participate.";
   }
+  if (!input.feeTier || !isFeeTier(input.feeTier)) {
+    errors.feeTier = "Select the membership tier your team is registering under.";
+  }
+  if (!input.consentAccepted) {
+    // Blocking rather than assuming: this is the record that the team agreed to
+    // the terms before money changed hands, so it cannot be inferred.
+    errors.consentAccepted = "Please accept the terms and policies to continue.";
+  }
 
   const expectedCount =
     input.memberCount !== undefined && Number.isInteger(input.memberCount) ? input.memberCount : 0;
@@ -138,7 +162,21 @@ export function hasFieldErrors(errors: FieldErrors): boolean {
 }
 
 export async function createRegistration(input: RegistrationInput) {
-  const payment = parsePayment(input.payment ?? {});
+  const paymentConfig = await getPaymentConfig();
+
+  // Priced once, here, and written to the row. Deliberately not recomputed on
+  // read: the prices and the early-bird window both move over time, and a team
+  // that registered while the discount was running must keep the figure they
+  // were quoted rather than watch their balance rise when the cutoff passes.
+  const fee = computeFee(input.feeTier, paymentConfig, paymentConfig);
+
+  const resumeCode = await createUniqueResumeCode(async (code) => {
+    const clash = await prisma.registration.findUnique({
+      where: { resumeCode: code },
+      select: { id: true },
+    });
+    return clash !== null;
+  });
 
   return prisma.$transaction(async (tx) => {
     const registration = await tx.registration.create({
@@ -148,12 +186,17 @@ export async function createRegistration(input: RegistrationInput) {
         memberCount: input.memberCount,
         technicalExperience: input.technicalExperience.trim(),
         motivation: input.motivation.trim(),
-        // A reference alone is not a payment — it is a claim, and it stays
-        // SUBMITTED until a human matches it against the account.
-        paymentStatus: payment.submitted ? "SUBMITTED" : "UNPAID",
-        paymentReference: payment.reference,
-        paymentAmountFils: payment.amountFils,
-        paymentSubmittedAt: payment.submitted ? new Date() : null,
+        feeTier: fee.tier,
+        feeBaseFils: fee.baseFils,
+        feeDiscountFils: fee.discountFils,
+        feeDueFils: fee.dueFils,
+        resumeCode,
+        consentAcceptedAt: new Date(),
+        consentVersion: CONSENT_VERSION,
+        // Nothing has been paid yet — stage two is where a team reports a
+        // transfer, and even then it stays SUBMITTED until a human matches it
+        // against the account.
+        paymentStatus: "UNPAID",
         members: {
           create: input.members.map((member, i) => ({
             order: i + 1,
@@ -188,6 +231,11 @@ export async function createRegistration(input: RegistrationInput) {
         university: m.university,
         major: m.major,
       })),
+      resumeCode,
+      feeBaseFils: fee.baseFils,
+      feeDiscountFils: fee.discountFils,
+      feeDueFils: fee.dueFils,
+      earlyBirdApplied: fee.earlyBirdApplied,
     });
     return registration;
   });

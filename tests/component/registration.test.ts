@@ -20,9 +20,41 @@ describe("validateRegistration", () => {
       memberCount: 1,
       technicalExperience: "Built line-following robots for two years.",
       motivation: "Excited to build a maze-solver.",
+      feeTier: "NON_MEMBER",
+      consentAccepted: true,
       members: [validMember],
     });
     expect(hasFieldErrors(errors)).toBe(false);
+  });
+
+  it("requires a fee tier", () => {
+    const errors = validateRegistration({
+      teamName: "Maze Runners",
+      submitterEmail: "ada@example.com",
+      memberCount: 1,
+      technicalExperience: "Some experience.",
+      motivation: "Motivated.",
+      consentAccepted: true,
+      members: [validMember],
+    });
+    expect(errors.feeTier).toBeDefined();
+  });
+
+  it("refuses to register a team that has not accepted the terms", () => {
+    // The consent record is what shows a team agreed before money changed
+    // hands, so it cannot be inferred from them simply submitting the form.
+    const errors = validateRegistration({
+      teamName: "Maze Runners",
+      submitterEmail: "ada@example.com",
+      memberCount: 1,
+      technicalExperience: "Some experience.",
+      motivation: "Motivated.",
+      feeTier: "NON_MEMBER",
+      consentAccepted: false,
+      members: [validMember],
+    });
+    expect(errors.consentAccepted).toBeDefined();
+    expect(hasFieldErrors(errors)).toBe(true);
   });
 
   it("flags missing and invalid team-level fields", () => {

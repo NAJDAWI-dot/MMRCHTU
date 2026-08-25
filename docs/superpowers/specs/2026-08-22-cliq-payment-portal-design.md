@@ -1,5 +1,13 @@
 # CliQ payment portal — design
 
+> **SUPERSEDED — do not implement.** This design was approved but never built.
+> It was replaced on 2026-08-25 by a two-stage registration flow that keeps
+> payment inside `/register` instead of a separate `/payment/[code]` portal,
+> with team-wide tiered pricing and an early-bird discount. Nothing below about
+> the portal, the `wa.me` proof hand-off, or removing the register-form panel
+> reflects the current direction. Kept for the reasoning in "Why", which still
+> holds: CliQ has no callback, so reconciliation is manual by design.
+
 Branch: `feat/cliq-payment` (unmerged; stays unmerged until asked). Supersedes
 the in-register-form CliQ panel already on this branch, which is removed.
 

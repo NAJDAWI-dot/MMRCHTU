@@ -17,8 +17,8 @@ export const optionalEnv = {
   resendApiKey: process.env.RESEND_API_KEY,
   resendFromEmail: process.env.RESEND_FROM_EMAIL,
   adminNotificationEmail: process.env.ADMIN_NOTIFICATION_EMAIL,
-  // Fallback only — prefer getSiteUrl() below, which reads the actual
-  // request host so links stay correct even when the dev server picks a
-  // different port (3001, 3002, ...) because 3000 was already in use.
-  siteUrl: process.env.SITE_URL ?? "http://localhost:3000",
+  // No siteUrl here on purpose. It used to default to localhost, which made a
+  // request-less email send in production emit localhost links. The site's
+  // address now has exactly one answer: siteOrigin() in src/lib/site-url.ts,
+  // which understands SITE_URL *and* Vercel's domain variables.
 };
