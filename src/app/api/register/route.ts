@@ -37,12 +37,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ errors }, { status: 422 });
   }
 
+  // No payment is taken here. Reporting a transfer happens later, against the
+  // resume code this call hands back, so that a registration and a bank
+  // transfer never have to succeed or fail together.
   const registration = await createRegistration({
     teamName: body.teamName,
     submitterEmail: body.submitterEmail,
     memberCount: Number(body.memberCount),
     technicalExperience: body.technicalExperience,
     motivation: body.motivation,
+    feeTier: body.feeTier,
+    consentAccepted: body.consentAccepted === true,
     members: body.members,
   });
 

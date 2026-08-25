@@ -111,7 +111,7 @@ Set these in the host's environment settings, never in the repository:
 | `ADMIN_BOOTSTRAP_USERNAME` | Creates the first admin on first run                       |
 | `ADMIN_BOOTSTRAP_PASSWORD` | Only used when no admin exists yet                         |
 | `RESEND_API_KEY`           | Outbound email                                             |
-| `RESEND_FROM_EMAIL`        | Verified Resend sender, e.g. `MMRC 26 <notifications@mmrc26.org>` |
+| `RESEND_FROM_EMAIL`        | Verified Resend sender, e.g. `MMRC 26 <support@mmrchtu.tech>` |
 | `ADMIN_NOTIFICATION_EMAIL` | Where FAQ questions are sent                               |
 | `SITE_URL`                 | Public URL, used for links inside emails                   |
 
@@ -124,7 +124,7 @@ npx prisma db seed
 
 Before deploying email, add and verify your domain in Resend under **Domains**, then add the DNS
 records Resend provides at your DNS host. Set `RESEND_FROM_EMAIL` to an address on that verified
-domain, such as `MMRC 26 <notifications@mmrc26.org>`. The domain must be verified before Resend
+domain, such as `MMRC 26 <support@mmrchtu.tech>`. The domain must be verified before Resend
 will deliver to arbitrary recipients.
 
 ## Brand assets

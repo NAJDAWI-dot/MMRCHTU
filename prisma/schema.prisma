@@ -1,5 +1,5 @@
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   // Supabase gives two connection strings. Application queries go through the
   // pooled one (port 6543); migrations need the direct one (port 5432) because
   // the pooler cannot run the statements a migration issues.
@@ -25,9 +25,57 @@ model Registration {
   status              String   @default("PENDING")
   createdAt           DateTime @default(now())
 
+  /// Payment is tracked separately from `status`: a team can be CONFIRMED on
+  /// merit while its fee is still outstanding, and refusing a payment must not
+  /// silently cancel a registration. See PaymentStatus in src/lib/payment.ts.
+  paymentStatus      String    @default("UNPAID")
+  /// The CliQ transaction reference the team reports, normalised on the way in.
+  paymentReference   String?
+  /// Stored in fils (1 JOD = 1000) so money is never a float.
+  paymentAmountFils  Int?
+  paymentSubmittedAt DateTime?
+  paymentVerifiedAt  DateTime?
+  /// Admin-facing: why a payment was refused, or any reconciliation note.
+  paymentNote        String?
+
+  /// Proof of payment: a screenshot of the team's CliQ confirmation. Same
+  /// url/key pair as GalleryPhoto — the key is kept so deleting a registration
+  /// can delete the file rather than orphaning it in the blob store.
+  paymentScreenshotUrl String?
+  paymentScreenshotKey String?
+
+  /// Which of the three team-wide tiers this registration is priced at.
+  /// Deliberately distinct from TeamMember.ieeeStatus: that stays a per-person
+  /// record, while the fee is one flat price for the whole team. See FeeTier in
+  /// src/lib/pricing.ts.
+  feeTier String @default("NON_MEMBER")
+
+  /// What the team was quoted, in fils, frozen at the moment they registered.
+  ///
+  /// Not recomputed from PaymentConfig on read: prices and the early-bird
+  /// window both change over time, and a team that registered at the early
+  /// price must not find their balance quietly raised afterwards. Nullable only
+  /// for rows created before pricing existed.
+  feeBaseFils     Int?
+  feeDiscountFils Int?
+  feeDueFils      Int?
+
+  /// Legal consent captured at stage one. The version is whatever
+  /// CONSENT_VERSION said at the time, so rewriting the legal pages later never
+  /// retroactively changes what an old registration agreed to.
+  consentAcceptedAt DateTime?
+  consentVersion    String?
+
+  /// Lets a team reopen stage two at /register?code=… after leaving to make the
+  /// transfer in their banking app. Nullable because registrations predating
+  /// this flow genuinely have no code; Postgres allows many NULLs under a
+  /// unique constraint.
+  resumeCode String? @unique
+
   members TeamMember[]
 
   @@index([status])
+  @@index([paymentStatus])
 }
 
 model TeamMember {
@@ -121,16 +169,16 @@ model BroadcastList {
 }
 
 model BroadcastContact {
-  id       String        @id @default(cuid())
-  listId   String
-  list     BroadcastList @relation(fields: [listId], references: [id], onDelete: Cascade)
-  email    String
-  name     String        @default("")
+  id      String        @id @default(cuid())
+  listId  String
+  list    BroadcastList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  email   String
+  name    String        @default("")
   // "MANUAL" for hand-entered rows, "REGISTRATION" for rows pulled in by the
   // import action — lets a re-import top up a list without duplicating or
   // clobbering people the admin added themselves.
-  source   String        @default("MANUAL")
-  addedAt  DateTime      @default(now())
+  source  String        @default("MANUAL")
+  addedAt DateTime      @default(now())
 
   @@unique([listId, email])
   @@index([listId])
@@ -139,14 +187,14 @@ model BroadcastContact {
 // Send log: one row per broadcast attempt, kept so the admin can see what was
 // already sent to a list rather than re-sending blind.
 model Broadcast {
-  id         String        @id @default(cuid())
-  listId     String
-  list       BroadcastList @relation(fields: [listId], references: [id], onDelete: Cascade)
-  subject    String
-  body       String
-  sentCount  Int           @default(0)
-  failedCount Int          @default(0)
-  sentAt     DateTime      @default(now())
+  id          String        @id @default(cuid())
+  listId      String
+  list        BroadcastList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  subject     String
+  body        String
+  sentCount   Int           @default(0)
+  failedCount Int           @default(0)
+  sentAt      DateTime      @default(now())
 
   @@index([listId])
 }
@@ -225,17 +273,17 @@ model GalleryPhoto {
   album   GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
 
   // Public URL of the stored image.
-  url String
+  url        String
   // Key in blob storage, kept so deleting the row can delete the file too and
   // the store does not fill with orphans nobody can find.
-  storageKey String @default("")
-  caption    String @default("")
+  storageKey String   @default("")
+  caption    String   @default("")
   // Recorded at upload so the page can reserve the right space and avoid the
   // layout jumping as each image arrives.
-  width     Int?
-  height    Int?
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
+  width      Int?
+  height     Int?
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
 
   @@index([albumId])
 }
@@ -246,7 +294,54 @@ model RegisterFormConfig {
   id           String    @id @default("singleton")
   deadlineText String    @default("Registration closes soon — check back for the exact date.")
   deadlineDate DateTime?
+  /// Human-written prose about the fee. Descriptive only — the amount actually
+  /// charged comes from PaymentConfig's per-tier prices, so this can say
+  /// whatever reads best without anyone worrying it drives arithmetic.
   feeInfoText  String    @default("35 JD (non-member) / 25 JD (IEEE member) / 15 JD (IEEE RAS member) per team.")
   isOpen       Boolean   @default(true)
-  updatedAt    DateTime  @updatedAt
+
+  updatedAt DateTime @updatedAt
+}
+
+// Singleton row (id is always "singleton") behind the admin Payments tab:
+// how to pay, what it costs, and whether the early-bird discount is running.
+//
+// Split out of RegisterFormConfig rather than added to it because it has its
+// own admin surface, following the one-singleton-per-tab shape already used by
+// RegisterFormConfig and CompetitionDayConfig.
+model PaymentConfig {
+  id String @id @default("singleton")
+
+  /// CliQ payment details, all admin-supplied.
+  ///
+  /// Off by default and blank: nobody but the committee knows the chapter's
+  /// alias, and a payment panel showing a placeholder would send money to
+  /// nowhere. The payment stage shows nothing until this is filled in and
+  /// switched on.
+  paymentEnabled  Boolean @default(false)
+  cliqAlias       String  @default("")
+  /// ALIAS or MOBILE — banking apps ask which kind of CliQ identifier this is.
+  cliqAliasType   String  @default("ALIAS")
+  cliqBankName    String  @default("")
+  cliqAccountName String  @default("")
+  /// Anything else the team needs to know, shown under the details.
+  paymentNote     String  @default("")
+
+  /// Flat per-team price for each tier, in fils (1 JOD = 1000) so money is
+  /// never a float. Defaults mirror the fee text the site has shown all along.
+  priceRasMemberFils  Int @default(15000)
+  priceIeeeMemberFils Int @default(25000)
+  priceNonMemberFils  Int @default(35000)
+
+  /// Early-bird discount: a percentage off every tier until the cutoff passes.
+  ///
+  /// The cutoff expires the discount on its own, so nobody has to remember to
+  /// switch it off; `earlyBirdEnabled` is a manual kill switch for ending it
+  /// early. A null cutoff means the discount never applies, even when enabled —
+  /// safer than treating "no date" as "forever".
+  earlyBirdEnabled Boolean   @default(false)
+  earlyBirdPercent Int       @default(0)
+  earlyBirdCutoff  DateTime?
+
+  updatedAt DateTime @updatedAt
 }

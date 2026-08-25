@@ -2,9 +2,13 @@
 
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import Link from "next/link";
 import { registerTeam, type RegisterActionState } from "@/app/register/actions";
 import { Button } from "@/components/ui/Button";
+import { PaymentStage } from "@/components/payment/PaymentStage";
 import { IEEE_STATUS_OPTIONS } from "@/lib/ieee-status";
+import { formatFils, type CliqDetails } from "@/lib/payment";
+import { FEE_TIER_OPTIONS, type FeeBreakdown, type FeeTier } from "@/lib/pricing";
 import type { TeamMemberFieldErrors } from "@/lib/registration";
 import { UNIVERSITIES } from "@/lib/universities";
 
@@ -12,24 +16,25 @@ const initialState: RegisterActionState = { status: "idle" };
 
 interface RegisterFormProps {
   feeInfoText: string;
+  /** Null when an admin has not switched CliQ on, or has not entered an alias. */
+  cliq: CliqDetails | null;
+  /**
+   * The price of each tier, quoted by the server.
+   *
+   * Computed there rather than from raw prices here so the figure on the radio
+   * button is produced by the same function that will charge it — a second
+   * implementation in the browser could disagree, and the one people saw before
+   * paying is the one that matters.
+   */
+  quotes: Record<FeeTier, FeeBreakdown>;
 }
 
-export function RegisterForm({ feeInfoText }: RegisterFormProps) {
+export function RegisterForm({ feeInfoText, cliq, quotes }: RegisterFormProps) {
   const [state, formAction] = useFormState(registerTeam, initialState);
   const [memberCount, setMemberCount] = useState(1);
 
-  if (state.status === "success") {
-    return (
-      <div
-        role="status"
-        className="rounded-md border border-ras-purple/30 bg-ras-purple/5 p-6 text-ras-purple dark:text-white"
-      >
-        <p className="font-display text-lg font-bold">You&apos;re registered!</p>
-        <p className="mt-1 text-sm">
-          We&apos;ll email your team with next steps as the competition date approaches.
-        </p>
-      </div>
-    );
+  if (state.status === "success" && state.payment) {
+    return <PaymentStage payment={state.payment} cliq={cliq} />;
   }
 
   return (
@@ -102,6 +107,93 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
         error={state.errors?.motivation}
         textarea
       />
+
+      <fieldset className="rounded-lg border border-ras-gray/20 p-4">
+        <legend className="px-1 font-display text-sm font-bold text-ras-purple dark:text-white">
+          Registration fee
+        </legend>
+        <p className="text-xs text-ras-gray dark:text-white/70">
+          One fee per team, based on your team&apos;s IEEE membership. Pick the one that applies —
+          you will be asked for your membership ID.
+        </p>
+        <div className="mt-3 space-y-2">
+          {FEE_TIER_OPTIONS.map((opt) => {
+            const quote = quotes[opt.value];
+            return (
+              <label
+                key={opt.value}
+                className="flex min-h-[44px] cursor-pointer items-start justify-between gap-4 rounded-md border border-ras-gray/20 px-3 py-2 text-sm text-ras-gray transition-colors duration-200 hover:border-ras-purple/40 motion-reduce:transition-none dark:text-white/80"
+              >
+                <span className="flex min-w-0 items-start gap-3">
+                  <input type="radio" name="feeTier" value={opt.value} className="mt-0.5" />
+                  <span className="min-w-0">{opt.label}</span>
+                </span>
+                <span className="shrink-0 text-right">
+                  <span className="font-display font-bold text-ras-purple dark:text-white">
+                    {formatFils(quote.dueFils)}
+                  </span>
+                  {quote.earlyBirdApplied ? (
+                    <span className="block text-xs text-ras-gray line-through dark:text-white/50">
+                      {formatFils(quote.baseFils)}
+                    </span>
+                  ) : null}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+        {quotes.NON_MEMBER.earlyBirdApplied ? (
+          <p className="mt-3 text-xs font-semibold text-ras-crimson">
+            Early bird pricing is running — these prices go up when it ends.
+          </p>
+        ) : null}
+        {state.errors?.feeTier ? (
+          <p role="alert" className="mt-2 text-sm text-ras-crimson">
+            {state.errors.feeTier}
+          </p>
+        ) : null}
+      </fieldset>
+
+      <div>
+        <label className="flex min-h-[44px] cursor-pointer items-start gap-3 text-sm text-ras-gray dark:text-white/80">
+          <input
+            type="checkbox"
+            name="consentAccepted"
+            className="mt-0.5"
+            aria-invalid={Boolean(state.errors?.consentAccepted)}
+          />
+          <span className="min-w-0">
+            I have read and accept the{" "}
+            <Link href="/legal/terms" className="font-semibold text-ras-purple underline dark:text-white">
+              Terms of Service
+            </Link>
+            , the{" "}
+            <Link href="/legal/privacy" className="font-semibold text-ras-purple underline dark:text-white">
+              Privacy Policy
+            </Link>
+            , the{" "}
+            <Link
+              href="/legal/payment-refund-policy"
+              className="font-semibold text-ras-purple underline dark:text-white"
+            >
+              Payment &amp; Refund Policy
+            </Link>{" "}
+            and the{" "}
+            <Link
+              href="/legal/code-of-conduct"
+              className="font-semibold text-ras-purple underline dark:text-white"
+            >
+              Code of Conduct
+            </Link>
+            .
+          </span>
+        </label>
+        {state.errors?.consentAccepted ? (
+          <p role="alert" className="mt-1 text-sm text-ras-crimson">
+            {state.errors.consentAccepted}
+          </p>
+        ) : null}
+      </div>
 
       <SubmitButton />
     </form>
@@ -206,6 +298,7 @@ interface FieldProps {
   error?: string;
   type?: string;
   autoComplete?: string;
+  inputMode?: "text" | "decimal" | "numeric";
   textarea?: boolean;
 }
 

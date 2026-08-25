@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
+import { LEGAL_PAGES, type LegalSlug } from "@/lib/mdx";
 
 export function Footer() {
   return (
@@ -9,6 +11,25 @@ export function Footer() {
           MMRC 26 is organized by the IEEE Robotics &amp; Automation Society, HTU Student
           Chapter.
         </p>
+
+        {/* Reachable from every page, which is the point of putting them here:
+            somebody about to pay a fee should not have to hunt for the refund
+            policy. */}
+        <nav aria-label="Policies">
+          <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs">
+            {(Object.keys(LEGAL_PAGES) as LegalSlug[]).map((slug) => (
+              <li key={slug}>
+                <Link
+                  href={`/legal/${slug}`}
+                  className="text-ras-gray underline-offset-2 transition-colors duration-200 hover:text-ras-purple hover:underline motion-reduce:transition-none dark:text-white/70 dark:hover:text-white"
+                >
+                  {LEGAL_PAGES[slug]}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
         <p className="text-xs text-ras-gray/70 dark:text-white/50">
           © {new Date().getFullYear()} IEEE RAS HTU Student Chapter.
         </p>

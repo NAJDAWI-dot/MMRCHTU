@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { updateRegistrationStatus } from "./actions";
+import { PaymentBadge } from "@/components/payment/PaymentBadge";
+import { formatFils } from "@/lib/payment";
 
 export const metadata: Metadata = {
   title: "Admin — Registrations",
@@ -16,10 +18,17 @@ export default async function AdminRegistrationsPage() {
     orderBy: { createdAt: "desc" },
   });
 
+  // Surfaced up front because it is the number the committee chases.
+  const awaiting = registrations.filter((r) => r.paymentStatus === "SUBMITTED").length;
+  const paid = registrations.filter((r) => r.paymentStatus === "VERIFIED").length;
+
   return (
     <div>
       <h1 className="font-display text-2xl font-extrabold text-ras-purple dark:text-white">Registrations</h1>
-      <p className="mt-2 text-sm text-ras-gray dark:text-white/70">{registrations.length} teams registered.</p>
+      <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
+        {registrations.length} teams registered · {paid} paid
+        {awaiting > 0 ? ` · ${awaiting} awaiting a payment check` : ""}
+      </p>
 
       <div className="mt-6 space-y-4">
         {registrations.map((reg) => (
@@ -66,6 +75,31 @@ export default async function AdminRegistrationsPage() {
             <p className="mt-1 text-xs text-ras-gray dark:text-white/60">
               <strong>Motivation:</strong> {reg.motivation}
             </p>
+
+            {/* Read-only here on purpose: payments are decided under Payments,
+                where the quoted fee and the screenshot are side by side. */}
+            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-ras-gray/20 p-3">
+              <span className="text-xs font-semibold uppercase tracking-widest text-ras-gray dark:text-white/60">
+                Fee
+              </span>
+              <PaymentBadge status={reg.paymentStatus} />
+              {reg.feeDueFils !== null ? (
+                <span className="text-xs font-semibold text-ras-purple dark:text-white">
+                  {formatFils(reg.feeDueFils)} due
+                </span>
+              ) : null}
+              {reg.paymentReference ? (
+                <span className="font-mono text-xs text-ras-gray dark:text-white/70">
+                  {reg.paymentReference}
+                </span>
+              ) : null}
+              <a
+                href="/admin/payments"
+                className="text-xs font-semibold text-ras-purple underline dark:text-white"
+              >
+                Manage in Payments
+              </a>
+            </div>
           </Card>
         ))}
       </div>

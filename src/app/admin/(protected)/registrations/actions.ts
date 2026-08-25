@@ -15,3 +15,7 @@ export async function updateRegistrationStatus(formData: FormData) {
 
   revalidatePath("/admin/registrations");
 }
+
+// Payment state is deliberately not writable from here. It has exactly one
+// writer — updatePaymentStatus in ../payments/actions.ts — so that refusing a
+// payment can never be confused with cancelling a registration.

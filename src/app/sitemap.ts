@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { parseStatus } from "@/lib/competition-day";
 import { absoluteUrl } from "@/lib/site-url";
 import { getCompetitionDayConfig } from "@/lib/site-config";
+import { LEGAL_PAGES } from "@/lib/mdx";
 
 /**
  * Rebuilt hourly rather than per request. Crawlers do not need the minute a
@@ -38,6 +39,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absoluteUrl("/faq"), lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: absoluteUrl("/game"), lastModified: now, changeFrequency: "monthly", priority: 0.5 },
   ];
+
+  // Listed rather than left out: a visitor deciding whether to pay a fee is
+  // entitled to find the refund policy through a search engine, not only
+  // through the footer of the page that took their money.
+  for (const slug of Object.keys(LEGAL_PAGES)) {
+    entries.push({
+      url: absoluteUrl(`/legal/${slug}`),
+      lastModified: now,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    });
+  }
 
   // Both of these hide themselves when there is nothing behind them, so a
   // sitemap that always listed them would advertise 404s.

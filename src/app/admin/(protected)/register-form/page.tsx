@@ -27,7 +27,11 @@ export default async function AdminRegisterFormPage() {
       <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
         Controls the deadline/fee copy shown on the public <code>/register</code> page and whether it accepts
         submissions. The deadline is informational only — closing registration always requires flipping the
-        toggle below.
+        toggle below. Prices, CliQ details and the early-bird discount live under{" "}
+        <a href="/admin/payments" className="font-semibold text-ras-purple underline dark:text-white">
+          Payments
+        </a>
+        .
       </p>
 
       <Card className="mt-6">
@@ -53,6 +57,7 @@ export default async function AdminRegisterFormPage() {
             <input type="checkbox" name="isOpen" defaultChecked={config.isOpen} />
             Registration is open
           </label>
+
           <div>
             <Button type="submit">Save</Button>
           </div>

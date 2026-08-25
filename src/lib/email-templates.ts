@@ -3,6 +3,8 @@
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { formatFils } from "@/lib/payment";
+import { VERIFICATION_WINDOW_TEXT } from "@/lib/payment-proof";
 
 const PURPLE = "#5F2167";
 const PURPLE_DEEP = "#3F1546";
@@ -228,6 +230,18 @@ export interface RegistrationConfirmationData {
   teamName: string;
   members: RegistrationConfirmationMember[];
   siteUrl: string;
+  /**
+   * The code that reopens the payment stage.
+   *
+   * This email is the only durable copy a team has of it. The success screen is
+   * gone the moment they close the tab, which is exactly what happens when they
+   * leave to make the transfer in their banking app.
+   */
+  resumeCode: string;
+  feeBaseFils: number;
+  feeDiscountFils: number;
+  feeDueFils: number;
+  earlyBirdApplied: boolean;
 }
 
 export function registrationConfirmationEmail(
@@ -247,12 +261,23 @@ export function registrationConfirmationEmail(
     )
     .join("");
 
+  const payUrl = `${data.siteUrl}/register?code=${encodeURIComponent(data.resumeCode)}`;
+
+  const discountRow = data.earlyBirdApplied
+    ? `
+        <tr>
+          <td style="padding:2px 0; font-size:13px; color:${GRAY};">Early bird discount</td>
+          <td style="padding:2px 0; font-size:13px; color:${GRAY}; text-align:right;">&minus;${escapeHtml(formatFils(data.feeDiscountFils))}</td>
+        </tr>`
+    : "";
+
   const html = baseEmailHtml(
-    `Your team ${data.teamName} is registered for MMRC 26.`,
+    `Your team ${data.teamName} is registered — ${formatFils(data.feeDueFils)} to pay.`,
     `
       ${heading("You&apos;re registered! 🐭")}
       <p style="margin:0 0 20px; color:${GRAY};">
-        Thanks for applying to the 2026 Maze Solver Robot Competition. Here&apos;s a summary of your submission:
+        Thanks for applying to the 2026 Maze Solver Robot Competition. Your place is held once your
+        registration fee is paid and verified.
       </p>
       <div style="margin:0 0 20px; padding:18px 20px; background-color:${SURFACE}; border:1px solid ${BORDER}; border-radius:10px;">
         <div style="font-size:11px; font-weight:600; color:${GRAY}; letter-spacing:0.12em; text-transform:uppercase;">Team</div>
@@ -261,14 +286,36 @@ export function registrationConfirmationEmail(
           ${memberRows}
         </table>
       </div>
+
+      <div style="margin:0 0 20px; padding:18px 20px; background-color:${SURFACE}; border:1px solid ${BORDER}; border-radius:10px;">
+        <div style="font-size:11px; font-weight:600; color:${GRAY}; letter-spacing:0.12em; text-transform:uppercase;">To pay</div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">
+          <tr>
+            <td style="padding:2px 0; font-size:13px; color:${GRAY};">Registration fee</td>
+            <td style="padding:2px 0; font-size:13px; color:${GRAY}; text-align:right;">${escapeHtml(formatFils(data.feeBaseFils))}</td>
+          </tr>
+          ${discountRow}
+          <tr>
+            <td style="padding:8px 0 0; font-size:17px; font-weight:800; color:${PURPLE}; border-top:1px solid ${BORDER};">Total due</td>
+            <td style="padding:8px 0 0; font-size:17px; font-weight:800; color:${PURPLE}; text-align:right; border-top:1px solid ${BORDER};">${escapeHtml(formatFils(data.feeDueFils))}</td>
+          </tr>
+        </table>
+        <p style="margin:14px 0 4px; font-size:11px; font-weight:600; color:${GRAY}; letter-spacing:0.12em; text-transform:uppercase;">Your payment code</p>
+        <p style="margin:0; font-family:'Courier New', monospace; font-size:24px; font-weight:800; letter-spacing:0.18em; color:${PURPLE};">${escapeHtml(data.resumeCode)}</p>
+        <p style="margin:8px 0 0; font-size:12px; color:${GRAY};">
+          Keep this code. It reopens your payment page if you close this tab before you finish.
+        </p>
+      </div>
+
       <p style="margin:0 0 8px; color:${GRAY};">
-        <strong>What happens next?</strong> Applications are screened on a rolling basis. If your team is selected,
-        we&apos;ll reach out to your team lead by email to complete verification and fee payment.
+        <strong>What happens next?</strong> Pay by CliQ using the details on your payment page, then upload
+        a screenshot of the confirmation from your banking app. We verify payments within
+        ${VERIFICATION_WINDOW_TEXT} and email you once yours is confirmed.
       </p>
       <p style="margin:0; color:${GRAY};">
         Remember: your robot must be physically present on competition day to be checked in.
       </p>
-      ${button("View schedule", `${data.siteUrl}/schedule`)}
+      ${button("Pay your registration fee", payUrl)}
     `,
     data.siteUrl,
   );
@@ -276,7 +323,10 @@ export function registrationConfirmationEmail(
   const memberLines = data.members
     .map((m) => `${m.order}. ${m.firstName} ${m.lastName}${m.order === 1 ? " (Team Leader)" : ""} — ${m.university}, ${m.major}`)
     .join("\n");
-  const text = `You're registered for MMRC 26!\n\nTeam: ${data.teamName}\n\n${memberLines}\n\nApplications are screened on a rolling basis. Selected teams will be contacted for verification and fee payment.\n\nSchedule: ${data.siteUrl}/schedule`;
+  const discountLine = data.earlyBirdApplied
+    ? `\nEarly bird discount: -${formatFils(data.feeDiscountFils)}`
+    : "";
+  const text = `You're registered for MMRC 26!\n\nTeam: ${data.teamName}\n\n${memberLines}\n\nRegistration fee: ${formatFils(data.feeBaseFils)}${discountLine}\nTotal due: ${formatFils(data.feeDueFils)}\n\nYour payment code: ${data.resumeCode}\nKeep this code — it reopens your payment page if you close the tab.\n\nPay by CliQ, then upload a screenshot of the confirmation. We verify payments within ${VERIFICATION_WINDOW_TEXT}.\n\nPay here: ${payUrl}`;
 
   return { subject, html, text };
 }

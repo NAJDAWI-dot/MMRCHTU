@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { headers } from "next/headers";
 import { optionalEnv } from "@/lib/env";
+import { siteOrigin } from "@/lib/site-url";
 import {
   broadcastEmail,
   faqNotificationEmail,
@@ -10,20 +11,27 @@ import {
 } from "@/lib/email-templates";
 
 /**
- * Prefer the incoming request's actual host (so links stay correct when the
- * dev server lands on 3001/3002 because 3000 was already taken, or in prod
- * behind a proxy) over the SITE_URL env var, which is only a fallback for
- * contexts with no request (there are none currently, but keep it safe).
+ * Prefer the incoming request's actual host (so links stay correct when the dev
+ * server lands on 3001/3002 because 3000 was already taken, or in prod behind a
+ * proxy), falling back to the site's canonical origin when there is no request
+ * to read.
+ *
+ * That fallback goes through siteOrigin() rather than reading SITE_URL directly.
+ * SITE_URL is not set in this project's environment, so the old direct read
+ * resolved the no-request path to localhost — and an email full of localhost
+ * links is both useless and quiet, since nothing throws. siteOrigin() also knows
+ * Vercel's own domain variables, so it has a real answer in production whether
+ * or not anyone remembers to set SITE_URL.
  */
 function getSiteUrl(): string {
   try {
     const headerList = headers();
     const host = headerList.get("x-forwarded-host") ?? headerList.get("host");
-    if (!host) return optionalEnv.siteUrl;
+    if (!host) return siteOrigin();
     const proto = headerList.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
     return `${proto}://${host}`;
   } catch {
-    return optionalEnv.siteUrl;
+    return siteOrigin();
   }
 }
 
