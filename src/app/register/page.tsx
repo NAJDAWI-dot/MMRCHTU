@@ -1,15 +1,19 @@
 import type { Metadata } from "next";
 import { RegisterForm } from "@/app/register/RegisterForm";
-import { PaymentStage } from "@/components/payment/PaymentStage";
+import { PaymentBadge } from "@/components/payment/PaymentBadge";
 import { getPaymentConfig, getRegisterFormConfig } from "@/lib/site-config";
-import { isPaymentConfigured } from "@/lib/payment";
-import { computeFee, FEE_TIER_OPTIONS, type FeeBreakdown, type FeeTier } from "@/lib/pricing";
+import {
+  PAYMENT_STATUS_BLURB,
+  formatFils,
+  isPaymentConfigured,
+  isPaymentStatus,
+} from "@/lib/payment";
+import { VERIFICATION_WINDOW_TEXT } from "@/lib/payment-proof";
 import { normaliseResumeCode } from "@/lib/registration-code";
 import { prisma } from "@/lib/prisma";
 
-// A resumed payment reads one registration row, so this page cannot be cached
-// wholesale. Without a code it is still just configuration, and closing
-// registration revalidates the path immediately.
+// A status lookup reads one registration row, so this cannot be cached
+// wholesale. Without a code it is only configuration.
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
@@ -31,67 +35,74 @@ export default async function RegisterPage({
   // panel with a blank alias would send money nowhere.
   const cliq = isPaymentConfigured(paymentConfig) ? paymentConfig : null;
 
-  // Someone coming back from their email to finish paying. Resolved here rather
-  // than in the client so a bad code renders as a plain message instead of a
-  // form that fails on submit.
+  // Someone checking on a registration they already completed. Resolved here
+  // rather than in the browser so an unknown reference reads as a plain
+  // message instead of a form that fails on submit.
   const code = normaliseResumeCode(searchParams.code ?? "");
   if (code) {
     const registration = await prisma.registration.findUnique({ where: { resumeCode: code } });
 
     if (!registration) {
       return (
-        <Shell heading="Payment code not found">
+        <Shell heading="Reference not found">
           <div
             role="status"
             className="rounded-md border border-ras-gray/20 bg-ras-gray/5 p-6 text-sm text-ras-gray dark:text-white/70"
           >
             <p>
-              We could not find a registration for the code{" "}
+              We could not find a registration for{" "}
               <span className="font-mono font-bold">{code}</span>.
             </p>
             <p className="mt-2">
-              Check it against your confirmation email — the code is six characters. If it still
-              does not work, reply to that email and we will sort it out.
+              Check it against your confirmation email — the reference is six characters. If it
+              still does not work, reply to that email and we will sort it out.
             </p>
           </div>
         </Shell>
       );
     }
 
+    const status = isPaymentStatus(registration.paymentStatus)
+      ? registration.paymentStatus
+      : "UNPAID";
+
     return (
-      <Shell heading="Finish your registration">
-        <PaymentStage
-          payment={{
-            resumeCode: code,
-            teamName: registration.teamName,
-            feeBaseFils: registration.feeBaseFils ?? 0,
-            feeDiscountFils: registration.feeDiscountFils ?? 0,
-            feeDueFils: registration.feeDueFils ?? 0,
-            earlyBirdApplied: (registration.feeDiscountFils ?? 0) > 0,
-          }}
-          cliq={cliq}
-          // Anything past UNPAID means they have already told us something; the
-          // form would only let them report a second time over the first.
-          alreadySubmitted={registration.paymentStatus !== "UNPAID"}
-        />
+      <Shell heading={registration.teamName}>
+        <div className="rounded-lg border border-ras-purple/30 bg-ras-purple/5 p-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs uppercase tracking-widest text-ras-gray dark:text-white/60">
+              Payment
+            </span>
+            <PaymentBadge status={registration.paymentStatus} />
+            {registration.feeDueFils !== null ? (
+              <span className="font-display font-bold text-ras-purple dark:text-white">
+                {formatFils(registration.feeDueFils)}
+              </span>
+            ) : null}
+          </div>
+
+          <p className="mt-3 text-sm text-ras-gray dark:text-white/70">
+            {PAYMENT_STATUS_BLURB[status]}
+          </p>
+
+          {status === "SUBMITTED" ? (
+            <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
+              Verification takes {VERIFICATION_WINDOW_TEXT}. You do not need to send anything else.
+            </p>
+          ) : null}
+
+          {status === "REJECTED" && registration.paymentNote ? (
+            <p className="mt-2 text-sm text-ras-crimson">{registration.paymentNote}</p>
+          ) : null}
+        </div>
       </Shell>
     );
   }
 
-  // Priced once here and handed to the form, so the amount on each radio button
-  // comes from the same function that will charge it.
-  const now = new Date();
-  const quotes = Object.fromEntries(
-    FEE_TIER_OPTIONS.map((opt) => [
-      opt.value,
-      computeFee(opt.value, paymentConfig, paymentConfig, now),
-    ]),
-  ) as Record<FeeTier, FeeBreakdown>;
-
   return (
     <Shell heading="Register your team" subheading={config.deadlineText}>
       {config.isOpen ? (
-        <RegisterForm feeInfoText={config.feeInfoText} cliq={cliq} quotes={quotes} />
+        <RegisterForm feeInfoText={config.feeInfoText} cliq={cliq} />
       ) : (
         <div
           role="status"

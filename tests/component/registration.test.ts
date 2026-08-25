@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { validateRegistration, hasFieldErrors, type TeamMemberInput } from "@/lib/registration";
+import {
+  feeTierForTeam,
+  validateRegistration,
+  hasFieldErrors,
+  type TeamMemberInput,
+} from "@/lib/registration";
 
 const validMember: TeamMemberInput = {
   firstName: "Ada",
@@ -12,6 +17,21 @@ const validMember: TeamMemberInput = {
   ieeeMembershipId: "Non-Member",
 };
 
+describe("feeTierForTeam", () => {
+  it("prices the team from the leader, not from the other members", () => {
+    const leader = { ieeeStatus: "IEEE_RAS_MEMBER" } as const;
+    const others = [{ ieeeStatus: "NON_MEMBER" } as const, { ieeeStatus: "NON_MEMBER" } as const];
+    expect(feeTierForTeam([leader, ...others])).toBe("IEEE_RAS_MEMBER");
+  });
+
+  it("falls back to the full price when there is no usable leader status", () => {
+    // Charging the lowest rate on missing data would make omitting the field
+    // the cheapest way to register.
+    expect(feeTierForTeam([])).toBe("NON_MEMBER");
+    expect(feeTierForTeam([{ ieeeStatus: "" as TeamMemberInput["ieeeStatus"] }])).toBe("NON_MEMBER");
+  });
+});
+
 describe("validateRegistration", () => {
   it("accepts a valid registration", () => {
     const errors = validateRegistration({
@@ -20,24 +40,10 @@ describe("validateRegistration", () => {
       memberCount: 1,
       technicalExperience: "Built line-following robots for two years.",
       motivation: "Excited to build a maze-solver.",
-      feeTier: "NON_MEMBER",
       consentAccepted: true,
       members: [validMember],
     });
     expect(hasFieldErrors(errors)).toBe(false);
-  });
-
-  it("requires a fee tier", () => {
-    const errors = validateRegistration({
-      teamName: "Maze Runners",
-      submitterEmail: "ada@example.com",
-      memberCount: 1,
-      technicalExperience: "Some experience.",
-      motivation: "Motivated.",
-      consentAccepted: true,
-      members: [validMember],
-    });
-    expect(errors.feeTier).toBeDefined();
   });
 
   it("refuses to register a team that has not accepted the terms", () => {
@@ -49,7 +55,6 @@ describe("validateRegistration", () => {
       memberCount: 1,
       technicalExperience: "Some experience.",
       motivation: "Motivated.",
-      feeTier: "NON_MEMBER",
       consentAccepted: false,
       members: [validMember],
     });

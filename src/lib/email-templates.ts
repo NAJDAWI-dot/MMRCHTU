@@ -231,11 +231,11 @@ export interface RegistrationConfirmationData {
   members: RegistrationConfirmationMember[];
   siteUrl: string;
   /**
-   * The code that reopens the payment stage.
+   * The team's reference for this registration.
    *
-   * This email is the only durable copy a team has of it. The success screen is
-   * gone the moment they close the tab, which is exactly what happens when they
-   * leave to make the transfer in their banking app.
+   * This email is the only durable copy: the success screen is gone as soon as
+   * they close the tab. It also opens a read-only status page, which is what a
+   * team reaches for on day two of waiting for verification.
    */
   resumeCode: string;
   feeBaseFils: number;
@@ -261,7 +261,7 @@ export function registrationConfirmationEmail(
     )
     .join("");
 
-  const payUrl = `${data.siteUrl}/register?code=${encodeURIComponent(data.resumeCode)}`;
+  const statusUrl = `${data.siteUrl}/register?code=${encodeURIComponent(data.resumeCode)}`;
 
   const discountRow = data.earlyBirdApplied
     ? `
@@ -272,12 +272,12 @@ export function registrationConfirmationEmail(
     : "";
 
   const html = baseEmailHtml(
-    `Your team ${data.teamName} is registered — ${formatFils(data.feeDueFils)} to pay.`,
+    `${data.teamName} is registered — we are checking your payment now.`,
     `
       ${heading("You&apos;re registered! 🐭")}
       <p style="margin:0 0 20px; color:${GRAY};">
-        Thanks for applying to the 2026 Maze Solver Robot Competition. Your place is held once your
-        registration fee is paid and verified.
+        Thanks for entering the 2026 Maze Solver Robot Competition. We have your registration and
+        your payment, and we are checking the payment against our account now.
       </p>
       <div style="margin:0 0 20px; padding:18px 20px; background-color:${SURFACE}; border:1px solid ${BORDER}; border-radius:10px;">
         <div style="font-size:11px; font-weight:600; color:${GRAY}; letter-spacing:0.12em; text-transform:uppercase;">Team</div>
@@ -288,7 +288,7 @@ export function registrationConfirmationEmail(
       </div>
 
       <div style="margin:0 0 20px; padding:18px 20px; background-color:${SURFACE}; border:1px solid ${BORDER}; border-radius:10px;">
-        <div style="font-size:11px; font-weight:600; color:${GRAY}; letter-spacing:0.12em; text-transform:uppercase;">To pay</div>
+        <div style="font-size:11px; font-weight:600; color:${GRAY}; letter-spacing:0.12em; text-transform:uppercase;">Your fee</div>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;">
           <tr>
             <td style="padding:2px 0; font-size:13px; color:${GRAY};">Registration fee</td>
@@ -296,26 +296,27 @@ export function registrationConfirmationEmail(
           </tr>
           ${discountRow}
           <tr>
-            <td style="padding:8px 0 0; font-size:17px; font-weight:800; color:${PURPLE}; border-top:1px solid ${BORDER};">Total due</td>
+            <td style="padding:8px 0 0; font-size:17px; font-weight:800; color:${PURPLE}; border-top:1px solid ${BORDER};">Total</td>
             <td style="padding:8px 0 0; font-size:17px; font-weight:800; color:${PURPLE}; text-align:right; border-top:1px solid ${BORDER};">${escapeHtml(formatFils(data.feeDueFils))}</td>
           </tr>
         </table>
-        <p style="margin:14px 0 4px; font-size:11px; font-weight:600; color:${GRAY}; letter-spacing:0.12em; text-transform:uppercase;">Your payment code</p>
+        <p style="margin:14px 0 4px; font-size:11px; font-weight:600; color:${GRAY}; letter-spacing:0.12em; text-transform:uppercase;">Your reference</p>
         <p style="margin:0; font-family:'Courier New', monospace; font-size:24px; font-weight:800; letter-spacing:0.18em; color:${PURPLE};">${escapeHtml(data.resumeCode)}</p>
         <p style="margin:8px 0 0; font-size:12px; color:${GRAY};">
-          Keep this code. It reopens your payment page if you close this tab before you finish.
+          Quote this if you need to ask us anything about your registration.
         </p>
       </div>
 
       <p style="margin:0 0 8px; color:${GRAY};">
-        <strong>What happens next?</strong> Pay by CliQ using the details on your payment page, then upload
-        a screenshot of the confirmation from your banking app. We verify payments within
-        ${VERIFICATION_WINDOW_TEXT} and email you once yours is confirmed.
+        <strong>What happens next?</strong> Checking a CliQ transfer against our account is done by
+        hand, so it takes <strong>${VERIFICATION_WINDOW_TEXT}</strong> — longer over a weekend or a
+        public holiday. We will email you as soon as it is confirmed. You do not need to send
+        anything else in the meantime.
       </p>
       <p style="margin:0; color:${GRAY};">
         Remember: your robot must be physically present on competition day to be checked in.
       </p>
-      ${button("Pay your registration fee", payUrl)}
+      ${button("Check your payment status", statusUrl)}
     `,
     data.siteUrl,
   );
@@ -326,7 +327,7 @@ export function registrationConfirmationEmail(
   const discountLine = data.earlyBirdApplied
     ? `\nEarly bird discount: -${formatFils(data.feeDiscountFils)}`
     : "";
-  const text = `You're registered for MMRC 26!\n\nTeam: ${data.teamName}\n\n${memberLines}\n\nRegistration fee: ${formatFils(data.feeBaseFils)}${discountLine}\nTotal due: ${formatFils(data.feeDueFils)}\n\nYour payment code: ${data.resumeCode}\nKeep this code — it reopens your payment page if you close the tab.\n\nPay by CliQ, then upload a screenshot of the confirmation. We verify payments within ${VERIFICATION_WINDOW_TEXT}.\n\nPay here: ${payUrl}`;
+  const text = `You're registered for MMRC 26!\n\nTeam: ${data.teamName}\n\n${memberLines}\n\nRegistration fee: ${formatFils(data.feeBaseFils)}${discountLine}\nTotal: ${formatFils(data.feeDueFils)}\n\nYour reference: ${data.resumeCode}\nQuote this if you need to ask us anything about your registration.\n\nWhat happens next: checking a CliQ transfer against our account is done by hand, so it takes ${VERIFICATION_WINDOW_TEXT} — longer over a weekend or a public holiday. We will email you as soon as it is confirmed. You do not need to send anything else.\n\nCheck your status: ${statusUrl}`;
 
   return { subject, html, text };
 }

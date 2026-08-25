@@ -5,43 +5,20 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import {
   createRegistration,
+  feeTierForTeam,
   validateRegistration,
   hasFieldErrors,
   type FieldErrors,
   type IeeeStatus,
   type TeamMemberInput,
 } from "@/lib/registration";
-import { hasPaymentErrors, parsePayment, validatePayment } from "@/lib/payment";
-import { type FeeTier } from "@/lib/pricing";
-import { normaliseResumeCode } from "@/lib/registration-code";
+import { validatePayment } from "@/lib/payment";
+import { computeFee, type FeeBreakdown } from "@/lib/pricing";
+import { getPaymentConfig } from "@/lib/site-config";
 import { paymentScreenshotKey } from "@/lib/payment-proof";
 import { checkUpload } from "@/lib/gallery";
 import { StorageNotConfiguredError, storePhoto } from "@/lib/photo-storage";
 import { createRateLimiter, clientKey } from "@/lib/rate-limit";
-import { prisma } from "@/lib/prisma";
-
-/**
- * What stage two needs to render, handed over when stage one succeeds.
- *
- * Everything here is already frozen on the registration row — it is passed
- * through rather than recomputed so the figure on screen is provably the figure
- * that was stored.
- */
-export interface PaymentStageData {
-  resumeCode: string;
-  teamName: string;
-  feeBaseFils: number;
-  feeDiscountFils: number;
-  feeDueFils: number;
-  earlyBirdApplied: boolean;
-}
-
-export interface RegisterActionState {
-  status: "idle" | "success" | "error";
-  errors?: FieldErrors;
-  /** Present exactly when status is "success" — the handover into stage two. */
-  payment?: PaymentStageData;
-}
 
 function readMember(formData: FormData, index: number): Partial<TeamMemberInput> {
   return {
@@ -56,72 +33,91 @@ function readMember(formData: FormData, index: number): Partial<TeamMemberInput>
   };
 }
 
-export async function registerTeam(
-  _prevState: RegisterActionState,
-  formData: FormData,
-): Promise<RegisterActionState> {
+function readTeam(formData: FormData) {
   const memberCount = Number(formData.get("memberCount") ?? 1);
-
-  const input = {
+  return {
     teamName: String(formData.get("teamName") ?? ""),
     submitterEmail: String(formData.get("submitterEmail") ?? ""),
     memberCount,
     technicalExperience: String(formData.get("technicalExperience") ?? ""),
     motivation: String(formData.get("motivation") ?? ""),
-    feeTier: String(formData.get("feeTier") ?? "") as FeeTier,
     consentAccepted: formData.get("consentAccepted") === "on",
-    members: Array.from({ length: memberCount }, (_, i) => readMember(formData, i + 1)) as TeamMemberInput[],
+    members: Array.from({ length: memberCount }, (_, i) =>
+      readMember(formData, i + 1),
+    ) as TeamMemberInput[],
   };
+}
+
+export interface TeamCheckState {
+  status: "idle" | "ok" | "error";
+  errors?: FieldErrors;
+  /** What the team will owe, so stage two can show it without a second round trip. */
+  fee?: FeeBreakdown;
+}
+
+/**
+ * Stage one's "Next": checks the team details and quotes the fee, storing
+ * nothing.
+ *
+ * The browser keeps the answers until the team actually reports a payment.
+ * Validation still runs on the server rather than only in the page, because the
+ * same rules have to hold at the point of the real write and there should be
+ * exactly one copy of them.
+ */
+export async function checkTeamDetails(
+  _prevState: TeamCheckState,
+  formData: FormData,
+): Promise<TeamCheckState> {
+  const input = readTeam(formData);
 
   const errors = validateRegistration(input);
   if (hasFieldErrors(errors)) {
     return { status: "error", errors };
   }
 
-  const registration = await createRegistration(input);
+  const config = await getPaymentConfig();
+  const fee = computeFee(feeTierForTeam(input.members), config, config);
 
-  return {
-    status: "success",
-    payment: {
-      // Non-null in practice: createRegistration always writes these. The
-      // fallbacks exist only because the columns are nullable for rows that
-      // predate pricing, which this row by definition is not.
-      resumeCode: registration.resumeCode ?? "",
-      teamName: registration.teamName,
-      feeBaseFils: registration.feeBaseFils ?? 0,
-      feeDiscountFils: registration.feeDiscountFils ?? 0,
-      feeDueFils: registration.feeDueFils ?? 0,
-      earlyBirdApplied: (registration.feeDiscountFils ?? 0) > 0,
-    },
-  };
+  return { status: "ok", fee };
 }
 
-export interface PaymentProofErrors {
+export interface CompleteRegistrationErrors {
   reference?: string;
   amount?: string;
   screenshot?: string;
-  /** Something that is not about one field: an unknown code, a rate limit. */
+  /** Something that is not about one field: a rate limit, a team-details problem. */
   form?: string;
 }
 
-export interface PaymentProofState {
+export interface CompleteRegistrationState {
   status: "idle" | "success" | "error";
-  errors?: PaymentProofErrors;
+  errors?: CompleteRegistrationErrors;
+  teamErrors?: FieldErrors;
+  registered?: {
+    teamName: string;
+    resumeCode: string;
+    feeDueFils: number;
+  };
 }
 
 /**
- * Reporting a payment is a public, unauthenticated write — anyone holding a
- * resume code can post to it. Same budget as /api/register: enough for a team
- * that mistypes a reference a few times, not enough to be worth scripting.
+ * Public, unauthenticated write: enough for a team fixing a mistyped
+ * reference, not enough to be worth scripting.
  */
-const proofLimiter = createRateLimiter({ limit: 8, windowMs: 10 * 60 * 1000 });
+const submitLimiter = createRateLimiter({ limit: 8, windowMs: 10 * 60 * 1000 });
 
-export async function submitPaymentProof(
-  resumeCode: string,
-  _prevState: PaymentProofState,
+/**
+ * Stage two's submit: the only point at which anything is stored.
+ *
+ * The team's details and their payment report are written together, so a
+ * half-finished registration never reaches the database — a team that gives up
+ * partway leaves nothing behind for anyone to chase.
+ */
+export async function completeRegistration(
+  _prevState: CompleteRegistrationState,
   formData: FormData,
-): Promise<PaymentProofState> {
-  const limit = proofLimiter.check(clientKey(headers()));
+): Promise<CompleteRegistrationState> {
+  const limit = submitLimiter.check(clientKey(headers()));
   if (!limit.allowed) {
     const minutes = Math.ceil(limit.retryAfterMs / 60000);
     return {
@@ -130,25 +126,25 @@ export async function submitPaymentProof(
     };
   }
 
-  const code = normaliseResumeCode(resumeCode);
-  const registration = code
-    ? await prisma.registration.findUnique({ where: { resumeCode: code } })
-    : null;
+  const team = readTeam(formData);
 
-  if (!registration) {
+  // Re-checked rather than trusted: stage one's pass happened in an earlier
+  // request, and the hidden fields carrying it here are editable.
+  const teamErrors = validateRegistration(team);
+  if (hasFieldErrors(teamErrors)) {
     return {
       status: "error",
-      errors: { form: "We could not find a registration for that payment code." },
+      teamErrors,
+      errors: { form: "Some of your team details need fixing — go back and check them." },
     };
   }
 
   const reference = String(formData.get("paymentReference") ?? "");
   const amount = String(formData.get("paymentAmount") ?? "");
-
-  // Required here, unlike the old optional register-time report: a team only
-  // reaches this form after they say they have paid, so blank fields are a
-  // mistake rather than a deliberate "later".
-  const errors: PaymentProofErrors = validatePayment({ reference, amount }, { required: true });
+  const errors: CompleteRegistrationErrors = validatePayment(
+    { reference, amount },
+    { required: true },
+  );
 
   const file = formData.get("screenshot");
   const hasFile = file instanceof File && file.size > 0;
@@ -163,15 +159,18 @@ export async function submitPaymentProof(
     return { status: "error", errors };
   }
 
-  const parsed = parsePayment({ reference, amount });
   const screenshot = file as File;
+  // Keyed on a fresh id rather than the registration's, which does not exist
+  // yet — the row is created immediately below, in this same call.
+  const key = paymentScreenshotKey(
+    randomUUID().replace(/-/g, ""),
+    screenshot.name,
+    randomUUID().slice(0, 8),
+  );
 
   let stored;
   try {
-    stored = await storePhoto(
-      paymentScreenshotKey(registration.id, screenshot.name, randomUUID().slice(0, 8)),
-      screenshot,
-    );
+    stored = await storePhoto(key, screenshot);
   } catch (error) {
     if (error instanceof StorageNotConfiguredError) {
       return { status: "error", errors: { screenshot: error.message } };
@@ -179,21 +178,25 @@ export async function submitPaymentProof(
     throw error;
   }
 
-  await prisma.registration.update({
-    where: { id: registration.id },
-    data: {
-      paymentReference: parsed.reference,
-      paymentAmountFils: parsed.amountFils,
-      paymentScreenshotUrl: stored.url,
-      paymentScreenshotKey: stored.key,
-      // A report is a claim, not a payment. It stays SUBMITTED until a human
-      // matches it against the account.
-      paymentStatus: "SUBMITTED",
-      paymentSubmittedAt: new Date(),
+  const registration = await createRegistration({
+    ...team,
+    payment: {
+      reference,
+      amount,
+      screenshotUrl: stored.url,
+      screenshotKey: stored.key,
     },
   });
 
   revalidatePath("/admin/payments");
+  revalidatePath("/admin/registrations");
 
-  return { status: "success" };
+  return {
+    status: "success",
+    registered: {
+      teamName: registration.teamName,
+      resumeCode: registration.resumeCode ?? "",
+      feeDueFils: registration.feeDueFils ?? 0,
+    },
+  };
 }

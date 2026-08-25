@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { sendRegistrationConfirmation } from "@/lib/email";
 import { IEEE_STATUS_OPTIONS, type IeeeStatus } from "@/lib/ieee-status";
 import { computeFee, isFeeTier, type FeeTier } from "@/lib/pricing";
+import { parsePayment } from "@/lib/payment";
 import { createUniqueResumeCode } from "@/lib/registration-code";
 import { getPaymentConfig } from "@/lib/site-config";
 
@@ -33,14 +34,15 @@ export interface TeamMemberInput {
   ieeeMembershipId: string;
 }
 
+/** What the team reported transferring, captured with the registration itself. */
+export interface RegistrationPaymentInput {
+  reference: string;
+  amount: string;
+  screenshotUrl: string;
+  screenshotKey: string;
+}
+
 export interface RegistrationInput {
-  /**
-   * The single membership tier the whole team is priced at.
-   *
-   * Separate from each member's own `ieeeStatus`: that stays a record of who
-   * the people are, while this decides one flat fee for the team.
-   */
-  feeTier: FeeTier;
   /** Whether the team ticked the box agreeing to the terms and policies. */
   consentAccepted: boolean;
   teamName: string;
@@ -49,6 +51,20 @@ export interface RegistrationInput {
   technicalExperience: string;
   motivation: string;
   members: TeamMemberInput[];
+  payment: RegistrationPaymentInput;
+}
+
+/**
+ * The tier a team is priced at: whatever the team leader's IEEE status says.
+ *
+ * One fee for the team, decided by the person registering it, rather than a
+ * separate question asking the same thing a second time. Asking twice invites
+ * the two answers to disagree, and then somebody has to decide which of a
+ * team's own statements about itself is the real one.
+ */
+export function feeTierForTeam(members: readonly { ieeeStatus: IeeeStatus }[]): FeeTier {
+  const leader = members[0]?.ieeeStatus;
+  return leader && isFeeTier(leader) ? leader : "NON_MEMBER";
 }
 
 export interface TeamMemberFieldErrors {
@@ -68,7 +84,6 @@ export interface FieldErrors {
   memberCount?: string;
   technicalExperience?: string;
   motivation?: string;
-  feeTier?: string;
   consentAccepted?: string;
   members?: (TeamMemberFieldErrors | undefined)[];
 }
@@ -134,9 +149,6 @@ export function validateRegistration(input: RegistrationValidationInput): FieldE
   if (!input.motivation || input.motivation.trim().length < 1) {
     errors.motivation = "Tell us your motivation to participate.";
   }
-  if (!input.feeTier || !isFeeTier(input.feeTier)) {
-    errors.feeTier = "Select the membership tier your team is registering under.";
-  }
   if (!input.consentAccepted) {
     // Blocking rather than assuming: this is the record that the team agreed to
     // the terms before money changed hands, so it cannot be inferred.
@@ -168,7 +180,12 @@ export async function createRegistration(input: RegistrationInput) {
   // read: the prices and the early-bird window both move over time, and a team
   // that registered while the discount was running must keep the figure they
   // were quoted rather than watch their balance rise when the cutoff passes.
-  const fee = computeFee(input.feeTier, paymentConfig, paymentConfig);
+  const fee = computeFee(feeTierForTeam(input.members), paymentConfig, paymentConfig);
+
+  const reported = parsePayment({
+    reference: input.payment.reference,
+    amount: input.payment.amount,
+  });
 
   const resumeCode = await createUniqueResumeCode(async (code) => {
     const clash = await prisma.registration.findUnique({
@@ -193,10 +210,14 @@ export async function createRegistration(input: RegistrationInput) {
         resumeCode,
         consentAcceptedAt: new Date(),
         consentVersion: CONSENT_VERSION,
-        // Nothing has been paid yet — stage two is where a team reports a
-        // transfer, and even then it stays SUBMITTED until a human matches it
-        // against the account.
-        paymentStatus: "UNPAID",
+        // A report is a claim, not a payment. SUBMITTED until a human matches
+        // it against the chapter's bank statement.
+        paymentStatus: "SUBMITTED",
+        paymentReference: reported.reference,
+        paymentAmountFils: reported.amountFils,
+        paymentSubmittedAt: new Date(),
+        paymentScreenshotUrl: input.payment.screenshotUrl,
+        paymentScreenshotKey: input.payment.screenshotKey,
         members: {
           create: input.members.map((member, i) => ({
             order: i + 1,

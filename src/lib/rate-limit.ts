@@ -1,9 +1,9 @@
 /**
  * A sliding-window rate limiter for the public write endpoints.
  *
- * `/api/register` and `/api/game/scores` accept POSTs from anyone with no
- * throttle at all: registration is spammable, and the leaderboard is one loop
- * away from being filled with junk.
+ * The registration submit and `/api/game/scores` accept writes from anyone with
+ * no throttle at all: registration is spammable, and the leaderboard is one
+ * loop away from being filled with junk.
  *
  * ## What this does and does not protect
  *

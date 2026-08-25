@@ -27,8 +27,8 @@ test("registering a 1-member team reaches the payment stage", async ({ page }) =
   await page.getByLabel("University").selectOption("The University of Jordan (UJ)");
   await page.getByLabel("Major").fill("Computer Engineering");
   // Scoped to the member fieldset: the fee-tier group offers a "Non-Member"
-  // radio too, and the two mean different things — one records who this person
-  // is, the other decides what the team pays.
+  // Scoped to the member fieldset. The leader's status is also what prices the
+  // team, so this one radio carries both meanings.
   await page
     .getByRole("group", { name: "Team Leader" })
     .getByRole("radio", { name: "Non-Member", exact: true })
@@ -39,18 +39,19 @@ test("registering a 1-member team reaches the payment stage", async ({ page }) =
     .fill("Two years building line-following robots.");
   await page.getByLabel("What is your motivation to participate?").fill("Excited to build a maze-solver.");
 
-  await page.getByRole("group", { name: /registration fee/i }).getByRole("radio", { name: /Non-Member/ }).check();
   await page.getByRole("checkbox", { name: /accept the/i }).check();
 
-  await page.getByRole("button", { name: "Register team" }).click();
+  await page.getByRole("button", { name: /next: payment/i }).click();
 
-  await expect(page.getByText(`${teamName} is registered.`)).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText("Total due")).toBeVisible();
+  // Non-member is 35 JD, less the 20% early bird the verification run sets up.
+  await expect(page.getByText("Total due")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("28 JD", { exact: true }).first()).toBeVisible();
+  expect(teamName).toBeTruthy();
 });
 
 test("shows validation errors for an incomplete form", async ({ page }) => {
   await page.goto("/register");
   await page.getByLabel("Team name").fill("A");
-  await page.getByRole("button", { name: "Register team" }).click();
+  await page.getByRole("button", { name: /next: payment/i }).click();
   await expect(page.getByRole("alert").first()).toBeVisible();
 });
