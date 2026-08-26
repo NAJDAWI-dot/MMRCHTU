@@ -91,6 +91,9 @@ export interface FieldErrors {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const IEEE_STATUS_VALUES: IeeeStatus[] = ["IEEE_RAS_MEMBER", "IEEE_MEMBER", "NON_MEMBER"];
 
+/** Largest team the rules allow, and the ceiling on anything sized by it. */
+export const MAX_TEAM_SIZE = 3;
+
 function validateMember(member: Partial<TeamMemberInput> | undefined): TeamMemberFieldErrors | undefined {
   const errors: TeamMemberFieldErrors = {};
 
@@ -139,7 +142,7 @@ export function validateRegistration(input: RegistrationValidationInput): FieldE
     input.memberCount === undefined ||
     !Number.isInteger(input.memberCount) ||
     input.memberCount < 1 ||
-    input.memberCount > 3
+    input.memberCount > MAX_TEAM_SIZE
   ) {
     errors.memberCount = "Team size must be 1, 2, or 3.";
   }
@@ -155,8 +158,17 @@ export function validateRegistration(input: RegistrationValidationInput): FieldE
     errors.consentAccepted = "Please accept the terms and policies to continue.";
   }
 
+  // Clamped, not merely checked for integer-ness: this is used as an array
+  // length, and an out-of-range count has already been reported above, so there
+  // is nothing to gain by walking a hundred million imaginary members to say so
+  // a second time. Callers should bound this before it reaches here — see
+  // readTeam in src/app/register/actions.ts — but this function is exported and
+  // can be called directly, so it does not depend on them having done it.
+  const rawCount = input.memberCount;
   const expectedCount =
-    input.memberCount !== undefined && Number.isInteger(input.memberCount) ? input.memberCount : 0;
+    rawCount !== undefined && Number.isInteger(rawCount) && rawCount >= 1 && rawCount <= MAX_TEAM_SIZE
+      ? rawCount
+      : 0;
   const members = input.members ?? [];
   const memberErrors = Array.from({ length: expectedCount }, (_, i) => validateMember(members[i]));
   if (memberErrors.some(Boolean)) {

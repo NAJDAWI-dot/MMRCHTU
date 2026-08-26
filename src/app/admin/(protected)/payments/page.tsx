@@ -6,7 +6,6 @@ import { prisma } from "@/lib/prisma";
 import { getPaymentConfig } from "@/lib/site-config";
 import { PAYMENT_STATUSES, PAYMENT_STATUS_LABELS, formatFils } from "@/lib/payment";
 import { isEarlyBirdActive } from "@/lib/pricing";
-import { downloadUrlFor } from "@/lib/photo-storage";
 import { updatePaymentConfig, updatePaymentStatus } from "./actions";
 
 export const metadata: Metadata = {
@@ -255,8 +254,11 @@ export default async function AdminPaymentsPage() {
 
               {reg.paymentScreenshotUrl ? (
                 <p className="mt-3 text-xs">
+                  {/* Served through an admin-only route rather than linked at
+                      its blob URL. A bank confirmation must not end up in
+                      browser history as a public link that keeps working. */}
                   <a
-                    href={downloadUrlFor(reg.paymentScreenshotUrl)}
+                    href={`/admin/payments/screenshot/${reg.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-semibold text-ras-purple underline dark:text-white"

@@ -40,6 +40,9 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [memberCount, setMemberCount] = useState(1);
   const [teamErrors, setTeamErrors] = useState<FieldErrors | undefined>();
+  // Registration having closed, or too many attempts — neither belongs against
+  // a field, because neither is fixed by editing one.
+  const [formError, setFormError] = useState<string | undefined>();
   const [fee, setFee] = useState<FeeBreakdown | undefined>();
   // Arrives with the Next response rather than as a prop, so step one's page
   // source carries nothing about how to pay.
@@ -109,10 +112,12 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
 
       if (result.status === "error") {
         setTeamErrors(result.errors);
+        setFormError(result.formError);
         return;
       }
 
       setTeamErrors(undefined);
+      setFormError(undefined);
       setFee(result.fee);
       setCliq(result.cliq ?? null);
 
@@ -270,6 +275,15 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
             </p>
           ) : null}
         </div>
+
+        {formError ? (
+          <p
+            role="alert"
+            className="rounded-md border border-ras-crimson/30 bg-ras-crimson/5 p-3 text-sm text-ras-crimson"
+          >
+            {formError}
+          </p>
+        ) : null}
 
         <Button type="button" onClick={handleNext} disabled={checking}>
           {checking ? "Checking…" : "Next: payment"}

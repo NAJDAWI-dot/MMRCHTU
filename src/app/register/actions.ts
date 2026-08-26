@@ -8,17 +8,22 @@ import {
   feeTierForTeam,
   validateRegistration,
   hasFieldErrors,
+  MAX_TEAM_SIZE,
   type FieldErrors,
   type IeeeStatus,
   type TeamMemberInput,
 } from "@/lib/registration";
 import { isPaymentConfigured, validatePayment, type CliqDetails } from "@/lib/payment";
 import { computeFee, type FeeBreakdown } from "@/lib/pricing";
-import { getPaymentConfig } from "@/lib/site-config";
+import { getPaymentConfig, getRegisterFormConfig } from "@/lib/site-config";
 import { paymentScreenshotKey } from "@/lib/payment-proof";
 import { checkUpload } from "@/lib/gallery";
-import { StorageNotConfiguredError, storePhoto } from "@/lib/photo-storage";
+import { StorageNotConfiguredError, removePhoto, storePhoto } from "@/lib/photo-storage";
 import { createRateLimiter, clientKey } from "@/lib/rate-limit";
+
+/** Shown when an admin has closed registration, on either step. */
+const CLOSED_MESSAGE =
+  "Registration is closed. If you think this is a mistake, contact the organizing committee.";
 
 function readMember(formData: FormData, index: number): Partial<TeamMemberInput> {
   return {
@@ -34,7 +39,17 @@ function readMember(formData: FormData, index: number): Partial<TeamMemberInput>
 }
 
 function readTeam(formData: FormData) {
-  const memberCount = Number(formData.get("memberCount") ?? 1);
+  // Bounded before it is used as a length. `memberCount` arrives from the
+  // network, and `Array.from({ length: n })` allocates eagerly — so a posted
+  // memberCount of 100000000 would build a hundred million member objects and
+  // exhaust the process, all before validateRegistration ever got the chance to
+  // say the team is too big. Anything out of range collapses to zero members,
+  // which is precisely what the validator already rejects, so a genuine typo
+  // still produces the same "Team size must be 1, 2, or 3" it always did.
+  const rawCount = Number(formData.get("memberCount") ?? 1);
+  const memberCount =
+    Number.isInteger(rawCount) && rawCount >= 1 && rawCount <= MAX_TEAM_SIZE ? rawCount : 0;
+
   return {
     teamName: String(formData.get("teamName") ?? ""),
     submitterEmail: String(formData.get("submitterEmail") ?? ""),
@@ -51,6 +66,12 @@ function readTeam(formData: FormData) {
 export interface TeamCheckState {
   status: "idle" | "ok" | "error";
   errors?: FieldErrors;
+  /**
+   * Something that is not about any one field: registration being closed, or a
+   * rate limit. Kept separate from `errors` so these never get filed against a
+   * field the person can "fix" by editing it.
+   */
+  formError?: string;
   /** What the team will owe, so step two can show it without a second round trip. */
   fee?: FeeBreakdown;
   /**
@@ -65,6 +86,19 @@ export interface TeamCheckState {
 }
 
 /**
+ * Public and unauthenticated, like the submit below, but deliberately loose.
+ *
+ * `clientKey` is an IP address, and most of the teams registering share one:
+ * a university lab, campus wifi, a phone network's NAT. So the ceiling has to
+ * clear a whole room of people registering in the same ten minutes, which a
+ * tight limit would read as an attack. It is set where a person cannot
+ * plausibly reach it and a script cannot plausibly stay under it — the real
+ * protection against a flood is that this handler now does bounded work per
+ * request (see readTeam), not that it counts them.
+ */
+const checkLimiter = createRateLimiter({ limit: 60, windowMs: 10 * 60 * 1000 });
+
+/**
  * Stage one's "Next": checks the team details and quotes the fee, storing
  * nothing.
  *
@@ -77,6 +111,24 @@ export async function checkTeamDetails(
   _prevState: TeamCheckState,
   formData: FormData,
 ): Promise<TeamCheckState> {
+  const limit = checkLimiter.check(clientKey(headers()));
+  if (!limit.allowed) {
+    const minutes = Math.ceil(limit.retryAfterMs / 60000);
+    return {
+      status: "error",
+      formError: `Too many attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`,
+    };
+  }
+
+  // Checked here as well as in the page, because the page only decides what to
+  // render — the form it rendered while registration was open can still be
+  // submitted after it closes, and a browser tab left open all week will do
+  // exactly that.
+  const form = await getRegisterFormConfig();
+  if (!form.isOpen) {
+    return { status: "error", formError: CLOSED_MESSAGE };
+  }
+
   const input = readTeam(formData);
 
   const errors = validateRegistration(input);
@@ -141,6 +193,25 @@ export async function completeRegistration(
     };
   }
 
+  const [form, paymentConfig] = await Promise.all([getRegisterFormConfig(), getPaymentConfig()]);
+
+  if (!form.isOpen) {
+    return { status: "error", errors: { form: CLOSED_MESSAGE } };
+  }
+
+  // Refuses to record a payment against details that are no longer published.
+  // Step one may have been passed while payment was switched on; if an admin
+  // has since turned it off, writing SUBMITTED here would claim money had been
+  // sent to an account nobody is watching.
+  if (!isPaymentConfigured(paymentConfig)) {
+    return {
+      status: "error",
+      errors: {
+        form: "Payment is not currently open. Please try again shortly, or contact the organizing committee.",
+      },
+    };
+  }
+
   const team = readTeam(formData);
 
   // Re-checked rather than trusted: stage one's pass happened in an earlier
@@ -193,15 +264,25 @@ export async function completeRegistration(
     throw error;
   }
 
-  const registration = await createRegistration({
-    ...team,
-    payment: {
-      reference,
-      amount,
-      screenshotUrl: stored.url,
-      screenshotKey: stored.key,
-    },
-  });
+  // The upload has already happened, so a failure from here on leaves a file in
+  // the store with nothing pointing at it. Cleaning up on the way out keeps the
+  // bucket in step with the table; the removal is best-effort by design, and
+  // must not replace the real error with a storage one.
+  let registration;
+  try {
+    registration = await createRegistration({
+      ...team,
+      payment: {
+        reference,
+        amount,
+        screenshotUrl: stored.url,
+        screenshotKey: stored.key,
+      },
+    });
+  } catch (error) {
+    await removePhoto(stored.key);
+    throw error;
+  }
 
   revalidatePath("/admin/payments");
   revalidatePath("/admin/registrations");

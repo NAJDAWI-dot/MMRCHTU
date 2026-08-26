@@ -90,6 +90,30 @@ describe("validateRegistration", () => {
     expect(tooMany.memberCount).toBeDefined();
   });
 
+  // memberCount arrives from a form post and is used as an array length. Before
+  // it was bounded, a count of 100000000 built a hundred million member objects
+  // looking for missing fields, so one small unauthenticated request was enough
+  // to exhaust the process. The assertion that catches a regression is
+  // `members`: sized from the raw count it would be enormous rather than absent,
+  // and the test would hang long before it got there.
+  it.each([1e8, 1e6, 4, 0, -1, 2.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    "reports an out-of-range team size of %p without walking it",
+    (memberCount) => {
+      const errors = validateRegistration({
+        teamName: "Maze Runners",
+        submitterEmail: "ada@example.com",
+        memberCount,
+        technicalExperience: "Some experience.",
+        motivation: "Motivated.",
+        consentAccepted: true,
+        members: [validMember],
+      });
+
+      expect(errors.memberCount).toBeDefined();
+      expect(errors.members).toBeUndefined();
+    },
+  );
+
   it("flags missing member fields", () => {
     const errors = validateRegistration({
       teamName: "Maze Runners",
