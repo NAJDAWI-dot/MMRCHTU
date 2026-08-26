@@ -119,13 +119,6 @@ describe("remainingHoldMs", () => {
 });
 
 describe("timings", () => {
-  it("holds for one full lap of the maze cell", () => {
-    // routeLoaderOrbit in globals.css runs 1.5s per circuit. The hold matches
-    // it so the dot lands back at its starting corner as the overlay lifts;
-    // a shorter hold cuts the animation off mid-wall.
-    expect(ROUTE_LOADER_MIN_MS).toBe(1500);
-  });
-
   it("holds long enough to read as deliberate, not so long as to obstruct", () => {
     expect(ROUTE_LOADER_MIN_MS).toBeGreaterThanOrEqual(400);
     expect(ROUTE_LOADER_MIN_MS).toBeLessThanOrEqual(2500);

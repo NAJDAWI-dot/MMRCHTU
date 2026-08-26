@@ -200,27 +200,11 @@
 }
 
 /* A cell of the maze, with something running its perimeter. */
-/* Walls keyed to the foreground rather than to a brand colour, so the cell is
-   equally legible on the light and dark backgrounds the overlay inherits. */
+/* The maze draws its own walls and mice — nothing is framed around it. */
 .route-loader-maze {
-  position: relative;
-  display: block;
-  width: 64px;
-  height: 64px;
-  border: 4px solid color-mix(in srgb, var(--color-fg, #37333d) 30%, transparent);
-  border-radius: 12px;
-}
-
-.route-loader-dot {
-  position: absolute;
-  top: -7px;
-  left: -7px;
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  background: var(--color-ras-gold, #f2a900);
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-ras-gold, #f2a900) 30%, transparent);
-  animation: routeLoaderOrbit 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  width: clamp(112px, 26vmin, 148px);
+  height: auto;
+  color: var(--color-ras-purple, #5f2167);
 }
 
 @keyframes routeLoaderIn {
@@ -229,29 +213,6 @@
   }
   to {
     opacity: 1;
-  }
-}
-
-/* Corner to corner, pausing fractionally at each — a turn, not a slide.
-   One lap takes 1.5s, which is deliberately the same as ROUTE_LOADER_MIN_MS in
-   src/lib/route-loader.ts: the loader is held for exactly one circuit, so the
-   dot is always back where it started when the overlay lifts. Changing either
-   number without the other leaves it cut off mid-wall. */
-@keyframes routeLoaderOrbit {
-  0% {
-    transform: translate(0, 0);
-  }
-  25% {
-    transform: translate(64px, 0);
-  }
-  50% {
-    transform: translate(64px, 64px);
-  }
-  75% {
-    transform: translate(0, 64px);
-  }
-  100% {
-    transform: translate(0, 0);
   }
 }
 
@@ -546,7 +507,6 @@
     animation: none;
   }
 
-  .route-loader-dot,
   .cheddar-actor,
   .cheddar-actor > *,
   .cheddar-bubble,

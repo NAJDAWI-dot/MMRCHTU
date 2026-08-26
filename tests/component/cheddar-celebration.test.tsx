@@ -1,22 +1,17 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CheddarCelebration } from "@/components/register/CheddarCelebration";
-import {
-  CELEBRATION_FADE_MS,
-  CELEBRATION_SEEN_KEY,
-  CHEDDAR_QUIPS,
-} from "@/lib/celebration";
+import { CELEBRATION_FADE_MS, CHEDDAR_QUIPS } from "@/lib/celebration";
 import { VERIFICATION_WINDOW_TEXT } from "@/lib/payment-proof";
 
 /**
  * Cheddar's appearance, from the outside.
  *
  * The picking itself is covered in tests/unit/celebration.test.ts. What matters
- * here is the behaviour around it: that he shows up once, that every route out
- * of the overlay works, and — most importantly — that he can always be got rid
- * of. The confirmation underneath him carries the team's resume code, so an
- * overlay that could not be dismissed would be a genuine problem rather than an
- * annoyance.
+ * here is the behaviour around it: that he shows up at all, that he says what
+ * the team needs to know, and that every route out of the overlay works. The
+ * confirmation underneath him carries the resume code, so one that could not be
+ * dismissed would be a real problem rather than an annoyance.
  */
 
 /** Always the first quip, so assertions can name it. */
@@ -61,17 +56,30 @@ describe("CheddarCelebration", () => {
     expect(home.getAttribute("href")).toBe("/");
   });
 
-  it("records that this browser has met him", () => {
+  it("remembers nothing, so he cannot be suppressed forever", () => {
+    // The regression this exists for. He used to write a "seen" flag to
+    // localStorage the moment he mounted, so one stray mount — an earlier
+    // build, an abandoned attempt — retired him for that browser permanently,
+    // with no way for the person to get him back and no way for us to
+    // reproduce it. Completing a registration is the only condition now.
+    const first = render(<CheddarCelebration random={firstQuip} />);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    first.unmount();
+
     render(<CheddarCelebration random={firstQuip} />);
-    expect(window.localStorage.getItem(CELEBRATION_SEEN_KEY)).toBe("1");
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
-  it("stays away once he has been seen", () => {
-    window.localStorage.setItem(CELEBRATION_SEEN_KEY, "1");
+  it("touches no storage at all", () => {
+    // Belt and braces on the above: if nothing is read or written, nothing can
+    // accumulate that quietly changes his behaviour later.
+    const getItem = vi.spyOn(Storage.prototype, "getItem");
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+
     render(<CheddarCelebration random={firstQuip} />);
 
-    // Not merely hidden — never rendered, so nothing covers the reference.
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(getItem).not.toHaveBeenCalled();
+    expect(setItem).not.toHaveBeenCalled();
   });
 
   it("hangs off the body rather than off whatever rendered it", () => {
@@ -134,19 +142,5 @@ describe("CheddarCelebration", () => {
     settle(30_000);
 
     expect(screen.queryByRole("dialog")).toBeTruthy();
-  });
-
-  it("still appears when storage refuses to answer", () => {
-    // Private browsing throws on access. The right outcome is a mouse, possibly
-    // twice — not a confirmation screen that crashed.
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new Error("denied");
-    });
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("denied");
-    });
-
-    expect(() => render(<CheddarCelebration random={firstQuip} />)).not.toThrow();
-    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 });

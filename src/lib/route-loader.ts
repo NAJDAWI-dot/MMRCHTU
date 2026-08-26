@@ -13,17 +13,13 @@
  */
 
 /**
- * The deliberate hold: one complete lap of the maze cell.
+ * The deliberate hold.
  *
  * Most of these pages render in single-digit milliseconds, so without a floor
  * the loader would appear and vanish inside one frame and read as a flicker or
- * a fault. The number is not arbitrary — the dot takes 1.5s to run all four
- * walls (routeLoaderOrbit in globals.css), so anything shorter cuts it off
- * partway round and the animation never resolves. Holding for exactly one lap
- * is what makes it look finished rather than interrupted.
- *
- * Change one of the two and change the other, or the dot stops landing back
- * where it started.
+ * a fault. This is long enough to watch the mice actually get somewhere in the
+ * maze — MazeTrail's loop mode repeats on its own, so the hold no longer has to
+ * match a single animation cycle the way the old square did.
  */
 export const ROUTE_LOADER_MIN_MS = 1500;
 

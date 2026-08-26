@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { MazeTrail } from "@/components/brand/MazeTrail";
 import {
   ROUTE_LOADER_FADE_MS,
   ROUTE_LOADER_SAFETY_MS,
@@ -118,14 +119,12 @@ export function RouteLoader() {
       // interrupt a screen reader on its way to the page that is already here.
       aria-hidden="true"
     >
-      {/* Deliberately not Cheddar. He is the payoff for finishing a
-          registration, and a mascot who turns up on every single navigation
-          stops being a payoff. This is a dot finding its way round a maze —
-          the competition's own idea, with none of the character. */}
+      {/* The mini maze the site already draws, in the looping mode MazeTrail
+          documents as being for exactly this. Deliberately not Cheddar: he is
+          the payoff for finishing a registration, and a mascot on every single
+          navigation stops being a payoff. */}
       <div className="route-loader-stage">
-        <span className="route-loader-maze">
-          <span className="route-loader-dot" />
-        </span>
+        <MazeTrail size={132} motion="loop" className="route-loader-maze" />
       </div>
     </div>
   );

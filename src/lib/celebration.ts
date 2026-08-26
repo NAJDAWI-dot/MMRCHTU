@@ -79,14 +79,16 @@ export function pickCelebration(random: () => number = Math.random): Celebration
 }
 
 /**
- * Records that this browser has met Cheddar.
+ * Nothing is remembered between celebrations.
  *
- * Deliberately `localStorage` and not the database: this is a bit of delight,
- * not a fact about the registration, and it is not worth a column or a write
- * on the submit path. The cost of being wrong is that somebody sees a mouse
- * twice.
+ * There was a `mmrc26.cheddar.seen` flag here. It was written when the overlay
+ * mounted, so anything that mounted it once suppressed it permanently — and
+ * because the flag lived in the visitor's browser, neither they nor we could
+ * clear it. "Once per browser" was also the wrong grain for something that
+ * marks the end of a registration: a team does one of those, and a shared lab
+ * machine should not eat the next team's turn. He now simply appears when a
+ * registration completes, which is once per team by construction.
  */
-export const CELEBRATION_SEEN_KEY = "mmrc26.cheddar.seen";
 
 /**
  * Cheddar does not let himself out on a timer.

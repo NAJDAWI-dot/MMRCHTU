@@ -5,12 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Cheddar } from "@/components/brand/Cheddar";
 import { VERIFICATION_WINDOW_TEXT } from "@/lib/payment-proof";
-import {
-  CELEBRATION_FADE_MS,
-  CELEBRATION_SEEN_KEY,
-  pickCelebration,
-  type Celebration,
-} from "@/lib/celebration";
+import { CELEBRATION_FADE_MS, pickCelebration, type Celebration } from "@/lib/celebration";
 
 interface CheddarCelebrationProps {
   /**
@@ -39,24 +34,25 @@ export function CheddarCelebration({ random = Math.random }: CheddarCelebrationP
   const dismissRef = useRef<HTMLButtonElement>(null);
   const timersRef = useRef<number[]>([]);
 
+  /**
+   * Shown whenever a registration completes, with nothing remembered between
+   * times.
+   *
+   * There used to be a `mmrc26.cheddar.seen` flag in localStorage, written when
+   * this mounted. It was a mistake twice over. Writing it on mount rather than
+   * on dismissal meant anything that mounted the component once — an earlier
+   * build, a half-finished attempt — suppressed him permanently, with no way
+   * for the person to ever get him back and no way for us to reproduce it. And
+   * "once per browser" was the wrong grain anyway: this is the end of a
+   * registration, a team does exactly one of those, and a shared university
+   * machine should not swallow the second team's turn because the first team
+   * sat at it.
+   *
+   * So there is no flag. He appears when a registration is completed, which is
+   * once per team by construction. A refresh of the confirmation does not bring
+   * him back either, because the form's success state does not survive one.
+   */
   useEffect(() => {
-    let seen = false;
-    try {
-      seen = window.localStorage.getItem(CELEBRATION_SEEN_KEY) === "1";
-    } catch {
-      // Private modes refuse storage. Worst case he shows up twice, which is
-      // not a reason to let anything throw on a confirmation screen.
-    }
-    if (seen) return;
-
-    // Recorded on the way in rather than on dismissal: someone who closes the
-    // tab mid-joke has still met him, and should get their confirmation
-    // uninterrupted next time.
-    try {
-      window.localStorage.setItem(CELEBRATION_SEEN_KEY, "1");
-    } catch {
-      // As above.
-    }
     setCelebration(pickCelebration(random));
   }, [random]);
 
