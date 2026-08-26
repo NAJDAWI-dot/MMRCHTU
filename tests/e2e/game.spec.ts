@@ -1,8 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { goto } from "./helpers";
 
 test.describe("Pac Mouse", () => {
   test("Classic Maze starts and responds to input", async ({ page }) => {
-    await page.goto("/game");
+    await goto(page, "/game");
     await expect(page.getByRole("heading", { name: "Pac Mouse" })).toBeVisible();
 
     await page.getByRole("button", { name: "Start Mission" }).click();
@@ -20,7 +21,7 @@ test.describe("Pac Mouse", () => {
   });
 
   test("switching to First-Person mode mounts its own canvas", async ({ page }) => {
-    await page.goto("/game");
+    await goto(page, "/game");
     await page.getByRole("button", { name: /First-Person/ }).click();
     await expect(page.getByRole("button", { name: "Enter the Maze" })).toBeVisible();
 
@@ -33,7 +34,7 @@ test.describe("Pac Mouse", () => {
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
 
-    await page.goto("/game");
+    await goto(page, "/game");
     await page.getByRole("button", { name: "Start Mission" }).click();
     await page.waitForTimeout(300);
     await page.getByRole("button", { name: /First-Person/ }).click();

@@ -3,28 +3,27 @@ import {
   splashMode,
   splashHoldMs,
   splashPrePaintScript,
-  SPLASH_SESSION_KEY,
   SPLASH_PENDING_CLASS,
   SPLASH_BRIEF_MS,
   SPLASH_FULL_MS,
 } from "@/lib/splash";
 
 describe("splashMode", () => {
-  it("plays the full run for a first-time visitor", () => {
-    expect(splashMode({ seen: false, reducedMotion: false })).toBe("full");
-  });
-
-  it("never replays once it has been seen in this tab", () => {
-    expect(splashMode({ seen: true, reducedMotion: false })).toBe("none");
+  it("plays the full run", () => {
+    expect(splashMode({ reducedMotion: false })).toBe("full");
   });
 
   it("downgrades to a static hold rather than skipping for reduced motion", () => {
     // The setting is about moving imagery, not about opting out of branding.
-    expect(splashMode({ seen: false, reducedMotion: true })).toBe("brief");
+    expect(splashMode({ reducedMotion: true })).toBe("brief");
   });
 
-  it("lets 'seen' win over reduced motion so it still never replays", () => {
-    expect(splashMode({ seen: true, reducedMotion: true })).toBe("none");
+  it("never returns none, because every document load is due a splash", () => {
+    // It used to, for a visitor who had already seen it in this tab. The intro
+    // now replays on refresh by design; client-side navigation gets the route
+    // loader instead, and never reaches this code.
+    expect(splashMode({ reducedMotion: false })).not.toBe("none");
+    expect(splashMode({ reducedMotion: true })).not.toBe("none");
   });
 });
 
@@ -46,16 +45,14 @@ describe("splashHoldMs", () => {
 describe("splashPrePaintScript", () => {
   const src = splashPrePaintScript();
 
-  it("carries the same key and class the component and CSS use", () => {
-    // Interpolated from the constants, so a rename cannot desync the two.
-    expect(src).toContain(JSON.stringify(SPLASH_SESSION_KEY));
+  it("carries the same class the component and CSS use", () => {
+    // Interpolated from the constant, so a rename cannot desync the two.
     expect(src).toContain(JSON.stringify(SPLASH_PENDING_CLASS));
   });
 
-  it("fails safe if storage throws", () => {
-    // Private-browsing modes can throw on sessionStorage access. Failing with
-    // the overlay hidden leaves a normal-looking site; failing loudly would
-    // not.
+  it("fails safe if anything throws", () => {
+    // This is the first script on the page. Failing with the overlay hidden
+    // leaves a normal-looking site; failing loudly would not.
     expect(src).toContain("try{");
     expect(src).toContain("catch(e){}");
   });
@@ -65,29 +62,22 @@ describe("splashPrePaintScript", () => {
     expect(src.trimEnd().endsWith("})();")).toBe(true);
   });
 
-  it("actually adds the class only when the key is unset", () => {
-    const calls: string[] = [];
-    const fakeStorage = (stored: string | null) => ({
-      getItem: (k: string) => {
-        calls.push(k);
-        return stored;
-      },
-    });
-    const run = (stored: string | null) => {
+  it("consults no storage, so a reload is not treated as a repeat visit", () => {
+    expect(src).not.toContain("sessionStorage");
+    expect(src).not.toContain("localStorage");
+  });
+
+  it("always adds the class", () => {
+    const run = () => {
       const classes: string[] = [];
-      const fn = new Function(
-        "sessionStorage",
-        "document",
-        src
-      ) as (s: unknown, d: unknown) => void;
-      fn(fakeStorage(stored), {
-        documentElement: { classList: { add: (c: string) => classes.push(c) } },
-      });
+      const fn = new Function("document", src) as (d: unknown) => void;
+      fn({ documentElement: { classList: { add: (c: string) => classes.push(c) } } });
       return classes;
     };
 
-    expect(run(null)).toEqual([SPLASH_PENDING_CLASS]);
-    expect(run("1")).toEqual([]);
-    expect(calls).toEqual([SPLASH_SESSION_KEY, SPLASH_SESSION_KEY]);
+    // Twice, standing in for two consecutive page loads: the second must be
+    // treated exactly like the first.
+    expect(run()).toEqual([SPLASH_PENDING_CLASS]);
+    expect(run()).toEqual([SPLASH_PENDING_CLASS]);
   });
 });

@@ -52,7 +52,13 @@ function readTeam(formData: FormData) {
 
   return {
     teamName: String(formData.get("teamName") ?? ""),
-    submitterEmail: String(formData.get("submitterEmail") ?? ""),
+    // The team leader is the submitter. Asked once, on the leader, rather than
+    // as a separate box beside it: two fields for one address is a question
+    // nobody enjoys and an invitation for the two to disagree, and then the
+    // confirmation goes somewhere the leader never sees. Deriving it also means
+    // validateRegistration's submitterEmail rule can only ever fire alongside
+    // the leader's own email error, which is the one that is on screen.
+    submitterEmail: String(formData.get("member1Email") ?? ""),
     memberCount,
     technicalExperience: String(formData.get("technicalExperience") ?? ""),
     motivation: String(formData.get("motivation") ?? ""),

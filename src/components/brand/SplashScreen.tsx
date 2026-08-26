@@ -8,13 +8,12 @@ import {
   SPLASH_FADE_MS,
   SPLASH_PENDING_CLASS,
   SPLASH_READY_CLASS,
-  SPLASH_SESSION_KEY,
   splashHoldMs,
   splashMode,
 } from "@/lib/splash";
 
 /**
- * Full-screen intro shown once per tab.
+ * Full-screen intro, shown on every load of the document.
  *
  * The markup here renders identically on the server every time and starts
  * hidden in CSS; a pre-paint script in <head> decides whether to reveal it.
@@ -39,31 +38,34 @@ export function SplashScreen() {
   // never torn down twice or resurrected after it has gone.
   const finishedRef = useRef(false);
 
+  /**
+   * The fade-out, held outside the effect on purpose.
+   *
+   * It used to be a local, which meant the effect's cleanup cleared it — and
+   * that is a trap once someone skips before the maze has reported its timing:
+   * `finish` runs and schedules the fade, the report then arrives and re-runs
+   * the effect, the cleanup cancels the fade, and the new run returns early
+   * because it has already finished. Nothing is left to take the classes off,
+   * so the overlay stays on <html> at opacity zero, invisible but covering the
+   * whole page and swallowing every click. A ref outlives the re-run.
+   */
+  const fadeTimerRef = useRef<number | undefined>(undefined);
+
   useEffect(() => {
     const root = document.documentElement;
     if (!root.classList.contains(SPLASH_PENDING_CLASS)) return;
     if (finishedRef.current) return;
 
     const mode = splashMode({
-      seen: false, // the pre-paint script already ruled this out
       reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     });
-
-    let fadeTimer: number | undefined;
 
     const finish = () => {
       if (finishedRef.current) return;
       finishedRef.current = true;
-      // Recording it here rather than on mount means a visitor who closes the
-      // tab mid-animation still gets the intro next time.
-      try {
-        sessionStorage.setItem(SPLASH_SESSION_KEY, "1");
-      } catch {
-        // Private modes can refuse storage. Worst case the splash replays;
-        // that must not take the page down with it.
-      }
       root.classList.add(SPLASH_DONE_CLASS);
-      fadeTimer = window.setTimeout(() => {
+      window.clearTimeout(fadeTimerRef.current);
+      fadeTimerRef.current = window.setTimeout(() => {
         root.classList.remove(SPLASH_PENDING_CLASS, SPLASH_DONE_CLASS);
       }, SPLASH_FADE_MS);
     };
@@ -86,13 +88,14 @@ export function SplashScreen() {
 
     return () => {
       window.clearTimeout(holdTimer);
-      if (fadeTimer !== undefined) window.clearTimeout(fadeTimer);
+      // The fade timer is deliberately left running — see fadeTimerRef. It is
+      // the only thing that takes the overlay off the page.
       window.removeEventListener("pointerdown", skip);
       window.removeEventListener("keydown", skip);
       // Deliberately does NOT clear the pending class. StrictMode mounts,
       // unmounts and remounts this in development; clearing here would leave
       // the second mount with no class to find, so it would bail out and the
-      // splash would vanish instantly without ever recording the session flag.
+      // splash would vanish instantly.
       // Nothing needs the cleanup anyway — this lives in the root layout,
       // which never unmounts during client navigation.
     };

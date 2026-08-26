@@ -5,6 +5,7 @@ import { SplashScreen } from "@/components/brand/SplashScreen";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { PageTransition } from "@/components/layout/PageTransition";
+import { RouteLoader } from "@/components/layout/RouteLoader";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
 import { splashPrePaintScript } from "@/lib/splash";
@@ -89,6 +90,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <ServiceWorkerRegistrar />
           <SplashScreen />
+          <RouteLoader />
           <a href="#main-content" className="skip-link">
             Skip to content
           </a>

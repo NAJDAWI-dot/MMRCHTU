@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { dismissSplash, goto } from "./helpers";
 
 /**
  * The two-step registration flow, end to end.
@@ -18,11 +19,11 @@ async function fillStepOne(
   teamName: string,
   leaderStatus: "IEEE_RAS_MEMBER" | "IEEE_MEMBER" | "NON_MEMBER" = "IEEE_MEMBER",
 ) {
-  await page.goto("/register");
+  await goto(page, "/register");
 
   await page.fill("#teamName", teamName);
-  await page.fill("#submitterEmail", "e2e@example.com");
 
+  // No separate submitter email: the leader's address below is the team's.
   await page.fill("#member1FirstName", "Ada");
   await page.fill("#member1LastName", "Lovelace");
   await page.fill("#member1Email", "ada@example.com");
@@ -37,7 +38,7 @@ async function fillStepOne(
 }
 
 test("step one shows nothing about payment until Next is pressed", async ({ page }) => {
-  await page.goto("/register");
+  await goto(page, "/register");
 
   // The whole point of the split: no prices, no CliQ alias, no upload box.
   await expect(page.getByText("Total due")).toBeHidden();
@@ -120,19 +121,45 @@ test("a draft survives leaving the page before payment", async ({ page }) => {
   await expect(page.getByText("Total due")).toBeVisible({ timeout: 15_000 });
 
   // Exactly what happens when someone leaves to open their banking app.
-  await page.goto("/register");
+  await goto(page, "/register");
   await expect(page.locator("#teamName")).toHaveValue(teamName);
   await expect(page.locator("#member1FirstName")).toHaveValue("Ada");
 });
 
 test("an unknown reference says so rather than failing", async ({ page }) => {
-  await page.goto("/register?code=ZZZZZZ");
+  await goto(page, "/register?code=ZZZZZZ");
   await expect(page.getByRole("heading", { name: /reference not found/i })).toBeVisible();
   await expect(page.getByText("ZZZZZZ")).toBeVisible();
 });
 
+test("the splash plays again on a refresh, not just on the first visit", async ({ page }) => {
+  // Deliberately not using the goto helper: this test is about the splash
+  // being there, so it must not be dismissed on the way in.
+  await page.goto("/register");
+  await expect(page.getByTestId("splash")).toBeVisible();
+  await dismissSplash(page);
+
+  await page.reload();
+  // It used to record itself in sessionStorage and stay away for the rest of
+  // the tab. A reload is an arrival, and now gets the intro.
+  await expect(page.getByTestId("splash")).toBeVisible();
+  await dismissSplash(page);
+});
+
+test("moving between pages goes through the loader", async ({ page }) => {
+  await goto(page, "/");
+
+  await page.getByRole("link", { name: "Rules", exact: true }).first().click();
+
+  // Held deliberately, so it is still up well after a page this size has
+  // rendered — that hold is the whole point of it.
+  await expect(page.locator(".route-loader")).toBeVisible();
+  await expect(page.locator(".route-loader")).toBeHidden({ timeout: 10_000 });
+  await expect(page).toHaveURL(/\/rules/);
+});
+
 test("every legal page renders and is reachable from the footer", async ({ page }) => {
-  await page.goto("/");
+  await goto(page, "/");
 
   const policies = page.getByRole("navigation", { name: /policies/i });
   await expect(policies).toBeVisible();
@@ -143,13 +170,13 @@ test("every legal page renders and is reachable from the footer", async ({ page 
     ["payment-refund-policy", "Payment & Refund Policy"],
     ["code-of-conduct", "Code of Conduct"],
   ] as const) {
-    await page.goto(`/legal/${slug}`);
+    await goto(page, `/legal/${slug}`);
     await expect(page.getByRole("heading", { name: title, level: 1 })).toBeVisible();
     await expect(page.getByText(/pending review/i)).toBeVisible();
   }
 
   // The refund policy is the one a paying team needs; check it states the
   // window rather than merely existing.
-  await page.goto("/legal/payment-refund-policy");
+  await goto(page, "/legal/payment-refund-policy");
   await expect(page.getByText(/24 to 48 hours/i)).toBeVisible();
 });

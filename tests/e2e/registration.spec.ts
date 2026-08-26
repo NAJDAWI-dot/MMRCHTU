@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { goto } from "./helpers";
 
 /**
  * Stage one driven entirely through accessible names.
@@ -16,9 +17,10 @@ import { test, expect } from "@playwright/test";
 test("registering a 1-member team reaches the payment stage", async ({ page }) => {
   const teamName = `Playwright Test Team ${Date.now()}`;
 
-  await page.goto("/register");
+  await goto(page, "/register");
   await page.getByLabel("Team name").fill(teamName);
-  await page.getByLabel("Submitter email").fill(`playwright-${Date.now()}@example.com`);
+  // There is no separate submitter email any more: the leader's address below
+  // is the one the confirmation and the payment updates go to.
   // memberCount defaults to 1, so only the Team Leader fields are visible.
   await page.getByLabel("First name").fill("Ada");
   await page.getByLabel("Last name").fill("Lovelace");
@@ -50,7 +52,7 @@ test("registering a 1-member team reaches the payment stage", async ({ page }) =
 });
 
 test("shows validation errors for an incomplete form", async ({ page }) => {
-  await page.goto("/register");
+  await goto(page, "/register");
   await page.getByLabel("Team name").fill("A");
   await page.getByRole("button", { name: /next: payment/i }).click();
   await expect(page.getByRole("alert").first()).toBeVisible();

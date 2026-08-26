@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
 import {
@@ -10,6 +10,7 @@ import {
   type TeamCheckState,
 } from "@/app/register/actions";
 import { Button } from "@/components/ui/Button";
+import { CheddarCelebration } from "@/components/register/CheddarCelebration";
 import { CliqPanel } from "@/components/payment/CliqPanel";
 import { IEEE_STATUS_OPTIONS } from "@/lib/ieee-status";
 import { formatFils, type CliqDetails } from "@/lib/payment";
@@ -31,6 +32,16 @@ const initialSubmit: CompleteRegistrationState = { status: "idle" };
  */
 const CACHE_KEY = "mmrc26.registration.draft";
 
+/**
+ * How long typing pauses before the draft is written.
+ *
+ * Short enough that nobody can lose a meaningful amount of work, long enough
+ * that holding a key down does not serialise the whole form on every character.
+ * Leaving the page flushes immediately regardless, so this delay never decides
+ * whether an answer survives — only how soon it is written.
+ */
+const DRAFT_DEBOUNCE_MS = 400;
+
 interface RegisterFormProps {
   feeInfoText: string;
 }
@@ -49,8 +60,63 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
   const [cliq, setCliq] = useState<CliqDetails | null>(null);
   const [checking, setChecking] = useState(false);
   const [draft, setDraft] = useState<Record<string, string> | null>(null);
+  const [draftSaved, setDraftSaved] = useState(false);
+  const debounceRef = useRef<number | undefined>(undefined);
 
   const [submitState, submitAction] = useFormState(completeRegistration, initialSubmit);
+
+  /**
+   * Writes everything currently typed to the browser.
+   *
+   * Nothing reaches the server until a payment is reported, so until then this
+   * is the only copy of the answers — which is why it is written continuously
+   * rather than at the end of step one. Someone who refreshes, closes the tab,
+   * or leaves to open their banking app must not come back to an empty form.
+   */
+  const saveDraft = useCallback(() => {
+    const form = formRef.current;
+    if (!form) return;
+    try {
+      const entries: Record<string, string> = {};
+      for (const [key, value] of new FormData(form).entries()) {
+        // Files are skipped: a File cannot be serialised, and the payment
+        // screenshot is chosen fresh at the moment of submitting anyway.
+        if (typeof value === "string") entries[key] = value;
+      }
+      window.localStorage.setItem(CACHE_KEY, JSON.stringify(entries));
+      setDraftSaved(true);
+    } catch {
+      // Private browsing, or storage full. Losing the draft is a nuisance, not
+      // a reason to stop someone filling the form in.
+    }
+  }, []);
+
+  const queueSave = useCallback(() => {
+    window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(saveDraft, DRAFT_DEBOUNCE_MS);
+  }, [saveDraft]);
+
+  // A pending debounce is worthless if the page is going away, so leaving
+  // flushes it. `pagehide` rather than `beforeunload` because the latter is
+  // ignored on mobile Safari, which is where a backgrounded tab is most likely
+  // to be discarded outright.
+  useEffect(() => {
+    const flush = () => {
+      window.clearTimeout(debounceRef.current);
+      saveDraft();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", flush);
+      window.clearTimeout(debounceRef.current);
+    };
+  }, [saveDraft]);
 
   // Restored after mount rather than during render: reading localStorage while
   // rendering would make the server's HTML and the browser's first pass
@@ -121,16 +187,11 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
       setFee(result.fee);
       setCliq(result.cliq ?? null);
 
-      const toSave: Record<string, string> = {};
-      for (const [key, value] of formData.entries()) {
-        if (typeof value === "string") toSave[key] = value;
-      }
-      try {
-        window.localStorage.setItem(CACHE_KEY, JSON.stringify(toSave));
-      } catch {
-        // Private browsing, or storage full. Losing the draft is a nuisance,
-        // not a reason to stop someone carrying on to payment.
-      }
+      // The autosave has almost certainly written this already; doing it here
+      // too means the step-one answers are definitely on disk before anyone
+      // leaves for their banking app.
+      window.clearTimeout(debounceRef.current);
+      saveDraft();
 
       setStep(2);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -140,7 +201,14 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
   }
 
   if (submitState.status === "success" && submitState.registered) {
-    return <Registered registered={submitState.registered} />;
+    return (
+      <>
+        {/* Cheddar goes over this, never instead of it — the reference below is
+            the one thing the team must not miss. */}
+        <Registered registered={submitState.registered} />
+        <CheddarCelebration />
+      </>
+    );
   }
 
   const errors = submitState.teamErrors ?? teamErrors;
@@ -156,6 +224,11 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
       onSubmit={(event) => {
         if (step === 1) event.preventDefault();
       }}
+      // One handler on the form rather than on every field: input bubbles, and
+      // `change` catches the radios and selects that do not fire `input` in
+      // every browser.
+      onInput={queueSave}
+      onChange={queueSave}
       className="space-y-6"
     >
       <Steps step={step} />
@@ -174,14 +247,6 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
           label="Team name"
           error={errors?.teamName}
           autoComplete="organization"
-        />
-        <Field
-          id="submitterEmail"
-          name="submitterEmail"
-          type="email"
-          label="Submitter email"
-          error={errors?.submitterEmail}
-          autoComplete="email"
         />
 
         <fieldset>
@@ -285,9 +350,18 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
           </p>
         ) : null}
 
-        <Button type="button" onClick={handleNext} disabled={checking}>
-          {checking ? "Checking…" : "Next: payment"}
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="button" onClick={handleNext} disabled={checking}>
+            {checking ? "Checking…" : "Next: payment"}
+          </Button>
+          {draftSaved ? (
+            // Quietly stated rather than announced: it should reassure someone
+            // who looks for it, not interrupt someone who is typing.
+            <span className="text-xs text-ras-gray dark:text-white/60">
+              Draft saved on this device
+            </span>
+          ) : null}
+        </div>
       </div>
 
       {step === 2 && fee ? (
@@ -521,7 +595,16 @@ function MemberFields({ index, isLeader, errors }: MemberFieldsProps) {
       <div className="mt-2 grid gap-4 sm:grid-cols-2">
         <Field id={`${prefix}FirstName`} name={`${prefix}FirstName`} label="First name" error={errors?.firstName} />
         <Field id={`${prefix}LastName`} name={`${prefix}LastName`} label="Last name" error={errors?.lastName} />
-        <Field id={`${prefix}Email`} name={`${prefix}Email`} type="email" label="Email" error={errors?.email} />
+        <Field
+          id={`${prefix}Email`}
+          name={`${prefix}Email`}
+          type="email"
+          label="Email"
+          error={errors?.email}
+          // The leader's address is the team's address: it is what the
+          // confirmation, the reference and every payment update are sent to.
+          hint={isLeader ? "Your confirmation and payment updates go here." : undefined}
+        />
         <Field id={`${prefix}Whatsapp`} name={`${prefix}Whatsapp`} label="WhatsApp number" error={errors?.whatsapp} />
         <div>
           <label htmlFor={`${prefix}University`} className="block text-sm font-medium text-ras-gray dark:text-white/80">
@@ -604,14 +687,27 @@ interface FieldProps {
   name: string;
   label: string;
   error?: string;
+  /** Shown under the input when there is nothing wrong with it. */
+  hint?: string;
   type?: string;
   autoComplete?: string;
   inputMode?: "text" | "decimal" | "numeric";
   textarea?: boolean;
 }
 
-function Field({ id, name, label, error, type = "text", textarea = false, ...rest }: FieldProps) {
+function Field({
+  id,
+  name,
+  label,
+  error,
+  hint,
+  type = "text",
+  textarea = false,
+  ...rest
+}: FieldProps) {
   const errorId = `${id}-error`;
+  const hintId = `${id}-hint`;
+  const describedBy = error ? errorId : hint ? hintId : undefined;
   const className =
     "mt-1 w-full rounded-md border border-ras-gray/30 bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-fg)] focus:border-ras-purple focus:outline-none";
   return (
@@ -625,7 +721,7 @@ function Field({ id, name, label, error, type = "text", textarea = false, ...res
           name={name}
           rows={3}
           aria-invalid={Boolean(error)}
-          aria-describedby={error ? errorId : undefined}
+          aria-describedby={describedBy}
           className={className}
         />
       ) : (
@@ -634,7 +730,7 @@ function Field({ id, name, label, error, type = "text", textarea = false, ...res
           name={name}
           type={type}
           aria-invalid={Boolean(error)}
-          aria-describedby={error ? errorId : undefined}
+          aria-describedby={describedBy}
           className={className}
           {...rest}
         />
@@ -642,6 +738,10 @@ function Field({ id, name, label, error, type = "text", textarea = false, ...res
       {error ? (
         <p id={errorId} role="alert" className="mt-1 text-sm text-ras-crimson">
           {error}
+        </p>
+      ) : hint ? (
+        <p id={hintId} className="mt-1 text-xs text-ras-gray dark:text-white/60">
+          {hint}
         </p>
       ) : null}
     </div>

@@ -6,9 +6,6 @@
  * own. The component reads the environment and hands the answers in.
  */
 
-/** Survives navigation within a tab, cleared when the tab closes. */
-export const SPLASH_SESSION_KEY = "mmrc26-splash-seen";
-
 /**
  * Set on <html> by a pre-paint inline script when the splash is due, and
  * removed once it finishes. The overlay is always in the server-rendered
@@ -52,19 +49,25 @@ export const SPLASH_FADE_MS = 400;
 export type SplashMode = "full" | "brief" | "none";
 
 export interface SplashConditions {
-  /** Already played once in this tab. */
-  seen: boolean;
   /** The visitor asked the OS to minimise animation. */
   reducedMotion: boolean;
 }
 
 /**
+ * The intro plays on every load of the document, refreshes included.
+ *
+ * It used to record itself in sessionStorage and never replay within a tab.
+ * That is the conventional choice and it was dropped deliberately: the splash
+ * is the site's opening, and the ask was for it to happen whenever someone
+ * arrives — which a reload is. Client-side navigation is unaffected, because
+ * the pre-paint script only runs when the document itself loads; moving
+ * between pages gets the route loader instead.
+ *
  * `reducedMotion` downgrades rather than skips: the point of that setting is
  * to avoid vestibular triggers from large moving imagery, not to opt out of
  * branding, so the logo still shows — it just doesn't travel.
  */
-export function splashMode({ seen, reducedMotion }: SplashConditions): SplashMode {
-  if (seen) return "none";
+export function splashMode({ reducedMotion }: SplashConditions): SplashMode {
   return reducedMotion ? "brief" : "full";
 }
 
@@ -86,16 +89,16 @@ export function splashHoldMs(mode: SplashMode, runMs?: number): number {
  * The pre-paint script, as source text for a `dangerouslySetInnerHTML` script
  * tag in <head>.
  *
- * Kept tiny and wrapped in try/catch because it runs before anything else on
- * the page: sessionStorage throws in some privacy modes, and a throw here
- * would leave the overlay hidden and the site looking normal — the safe way
- * to fail. Constants are interpolated so this can never drift from the values
- * the component and the CSS use.
+ * Runs before anything else on the page, which is what stops the real page
+ * painting for a frame behind the overlay. It no longer consults storage —
+ * every document load is due a splash — but the try/catch stays: this is the
+ * first script on the page, and if it ever throws the right outcome is a
+ * normal-looking site with no intro, not a broken one. The class name is
+ * interpolated so it cannot drift from the component and the CSS.
  */
 export function splashPrePaintScript(): string {
   return (
     `(function(){try{` +
-    `if(sessionStorage.getItem(${JSON.stringify(SPLASH_SESSION_KEY)}))return;` +
     `document.documentElement.classList.add(${JSON.stringify(SPLASH_PENDING_CLASS)});` +
     `}catch(e){}})();`
   );
