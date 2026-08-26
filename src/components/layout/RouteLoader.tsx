@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Cheddar } from "@/components/brand/Cheddar";
 import {
   ROUTE_LOADER_FADE_MS,
   ROUTE_LOADER_SAFETY_MS,
@@ -119,9 +118,14 @@ export function RouteLoader() {
       // interrupt a screen reader on its way to the page that is already here.
       aria-hidden="true"
     >
+      {/* Deliberately not Cheddar. He is the payoff for finishing a
+          registration, and a mascot who turns up on every single navigation
+          stops being a payoff. This is a dot finding its way round a maze —
+          the competition's own idea, with none of the character. */}
       <div className="route-loader-stage">
-        <Cheddar size={96} pose="run" className="route-loader-cheddar" />
-        <span className="route-loader-track" />
+        <span className="route-loader-maze">
+          <span className="route-loader-dot" />
+        </span>
       </div>
     </div>
   );

@@ -199,24 +199,28 @@
   gap: 0.75rem;
 }
 
-/* He runs on the spot: a short shuttle plus a bob, so the loader reads as
-   motion without travelling far enough to be distracting. */
-.route-loader-cheddar {
-  animation: cheddarScamper 620ms ease-in-out infinite alternate;
+/* A cell of the maze, with something running its perimeter. */
+/* Walls keyed to the foreground rather than to a brand colour, so the cell is
+   equally legible on the light and dark backgrounds the overlay inherits. */
+.route-loader-maze {
+  position: relative;
+  display: block;
+  width: 64px;
+  height: 64px;
+  border: 4px solid color-mix(in srgb, var(--color-fg, #37333d) 30%, transparent);
+  border-radius: 12px;
 }
 
-/* The ground he is running along, sweeping to suggest speed. */
-.route-loader-track {
-  width: 90px;
-  height: 3px;
+.route-loader-dot {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  width: 14px;
+  height: 14px;
   border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--color-ras-gold, #f2a900),
-    transparent
-  );
-  animation: routeLoaderTrack 620ms linear infinite;
+  background: var(--color-ras-gold, #f2a900);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-ras-gold, #f2a900) 30%, transparent);
+  animation: routeLoaderOrbit 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 
 @keyframes routeLoaderIn {
@@ -228,27 +232,22 @@
   }
 }
 
-@keyframes cheddarScamper {
-  from {
-    transform: translateX(-7px) translateY(0) rotate(-4deg);
+/* Corner to corner, pausing fractionally at each — a turn, not a slide. */
+@keyframes routeLoaderOrbit {
+  0% {
+    transform: translate(0, 0);
   }
-  to {
-    transform: translateX(7px) translateY(-5px) rotate(4deg);
-  }
-}
-
-@keyframes routeLoaderTrack {
-  from {
-    transform: scaleX(0.4);
-    opacity: 0.35;
+  25% {
+    transform: translate(64px, 0);
   }
   50% {
-    transform: scaleX(1);
-    opacity: 1;
+    transform: translate(64px, 64px);
   }
-  to {
-    transform: scaleX(0.4);
-    opacity: 0.35;
+  75% {
+    transform: translate(0, 64px);
+  }
+  100% {
+    transform: translate(0, 0);
   }
 }
 
@@ -264,13 +263,16 @@
   inset: 0;
   z-index: 110; /* above the splash, which could otherwise land on top */
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  padding: 0 1rem 3rem;
+  /* Scrollable rather than clipped: the bubble, Cheddar and the card together
+     are taller than a short phone in landscape, and the buttons at the bottom
+     are the whole point of the panel. */
+  overflow-y: auto;
+  padding: 2rem 1rem;
   background: rgb(0 0 0 / 0.62);
   backdrop-filter: blur(4px);
   animation: cheddarDim 320ms ease-out both;
-  cursor: pointer;
 }
 
 .cheddar-celebration-leaving {
@@ -348,20 +350,72 @@
   animation: cheddarBounce 700ms cubic-bezier(0.3, 0, 0.3, 1) 620ms 3;
 }
 
-.cheddar-dismiss {
-  min-height: 44px;
-  border-radius: 999px;
-  padding: 0.55rem 1.9rem;
-  font-weight: 700;
-  color: #37333d;
-  background: var(--color-ras-gold, #f2a900);
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.3);
-  animation: cheddarBubbleIn 420ms cubic-bezier(0.2, 0.7, 0.3, 1) 700ms both;
+/*
+  What actually has to be read: that the registration is done, and how long the
+  payment check takes. It arrives last, after Cheddar has landed.
+*/
+.cheddar-card {
+  max-width: 26rem;
+  border-radius: 1rem;
+  background: var(--color-bg, #ffffff);
+  color: var(--color-fg, #37333d);
+  padding: 1.25rem 1.35rem 1.1rem;
+  box-shadow: 0 16px 44px rgb(0 0 0 / 0.4);
+  animation: cheddarBubbleIn 420ms cubic-bezier(0.2, 0.7, 0.3, 1) 780ms both;
 }
 
-.cheddar-dismiss:focus-visible {
-  outline: 3px solid #fffdf7;
-  outline-offset: 3px;
+.cheddar-heading {
+  font-family: var(--font-display, inherit);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-ras-purple, #5f2167);
+}
+
+.cheddar-note {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.cheddar-actions {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+.cheddar-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 999px;
+  padding: 0.55rem 1.5rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.cheddar-action-primary {
+  color: #37333d;
+  background: var(--color-ras-gold, #f2a900);
+}
+
+.cheddar-action-secondary {
+  color: inherit;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+}
+
+.cheddar-action:focus-visible {
+  outline: 3px solid var(--color-ras-purple, #5f2167);
+  outline-offset: 2px;
+}
+
+.cheddar-hint {
+  margin-top: 0.7rem;
+  font-size: 0.75rem;
+  opacity: 0.6;
 }
 
 @keyframes cheddarDim {
@@ -488,12 +542,11 @@
     animation: none;
   }
 
-  .route-loader-cheddar,
-  .route-loader-track,
+  .route-loader-dot,
   .cheddar-actor,
   .cheddar-actor > *,
   .cheddar-bubble,
-  .cheddar-dismiss {
+  .cheddar-card {
     animation: none;
     opacity: 1;
     transform: none;

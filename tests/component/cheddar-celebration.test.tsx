@@ -2,11 +2,11 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CheddarCelebration } from "@/components/register/CheddarCelebration";
 import {
-  CELEBRATION_AUTO_MS,
   CELEBRATION_FADE_MS,
   CELEBRATION_SEEN_KEY,
   CHEDDAR_QUIPS,
 } from "@/lib/celebration";
+import { VERIFICATION_WINDOW_TEXT } from "@/lib/payment-proof";
 
 /**
  * Cheddar's appearance, from the outside.
@@ -44,6 +44,23 @@ describe("CheddarCelebration", () => {
     expect(screen.getByText(CHEDDAR_QUIPS[0]!)).toBeTruthy();
   });
 
+  it("says the registration is complete and how long the check takes", () => {
+    // The joke is the reason he is here; this is the reason the panel is. A
+    // team must not have to guess whether they are actually registered, or how
+    // long the silence before the confirmation email is meant to last.
+    render(<CheddarCelebration random={firstQuip} />);
+
+    expect(screen.getByRole("heading", { name: /registration complete/i })).toBeTruthy();
+    expect(screen.getByText(new RegExp(VERIFICATION_WINDOW_TEXT))).toBeTruthy();
+  });
+
+  it("offers a way back to the main page", () => {
+    render(<CheddarCelebration random={firstQuip} />);
+
+    const home = screen.getByRole("link", { name: /back to the main page/i });
+    expect(home.getAttribute("href")).toBe("/");
+  });
+
   it("records that this browser has met him", () => {
     render(<CheddarCelebration random={firstQuip} />);
     expect(window.localStorage.getItem(CELEBRATION_SEEN_KEY)).toBe("1");
@@ -73,14 +90,14 @@ describe("CheddarCelebration", () => {
 
   it("puts focus on the way out, so a keyboard is not trapped behind him", () => {
     render(<CheddarCelebration random={firstQuip} />);
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: /nice/i }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: /stay here/i }));
   });
 
-  it("leaves when the button is pressed", () => {
+  it("leaves when Stay here is pressed", () => {
     vi.useFakeTimers();
     render(<CheddarCelebration random={firstQuip} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /nice/i }));
+    fireEvent.click(screen.getByRole("button", { name: /stay here/i }));
     settle();
 
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -96,26 +113,27 @@ describe("CheddarCelebration", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("leaves on a click anywhere", () => {
+  it("does not vanish on a stray click", () => {
+    // It used to dismiss on a click anywhere, which was fine when it held only
+    // a joke. It now holds the only statement of what happens next and a choice
+    // of where to go, so a misfired click on the way to a button must not take
+    // all of that away mid-sentence.
     vi.useFakeTimers();
     render(<CheddarCelebration random={firstQuip} />);
 
     fireEvent.click(screen.getByRole("dialog"));
     settle();
 
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeTruthy();
   });
 
-  it("lets itself out if nobody touches it", () => {
-    // The one that matters most: a team who wanders off to tell someone must
-    // come back to their confirmation, not to a mouse.
+  it("stays put on its own, rather than timing out from under a reader", () => {
     vi.useFakeTimers();
     render(<CheddarCelebration random={firstQuip} />);
 
-    expect(screen.getByRole("dialog")).toBeTruthy();
-    settle(CELEBRATION_AUTO_MS);
+    settle(30_000);
 
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeTruthy();
   });
 
   it("still appears when storage refuses to answer", () => {

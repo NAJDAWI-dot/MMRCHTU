@@ -89,14 +89,14 @@ export function pickCelebration(random: () => number = Math.random): Celebration
 export const CELEBRATION_SEEN_KEY = "mmrc26.cheddar.seen";
 
 /**
- * How long Cheddar stays before letting himself out.
+ * Cheddar does not let himself out on a timer.
  *
- * Long enough to read a line and smile, short enough that a team who has
- * wandered off to tell someone comes back to their confirmation rather than to
- * a mouse. The confirmation underneath carries the resume code, so nothing here
- * may hold it hostage.
+ * He used to, after nine seconds. But he now carries the only on-screen
+ * statement that the registration is complete and how long verification takes,
+ * and he offers a choice of where to go next — so snatching all of that away
+ * from someone still reading it would be worse than leaving it up. Escape and
+ * both buttons dismiss him, so he is never a trap.
  */
-export const CELEBRATION_AUTO_MS = 9000;
 
 /** The fade, which must match the CSS or the overlay is torn out mid-transition. */
 export const CELEBRATION_FADE_MS = 320;

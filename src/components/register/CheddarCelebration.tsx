@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { Cheddar } from "@/components/brand/Cheddar";
+import { VERIFICATION_WINDOW_TEXT } from "@/lib/payment-proof";
 import {
-  CELEBRATION_AUTO_MS,
   CELEBRATION_FADE_MS,
   CELEBRATION_SEEN_KEY,
   pickCelebration,
@@ -75,7 +76,6 @@ export function CheddarCelebration({ random = Math.random }: CheddarCelebrationP
       if (event.key === "Escape") dismiss();
     };
     window.addEventListener("keydown", onKeyDown);
-    timersRef.current.push(window.setTimeout(dismiss, CELEBRATION_AUTO_MS));
 
     return () => {
       window.removeEventListener("keydown", onKeyDown);
@@ -105,26 +105,46 @@ export function CheddarCelebration({ random = Math.random }: CheddarCelebrationP
       className={`cheddar-celebration${leaving ? " cheddar-celebration-leaving" : ""}`}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="cheddar-quip"
-      onClick={dismiss}
+      aria-labelledby="cheddar-heading"
+      // No click-anywhere dismissal any more: this panel now carries the only
+      // on-screen statement of what happens next, and a stray click on the way
+      // to a button should not take it away mid-sentence.
     >
       <div className="cheddar-celebration-stage">
-        <p id="cheddar-quip" className="cheddar-bubble" aria-live="polite">
-          {celebration.quip}
-        </p>
+        <p className="cheddar-bubble">{celebration.quip}</p>
 
         <div className={`cheddar-actor cheddar-move-${celebration.move}`}>
-          <Cheddar size={180} />
+          <Cheddar size={168} />
         </div>
 
-        <button
-          ref={dismissRef}
-          type="button"
-          onClick={dismiss}
-          className="cheddar-dismiss"
-        >
-          Nice.
-        </button>
+        <div className="cheddar-card">
+          <h2 id="cheddar-heading" className="cheddar-heading">
+            Registration complete
+          </h2>
+          <p className="cheddar-note">
+            We have your team and your payment. Checking the payment against our account takes{" "}
+            <strong>{VERIFICATION_WINDOW_TEXT}</strong>, and we will email you the moment it is
+            confirmed. There is nothing else you need to send.
+          </p>
+
+          <div className="cheddar-actions">
+            <Link href="/" className="cheddar-action cheddar-action-primary">
+              Back to the main page
+            </Link>
+            <button
+              ref={dismissRef}
+              type="button"
+              onClick={dismiss}
+              className="cheddar-action cheddar-action-secondary"
+            >
+              Stay here
+            </button>
+          </div>
+
+          <p className="cheddar-hint">
+            Staying shows your registration reference, which is also in your email.
+          </p>
+        </div>
       </div>
     </div>,
     document.body,

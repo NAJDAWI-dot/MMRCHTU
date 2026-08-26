@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   CHEDDAR_MOVES,
   CHEDDAR_QUIPS,
-  CELEBRATION_AUTO_MS,
   CELEBRATION_FADE_MS,
   pickCelebration,
 } from "@/lib/celebration";
@@ -82,12 +81,8 @@ describe("pickCelebration", () => {
 });
 
 describe("timings", () => {
-  it("clears itself long before anyone could think it is stuck", () => {
-    expect(CELEBRATION_AUTO_MS).toBeGreaterThan(3000);
-    expect(CELEBRATION_AUTO_MS).toBeLessThanOrEqual(15_000);
-  });
-
-  it("fades faster than it stays", () => {
-    expect(CELEBRATION_FADE_MS).toBeLessThan(CELEBRATION_AUTO_MS);
+  it("fades quickly enough not to be sat through", () => {
+    expect(CELEBRATION_FADE_MS).toBeGreaterThan(0);
+    expect(CELEBRATION_FADE_MS).toBeLessThanOrEqual(600);
   });
 });
