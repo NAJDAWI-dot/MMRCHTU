@@ -13,16 +13,19 @@
  */
 
 /**
- * The deliberate hold.
+ * The deliberate hold: one complete lap of the maze cell.
  *
  * Most of these pages render in single-digit milliseconds, so without a floor
  * the loader would appear and vanish inside one frame and read as a flicker or
- * a fault. This is the requested "take its time" — long enough to register as a
- * transition, short enough that clicking through the nav does not feel like
- * being held up. Past about a second a deliberate delay stops reading as
- * intentional and starts reading as a slow site.
+ * a fault. The number is not arbitrary — the dot takes 1.5s to run all four
+ * walls (routeLoaderOrbit in globals.css), so anything shorter cuts it off
+ * partway round and the animation never resolves. Holding for exactly one lap
+ * is what makes it look finished rather than interrupted.
+ *
+ * Change one of the two and change the other, or the dot stops landing back
+ * where it started.
  */
-export const ROUTE_LOADER_MIN_MS = 700;
+export const ROUTE_LOADER_MIN_MS = 1500;
 
 /** Must match the CSS fade, or the overlay is removed mid-transition. */
 export const ROUTE_LOADER_FADE_MS = 250;
@@ -35,7 +38,7 @@ export const ROUTE_LOADER_FADE_MS = 250;
  * those are allowed to leave the site sitting behind a curtain it cannot lift.
  * Generous enough that a genuinely slow route still gets its loader.
  */
-export const ROUTE_LOADER_SAFETY_MS = 8000;
+export const ROUTE_LOADER_SAFETY_MS = 12_000;
 
 /**
  * Everything about a click that matters, without requiring a real event.
