@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { updateRegistrationStatus } from "./actions";
 import { PaymentBadge } from "@/components/payment/PaymentBadge";
+import { DeleteRegistration } from "@/components/admin/DeleteRegistration";
 import { formatFils } from "@/lib/payment";
 
 export const metadata: Metadata = {
@@ -99,6 +100,10 @@ export default async function AdminRegistrationsPage() {
               >
                 Manage in Payments
               </a>
+            </div>
+
+            <div className="mt-3 flex justify-end">
+              <DeleteRegistration id={reg.id} teamName={reg.teamName} />
             </div>
           </Card>
         ))}
