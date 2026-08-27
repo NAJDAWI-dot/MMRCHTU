@@ -2,7 +2,6 @@
 
 import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
-import { revalidatePath } from "next/cache";
 import {
   createRegistration,
   feeTierForTeam,
@@ -290,9 +289,18 @@ export async function completeRegistration(
     throw error;
   }
 
-  revalidatePath("/admin/payments");
-  revalidatePath("/admin/registrations");
-
+  // Deliberately no revalidatePath here.
+  //
+  // It used to revalidate the two admin lists, which did nothing for them and
+  // broke this page. Nothing for them because admin/(protected)/layout.tsx sets
+  // `dynamic = "force-dynamic"`, so those lists are built fresh on every request
+  // and have no cache to invalidate. Broke this page because revalidating from
+  // inside a Server Action also refreshes the route the action was called from:
+  // /register re-rendered, this form remounted, and the remount discarded the
+  // useFormState success state that had just been set — so the confirmation and
+  // Cheddar appeared and were destroyed within a frame, leaving an empty step
+  // one and no sign that anything had been registered at all. The row was
+  // written every time; only the screen forgot.
   return {
     status: "success",
     registered: {
