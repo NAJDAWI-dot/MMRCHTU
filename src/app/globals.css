@@ -900,6 +900,54 @@
   animation: tick-in 280ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
+/*
+  The countdown digits.
+
+  Brand crimson and purple are both dark and low-chroma: a row of numerals
+  painted flat in either reads as body copy set large, which is what the one
+  live element on the homepage should least look like. These take the
+  moodboard's brighter end instead — permitted for decorative use, and these
+  are decorative in the strict sense, being aria-hidden with the real value in
+  an sr-only sentence beside them.
+
+  Deliberately no animation of its own. This class shares an element with
+  .tick-in, and two `animation` declarations on one element do not combine —
+  the later rule replaces the earlier one wholesale, so a sheen here would
+  simply delete the tick. The gradient stays still and the digit moves.
+*/
+.countdown-digit {
+  /* What the glyphs fall back to where background-clip:text is unavailable.
+     Never transparent unconditionally — that is the difference between a
+     flat-coloured clock and no clock at all. */
+  color: var(--color-mood-orchid);
+  /* Angled and run across the full glyph height, so even a two-character
+     number crosses the whole ramp rather than sampling one flat slice of it. */
+  background-image: linear-gradient(115deg, #7a2b86 0%, #a11640 52%, #d81e5b 100%);
+}
+
+.dark .countdown-digit {
+  color: #f0b4ff;
+  /* The same sweep lifted clear of the dark background, to where the hues
+     still read as purple and rose rather than as grey. */
+  background-image: linear-gradient(115deg, #cf95e8 0%, #ff6f9c 52%, #ffb45f 100%);
+}
+
+/*
+  Both selectors are listed, and the dark one is not redundant.
+  `.dark .countdown-digit` above is a two-class selector, so it outranks a
+  bare `.countdown-digit` here however late this block appears — which left the
+  dark fallback colour painting opaque over its own gradient. Matching the
+  specificity is what lets source order decide.
+*/
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .countdown-digit,
+  .dark .countdown-digit {
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .figure-in,
   .pop-in,

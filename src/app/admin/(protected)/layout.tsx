@@ -19,6 +19,7 @@ const NAV_LINKS = [
   { href: "/admin/competition-day", label: "Competition Day" },
   { href: "/admin/faq", label: "FAQ" },
   { href: "/admin/gallery", label: "Gallery" },
+  { href: "/admin/pages", label: "Pages" },
   { href: "/admin/register-form", label: "Register Form" },
   { href: "/admin/registrations", label: "Registrations" },
   { href: "/admin/payments", label: "Payments" },
@@ -39,7 +40,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </p>
         {/*
           A horizontal strip of chips on a phone, the usual column from md up.
-          Nine stacked links would push every admin page a screen and a half
+          A dozen stacked links would push every admin page a screen and a half
           down; scrolling them sideways keeps the page itself reachable.
         */}
         <nav

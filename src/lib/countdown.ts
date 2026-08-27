@@ -45,20 +45,28 @@ export function remainingUntil(target: Date, now: Date = new Date()): Remaining 
 }
 
 /**
- * Whether the event is close enough that seconds are worth showing.
+ * Whether seconds are worth showing. They always are.
  *
- * Ticking seconds three months out is noise, and it forces a re-render every
- * second for a number nobody is watching. Inside a day it is the point.
+ * This used to hide them until the last day, on the reasoning that a ticking
+ * seconds digit three months out is noise. In practice it made the opposite
+ * point: a clock whose largest three units all change at most once an hour is
+ * indistinguishable from a static graphic, and the one live thing on the
+ * homepage read as decoration. The seconds digit is what tells a visitor the
+ * page is counting.
+ *
+ * Kept as a function rather than deleted so callers keep asking rather than
+ * assuming, and so hiding them again is a one-line change here.
  */
-export function showsSeconds(remaining: Remaining): boolean {
-  return remaining.totalMs < DAY;
+export function showsSeconds(_remaining: Remaining): boolean {
+  return true;
 }
 
 /**
  * How often the display needs to change, in ms.
  *
- * Far out, once a minute is plenty; inside the last day, every second. Used to
- * pick a timer interval rather than blindly ticking at 1Hz for months.
+ * Once a second, since seconds are always on screen. A re-render a second is
+ * cheap — the component renders four numbers — and anything slower would leave
+ * the seconds digit visibly skipping values.
  */
 export function tickIntervalMs(remaining: Remaining): number {
   return showsSeconds(remaining) ? SECOND : MINUTE;

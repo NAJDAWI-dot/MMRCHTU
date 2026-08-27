@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { parseStatus } from "@/lib/competition-day";
+import { hiddenPageHrefs } from "@/lib/page-visibility";
 import { MobileNav } from "@/components/layout/MobileNav";
 
 const LINKS = [
@@ -16,18 +17,24 @@ const LINKS = [
 /**
  * Hrefs to leave out of the menu, so it never points at a 404 or a dead end.
  *
- * Competition Day goes while that page's status is HIDDEN. Gallery goes until
- * at least one album is published with a photo in it — an empty gallery is a
- * wasted click. Admin saves call revalidatePath("/", "layout") to pick either
- * change up.
+ * Three separate reasons, unioned. A page an admin switched off on the Pages
+ * tab goes, and so does anything hiding itself: Competition Day while that
+ * page's status is HIDDEN, and Gallery until at least one album is published
+ * with a photo in it, since an empty gallery is a wasted click. Admin saves
+ * call revalidatePath("/", "layout") to pick any of them up.
+ *
+ * The menu is filtered for admins too. A link the admin has just hidden should
+ * not still be sitting in the menu they are looking at — and the page itself
+ * stays reachable by URL for them, which is where previewing it belongs.
  */
 async function hiddenHrefs(): Promise<Set<string>> {
-  const [config, publishedAlbums] = await Promise.all([
+  const [config, publishedAlbums, adminHidden] = await Promise.all([
     prisma.competitionDayConfig.findUnique({ where: { id: "singleton" } }),
     prisma.galleryAlbum.count({ where: { isPublished: true, photos: { some: {} } } }),
+    hiddenPageHrefs(),
   ]);
 
-  const hidden = new Set<string>();
+  const hidden = new Set<string>(adminHidden);
   // No row yet means the schema defaults apply, and the default is not HIDDEN.
   if (parseStatus(config?.status) === "HIDDEN") hidden.add("/competition-day");
   if (publishedAlbums === 0) hidden.add("/gallery");

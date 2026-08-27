@@ -49,15 +49,17 @@ describe("remainingUntil", () => {
 });
 
 describe("showsSeconds and tickIntervalMs", () => {
-  it("shows seconds only inside the last day", () => {
-    expect(showsSeconds(remainingUntil(after(DAY + MINUTE), BASE))).toBe(false);
+  it("shows seconds however far out the date is", () => {
+    // Without a digit that changes every second the clock reads as a graphic.
+    expect(showsSeconds(remainingUntil(after(90 * DAY), BASE))).toBe(true);
+    expect(showsSeconds(remainingUntil(after(DAY + MINUTE), BASE))).toBe(true);
     expect(showsSeconds(remainingUntil(after(DAY - MINUTE), BASE))).toBe(true);
   });
 
-  it("ticks once a minute when far out and once a second when close", () => {
-    // Re-rendering every second for three months would be pure waste.
-    expect(tickIntervalMs(remainingUntil(after(30 * DAY), BASE))).toBe(MINUTE);
+  it("ticks once a second at any distance, since seconds are always shown", () => {
+    expect(tickIntervalMs(remainingUntil(after(30 * DAY), BASE))).toBe(SECOND);
     expect(tickIntervalMs(remainingUntil(after(2 * HOUR), BASE))).toBe(SECOND);
+    expect(MINUTE).toBe(60 * SECOND); // guards the constants above from drifting
   });
 });
 
@@ -74,9 +76,9 @@ describe("pad", () => {
 });
 
 describe("countdownUnits", () => {
-  it("leads with days when there are any, and hides seconds that far out", () => {
+  it("leads with days when there are any, and still carries seconds", () => {
     const units = countdownUnits(remainingUntil(after(3 * DAY + 2 * HOUR), BASE));
-    expect(units.map((u) => u.label)).toEqual(["days", "hours", "minutes"]);
+    expect(units.map((u) => u.label)).toEqual(["days", "hours", "minutes", "seconds"]);
     expect(units[0]).toEqual({ value: "3", label: "days" });
   });
 
@@ -87,8 +89,10 @@ describe("countdownUnits", () => {
   });
 
   it("uses singular labels for exactly one", () => {
-    const units = countdownUnits(remainingUntil(after(1 * DAY + 1 * HOUR + 1 * MINUTE), BASE));
-    expect(units.map((u) => u.label)).toEqual(["day", "hour", "minute"]);
+    const units = countdownUnits(
+      remainingUntil(after(1 * DAY + 1 * HOUR + 1 * MINUTE + 1 * SECOND), BASE),
+    );
+    expect(units.map((u) => u.label)).toEqual(["day", "hour", "minute", "second"]);
   });
 });
 

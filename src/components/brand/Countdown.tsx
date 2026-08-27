@@ -78,17 +78,26 @@ export function Countdown({
         they are gibberish, and an aria-live region updating every second would
         talk over everything else. One sentence is announced instead.
       */}
-      <div className="flex flex-wrap items-end gap-3 sm:gap-4" aria-hidden="true">
+      <div
+        className="flex flex-wrap items-end justify-center gap-3 sm:gap-4"
+        aria-hidden="true"
+      >
         {units.map((unit) => (
           <div key={unit.label} className="text-center">
             {/*
               Keyed on the value, so a digit that changes is a new element and
               replays the tick. Without it the clock silently swaps numbers and
               the one genuinely live thing on the page reads as static text.
+
+              The gradient sits on this same element rather than on the row, so
+              that it travels with the tick's transform. On the row it would
+              stay put while the glyph slid out from under it, and the digit
+              would vanish for the length of the animation — background-clip
+              paints only where the element's own background box reaches.
             */}
             <div
               key={unit.value}
-              className={`tick-in font-display font-extrabold tabular-nums text-ras-purple dark:text-white ${
+              className={`countdown-digit tick-in font-display font-extrabold tabular-nums ${
                 compact ? "text-3xl" : "text-5xl"
               }`}
             >
