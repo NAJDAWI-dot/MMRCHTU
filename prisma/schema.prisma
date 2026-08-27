@@ -288,6 +288,25 @@ model GalleryPhoto {
   @@index([albumId])
 }
 
+// Whether a public page is reachable, one row per page the admin has taken a
+// decision about.
+//
+// Sparse on purpose: a missing row means visible, so nothing has to be seeded
+// and adding a page to MANAGED_PAGES in src/lib/pages.ts needs no migration.
+// The href is the primary key rather than a surrogate id — there is exactly one
+// decision per page, and keying on the path makes a duplicate impossible rather
+// than merely unlikely.
+//
+// Distinct from CompetitionDayConfig.status and GalleryAlbum.isPublished, which
+// hide their pages for reasons of their own: those describe whether there is
+// anything to show, this is an admin saying "not yet" regardless. Either one
+// hiding a page hides it.
+model PageVisibility {
+  href      String   @id
+  isHidden  Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+
 // Singleton row (id is always "singleton") holding admin-editable copy for
 // the public register page.
 model RegisterFormConfig {

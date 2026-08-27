@@ -83,7 +83,10 @@ export function MobileNav({ links }: { links: NavLink[] }) {
           // width; a narrow dropdown would put the links in a cramped column.
           // page-enter doubles as the panel's own drop-in: it mounts fresh on
           // every open, so the animation replays without needing a key.
-          className="page-enter absolute left-0 right-0 top-full z-50 border-b border-ras-gray/15 bg-[var(--color-bg)] shadow-lg"
+          // The bottom border matches the rule the header now carries, so the
+          // open panel reads as the header extended rather than as a separate
+          // sheet with a fainter edge.
+          className="page-enter absolute left-0 right-0 top-full z-50 border-b-2 border-ras-crimson/50 bg-[var(--color-bg)] shadow-lg dark:border-mood-rose/60"
         >
           <nav aria-label="Site" className="mx-auto max-w-6xl px-4 py-2">
             <ul className="flex flex-col">

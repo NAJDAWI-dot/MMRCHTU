@@ -34,8 +34,15 @@ import {
 /** Enough bands to read as a sweep, few enough that each carries real weight. */
 const WALL_BANDS = 6;
 
-/** Two mice, not four: at loader size a third line collides before it reads. */
-const LOOP_MICE = 2;
+/**
+ * One mouse, not four.
+ *
+ * At loader size a second line spends most of its lap crossing the first, and
+ * two trails moving at once read as a tangle rather than as one thing solving
+ * the maze. A single line is legible at 130px in the fraction of a second a
+ * page change actually lasts.
+ */
+const LOOP_MICE = 1;
 
 /** Units per second for the loader's endless lap. Slower than the splash run. */
 const LOOP_SPEED = 96;
@@ -260,7 +267,7 @@ function RunMaze({ maze }: { maze: Maze }) {
   );
 }
 
-/** The route loader: two mice lapping a small maze until the page is ready. */
+/** The route loader: one mouse lapping a small maze until the page is ready. */
 function LoopMaze({ maze }: { maze: Maze }) {
   const routes = maze.routes.slice(0, LOOP_MICE);
 

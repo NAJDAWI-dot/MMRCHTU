@@ -51,12 +51,22 @@ export default async function HomePage() {
 
         {showCountdown && config.eventDate ? (
           <div className="mt-14">
-            <div className="relative mx-auto max-w-2xl overflow-hidden rounded-2xl border border-ras-purple/25 bg-gradient-to-br from-ras-purple/10 via-transparent to-ras-crimson/10 px-5 py-7 sm:px-8">
-              {/* A faint sweep across the panel, so the one live thing on the
-                  page sits on something that is not flat. */}
+            {/* `isolate` is what keeps the two glows behind the text: it makes
+                this the stacking context, so the -z-10 below lands above the
+                panel's own gradient but under everything written on top of it.
+                Without it the glows paint over the digits, which at these
+                opacities is visible. */}
+            <div className="relative isolate mx-auto max-w-2xl overflow-hidden rounded-2xl border border-ras-purple/40 bg-gradient-to-br from-mood-orchid/25 via-ras-purple/10 to-mood-rose/25 px-5 py-7 shadow-lg shadow-ras-purple/10 sm:px-8 dark:border-mood-violet/45 dark:from-mood-violet/30 dark:via-transparent dark:to-mood-rose/30 dark:shadow-none">
+              {/* Two sweeps rather than one, from opposite corners: the panel
+                  reads as lit from both ends of the digits' gradient instead of
+                  fading off to nothing on the left. */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-ras-crimson/10 blur-3xl"
+                className="pointer-events-none absolute -right-16 -top-16 -z-10 h-48 w-48 rounded-full bg-mood-rose/25 blur-3xl"
+              />
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -bottom-20 -left-20 -z-10 h-52 w-52 rounded-full bg-mood-orchid/25 blur-3xl"
               />
               <p className="font-mono text-xs uppercase tracking-[0.2em] text-ras-crimson dark:text-mood-rose">
                 Competition day in
