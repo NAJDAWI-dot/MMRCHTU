@@ -12,6 +12,8 @@
  * bank receipt, and two copies of that answer would drift.
  */
 
+import { isAllowedImageType } from "@/lib/gallery";
+
 /**
  * A storage key for one screenshot.
  *
@@ -31,6 +33,27 @@ export function paymentScreenshotKey(
   const ext = (originalName.match(/\.([a-zA-Z0-9]{1,5})$/)?.[1] ?? "jpg").toLowerCase();
   const safeId = registrationId.replace(/[^a-zA-Z0-9]/g, "");
   return `payments/${safeId}/${safeId}-${unique}.${ext}`;
+}
+
+/**
+ * The content type a stored screenshot may be rendered under, or null if it
+ * must only ever be offered as a download.
+ *
+ * Showing a proof of payment in the admin panel means serving bytes a stranger
+ * uploaded as a document on this origin, in a session that is by definition an
+ * admin's. A browser that decides those bytes are HTML or SVG will run whatever
+ * script is in them. So the stored type is never passed through to the browser:
+ * it is matched here against the uploader's own allowlist, every member of
+ * which is an inert raster format, and anything else — an old row, a type the
+ * store guessed, an upload that predates validation — falls back to being
+ * downloaded rather than rendered.
+ *
+ * Parameters after ";" are dropped, since "image/png; charset=binary" is a png
+ * and a bare string comparison would miss it.
+ */
+export function inlineScreenshotType(storedType: string | null | undefined): string | null {
+  const type = (storedType ?? "").split(";")[0]!.trim().toLowerCase();
+  return isAllowedImageType(type) ? type : null;
 }
 
 /**

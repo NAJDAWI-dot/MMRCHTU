@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PaymentBadge } from "@/components/payment/PaymentBadge";
+import { PaymentScreenshot } from "@/components/admin/PaymentScreenshot";
 import { prisma } from "@/lib/prisma";
 import { getPaymentConfig } from "@/lib/site-config";
 import { PAYMENT_STATUSES, PAYMENT_STATUS_LABELS, formatFils } from "@/lib/payment";
@@ -253,24 +254,16 @@ export default async function AdminPaymentsPage() {
               ) : null}
 
               {reg.paymentScreenshotUrl ? (
-                <p className="mt-3 text-xs">
-                  {/* Served through an admin-only route rather than linked at
-                      its blob URL. A bank confirmation must not end up in
-                      browser history as a public link that keeps working. */}
-                  <a
-                    href={`/admin/payments/screenshot/${reg.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold text-ras-purple underline dark:text-white"
-                  >
-                    View payment screenshot
-                  </a>
-                  {reg.paymentSubmittedAt ? (
-                    <span className="ml-2 text-ras-gray dark:text-white/50">
-                      reported {reg.paymentSubmittedAt.toLocaleDateString()}
-                    </span>
-                  ) : null}
-                </p>
+                /* Served through an admin-only route rather than linked at its
+                   blob URL. A bank confirmation must not end up in browser
+                   history as a public link that keeps working. The component
+                   shows it in place, so checking a payment against the amount
+                   and reference above it does not mean downloading anything. */
+                <PaymentScreenshot
+                  registrationId={reg.id}
+                  teamName={reg.teamName}
+                  reportedOn={reg.paymentSubmittedAt?.toLocaleDateString()}
+                />
               ) : (
                 <p className="mt-3 text-xs text-ras-gray dark:text-white/50">No screenshot uploaded.</p>
               )}
