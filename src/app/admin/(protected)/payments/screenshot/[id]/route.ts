@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { inlineScreenshotType } from "@/lib/payment-proof";
 
 /**
  * An admin's view of one team's proof-of-payment screenshot.
@@ -22,13 +23,20 @@ import { prisma } from "@/lib/prisma";
  * A route handler rather than a page because it returns an image, and because
  * it must answer an unauthenticated caller with a status rather than the
  * redirect `requireAdmin()` would issue.
+ *
+ * It used to answer every request with `Content-Disposition: attachment`, so a
+ * link labelled "View payment screenshot" put a file in the admin's downloads
+ * folder instead of showing them anything — and reconciling a dozen payments
+ * meant a dozen bank receipts left sitting on disk, which is the opposite of
+ * what the rest of this file is careful about. It now renders inline, and
+ * `?download=1` is there for when the file itself is genuinely wanted.
  */
 
 // Reads one registration row and proxies a remote object; nothing here is
 // cacheable, and caching it is the specific thing this route exists to prevent.
 export const dynamic = "force-dynamic";
 
-export async function GET(_request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   const admin = await requireAdminApi();
   if (!admin) {
     return new NextResponse("Not found", { status: 404 });
@@ -61,18 +69,35 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   // in their downloads folder.
   const filename = registration.paymentScreenshotKey?.split("/").pop() || "payment-screenshot";
 
+  const imageType = inlineScreenshotType(upstream.headers.get("content-type"));
+  // Explicitly asking for the file wins over rendering it, and anything that is
+  // not a recognised image is only ever offered as a download.
+  const wantsDownload = new URL(request.url).searchParams.get("download") === "1";
+  const inline = imageType !== null && !wantsDownload;
+
   return new NextResponse(upstream.body, {
     headers: {
-      "Content-Type": upstream.headers.get("content-type") ?? "application/octet-stream",
+      // Never the upstream header verbatim: what a browser does with these
+      // bytes is decided here, from a value that has been checked.
+      "Content-Type": inline ? imageType : "application/octet-stream",
       // Kept out of every cache between here and the admin's screen. The whole
       // point is that this content does not persist anywhere it can be reached
       // without a session.
       "Cache-Control": "private, no-store, max-age=0",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${filename}"`,
       // Belt and braces: the bytes are attacker-supplied in the sense that a
       // registrant chose them, so refuse to let a browser sniff them into
       // something executable.
       "X-Content-Type-Options": "nosniff",
+      // If the type check above were ever wrong, this is what stops the
+      // mistake becoming script execution: opened directly, the response
+      // becomes a document in an opaque origin of its own, with scripts
+      // disabled and no access to this one.
+      //
+      // `sandbox` alone rather than a full policy: a `default-src 'none'`
+      // blocks the image inside the document a browser synthesises around it,
+      // which would break the very thing this change is for.
+      "Content-Security-Policy": "sandbox",
     },
   });
 }
