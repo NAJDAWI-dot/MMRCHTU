@@ -4,7 +4,14 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { removePhoto, storePhoto } from "@/lib/photo-storage";
-import { checkUpload, reorder, storageKey, uniqueSlug } from "@/lib/gallery";
+import {
+  SNIFF_BYTES,
+  checkUpload,
+  reorder,
+  sniffImageType,
+  storageKey,
+  uniqueSlug,
+} from "@/lib/gallery";
 
 function toDate(value: FormDataEntryValue | null): Date | null {
   const str = String(value ?? "");
@@ -147,12 +154,23 @@ export async function uploadPhotos(formData: FormData): Promise<UploadResult> {
       continue;
     }
 
+    // Same byte check the public payment upload does. This one is behind an
+    // admin login so the threat is far smaller, but both paths reach the same
+    // storage under the same rules, and having them agree is what stops the
+    // safer of the two quietly becoming the way in.
+    const head = new Uint8Array(await file.slice(0, SNIFF_BYTES).arrayBuffer());
+    const imageType = sniffImageType(head);
+    if (!imageType) {
+      errors.push(`${file.name}: not a JPEG, PNG, WebP or AVIF image.`);
+      continue;
+    }
+
     try {
       // Unique without needing a round trip: the album is fixed, and no two
       // files in one submission can share both index and timestamp.
       const unique = `${Date.now().toString(36)}-${index}`;
-      const key = storageKey(album.slug, file.name, unique);
-      const stored = await storePhoto(key, file);
+      const key = storageKey(album.slug, imageType, unique);
+      const stored = await storePhoto(key, file, imageType);
 
       await prisma.galleryPhoto.create({
         data: {

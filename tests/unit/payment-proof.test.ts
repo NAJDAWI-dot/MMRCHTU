@@ -3,20 +3,38 @@ import { inlineScreenshotType, paymentScreenshotKey } from "@/lib/payment-proof"
 
 describe("paymentScreenshotKey", () => {
   it("files a screenshot under the registration it belongs to", () => {
-    expect(paymentScreenshotKey("reg123", "receipt.png", "abc")).toBe(
+    expect(paymentScreenshotKey("reg123", "image/png", "abc")).toBe(
       "payments/reg123/reg123-abc.png",
     );
   });
 
-  it("never lets an uploaded filename escape its folder", () => {
-    // The name is chosen by the uploader, so "../" in it must not travel.
-    const key = paymentScreenshotKey("reg123", "../../etc/passwd.png", "abc");
+  it("takes its extension from the verified type, never from the upload", () => {
+    // This is the whole fix. The extension decides what blob storage serves
+    // the file as, and this form is open to the public — so a key built from
+    // the uploaded filename let a stranger choose it.
+    expect(paymentScreenshotKey("r", "image/jpeg", "u")).toBe("payments/r/r-u.jpg");
+    expect(paymentScreenshotKey("r", "image/webp", "u")).toBe("payments/r/r-u.webp");
+    expect(paymentScreenshotKey("r", "image/avif", "u")).toBe("payments/r/r-u.avif");
+  });
+
+  it("has no parameter a filename could arrive in at all", () => {
+    const key = paymentScreenshotKey("reg123", "image/png", "abc");
     expect(key).toBe("payments/reg123/reg123-abc.png");
     expect(key).not.toContain("..");
   });
 
-  it("falls back to jpg when there is no usable extension", () => {
-    expect(paymentScreenshotKey("reg1", "screenshot", "u")).toBe("payments/reg1/reg1-u.jpg");
+  it("strips anything unexpected from the registration id", () => {
+    expect(paymentScreenshotKey("../../evil", "image/png", "u")).toBe("payments/evil/evil-u.png");
+  });
+
+  it("never produces a key an attacker could have chosen the extension of", () => {
+    // Belt and braces on the type: every accepted type maps to a known-inert
+    // raster extension, so no input path reaches .html, .svg or .js.
+    const dangerous = [".html", ".svg", ".js", ".htm", ".xhtml"];
+    for (const type of ["image/jpeg", "image/png", "image/webp", "image/avif"] as const) {
+      const key = paymentScreenshotKey("r", type, "u");
+      expect(dangerous.some((ext) => key.endsWith(ext))).toBe(false);
+    }
   });
 });
 

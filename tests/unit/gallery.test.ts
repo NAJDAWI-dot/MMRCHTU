@@ -8,6 +8,7 @@ import {
   isAllowedImageType,
   reorder,
   slugify,
+  sniffImageType,
   sortAlbums,
   storageKey,
   uniqueSlug,
@@ -56,31 +57,93 @@ describe("uniqueSlug", () => {
 });
 
 describe("storageKey", () => {
-  it("keeps the extension and namespaces by album", () => {
-    expect(storageKey("finals", "IMG_1234.JPG", "abc")).toBe("gallery/finals/finals-abc.jpg");
+  it("takes its extension from the verified type and namespaces by album", () => {
+    expect(storageKey("finals", "image/jpeg", "abc")).toBe("gallery/finals/finals-abc.jpg");
   });
 
   it("names the file after the album, since that is what a download is called", () => {
     // Downloads are named from the file part only, so a bare id would land in
     // someone's downloads folder as an unplaceable "abc.jpg".
-    const key = storageKey("mmrc-26-finals", "x.jpg", "k3f9a1");
+    const key = storageKey("mmrc-26-finals", "image/jpeg", "k3f9a1");
     expect(key.split("/").pop()).toBe("mmrc-26-finals-k3f9a1.jpg");
   });
 
-  it("never lets a filename escape its folder", () => {
-    // The original name is attacker-controllable in principle; only a
-    // sanitised extension survives, and the name itself is ours.
-    const key = storageKey("finals", "../../etc/passwd", "abc");
+  it("gives every accepted type its own extension", () => {
+    // The extension is what blob storage serves the file as, so these must map
+    // one-to-one onto the types the sniffer can return.
+    expect(storageKey("a", "image/png", "k").endsWith(".png")).toBe(true);
+    expect(storageKey("a", "image/webp", "k").endsWith(".webp")).toBe(true);
+    expect(storageKey("a", "image/avif", "k").endsWith(".avif")).toBe(true);
+  });
+
+  it("carries nothing at all from the upload, so no name can escape the folder", () => {
+    // There is no longer a parameter a filename could arrive in — which is the
+    // point. Only the album segment and the caller's unique part shape the key.
+    const key = storageKey("finals", "image/jpeg", "abc");
     expect(key).toBe("gallery/finals/finals-abc.jpg");
     expect(key).not.toContain("..");
   });
 
-  it("falls back to jpg when there is no usable extension", () => {
-    expect(storageKey("finals", "photo", "xyz")).toBe("gallery/finals/finals-xyz.jpg");
+  it("sanitises the album segment too", () => {
+    expect(storageKey("../evil", "image/png", "k")).toBe("gallery/evil/evil-k.png");
+  });
+});
+
+describe("sniffImageType", () => {
+  const bytes = (...values: number[]) => new Uint8Array(values);
+  const ascii = (text: string) => [...text].map((c) => c.charCodeAt(0));
+
+  it("recognises a PNG by its signature", () => {
+    expect(sniffImageType(bytes(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0))).toBe(
+      "image/png",
+    );
   });
 
-  it("sanitises the album segment too", () => {
-    expect(storageKey("../evil", "a.png", "k")).toBe("gallery/evil/evil-k.png");
+  it("recognises a JPEG by its signature", () => {
+    expect(sniffImageType(bytes(0xff, 0xd8, 0xff, 0xe0, 0, 0))).toBe("image/jpeg");
+  });
+
+  it("recognises a WebP by its RIFF form type, not just the container", () => {
+    expect(sniffImageType(bytes(...ascii("RIFF"), 0, 0, 0, 0, ...ascii("WEBP")))).toBe("image/webp");
+    // RIFF alone is a container shared with WAV and AVI.
+    expect(sniffImageType(bytes(...ascii("RIFF"), 0, 0, 0, 0, ...ascii("WAVE")))).toBeNull();
+  });
+
+  it("recognises AVIF from the major brand", () => {
+    expect(sniffImageType(bytes(0, 0, 0, 0x20, ...ascii("ftyp"), ...ascii("avif")))).toBe(
+      "image/avif",
+    );
+  });
+
+  it("recognises AVIF from a compatible brand, which is where encoders often put it", () => {
+    const head = bytes(
+      0, 0, 0, 0x20,
+      ...ascii("ftyp"),
+      ...ascii("mif1"), // major brand
+      0, 0, 0, 0, // minor version
+      ...ascii("mif1"),
+      ...ascii("avif"), // compatible brand
+    );
+    expect(sniffImageType(head)).toBe("image/avif");
+  });
+
+  it("does not accept HEIC, which shares the container but is not on the list", () => {
+    const heic = bytes(0, 0, 0, 0x20, ...ascii("ftyp"), ...ascii("heic"), 0, 0, 0, 0, ...ascii("heic"));
+    expect(sniffImageType(heic)).toBeNull();
+  });
+
+  it("rejects the payloads this check exists to stop", () => {
+    // A declared image/png meant nothing; these are what actually arrived.
+    expect(sniffImageType(bytes(...ascii("<!DOCTYPE html><script>")))).toBeNull();
+    expect(sniffImageType(bytes(...ascii("<svg xmlns=")))).toBeNull();
+    expect(sniffImageType(bytes(...ascii("%PDF-1.7")))).toBeNull();
+    expect(sniffImageType(bytes(...ascii("GIF89a")))).toBeNull();
+  });
+
+  it("rejects an empty or truncated head rather than guessing", () => {
+    expect(sniffImageType(bytes())).toBeNull();
+    expect(sniffImageType(bytes(0x89, 0x50))).toBeNull();
+    expect(sniffImageType(bytes(...ascii("RIFF")))).toBeNull();
   });
 });
 
