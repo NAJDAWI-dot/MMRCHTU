@@ -117,11 +117,49 @@ export interface TeamRowSource {
   createdAt: Date;
 }
 
-export const TEAM_HEADERS = [
+/**
+ * How many member blocks the teams sheet carries.
+ *
+ * Must equal MAX_TEAM_SIZE in registration.ts, which is not imported here
+ * because that module pulls in Prisma and the mail client, and this one is
+ * deliberately free of both. A test asserts the two agree, so raising the team
+ * size cannot silently start truncating the export.
+ *
+ * Fixed rather than sized to the largest team present: a column count that
+ * changes with the data would rearrange the sheet under an Excel query that is
+ * already bound to it, which is how a refresh quietly starts filling the wrong
+ * columns.
+ */
+export const TEAM_MEMBER_SLOTS = 3;
+
+/** What each member contributes to a team row, in order. */
+const MEMBER_FIELDS = [
+  "first name",
+  "last name",
+  "email",
+  "WhatsApp",
+  "university",
+  "IEEE status",
+  "IEEE membership ID",
+  "major",
+] as const;
+
+/**
+ * Team identity first, then the people, then the money.
+ *
+ * The members sit in the middle rather than at the end because that is the
+ * reading order of the row: who they are, then what they owe. Every slot is
+ * present whether or not the team filled it, so column N is the same field on
+ * every row — the property any formula or pivot over this sheet depends on.
+ */
+export const TEAM_HEADERS: readonly string[] = [
   "Team name",
   "Submitter email",
   "Status",
   "Members",
+  ...Array.from({ length: TEAM_MEMBER_SLOTS }, (_, slot) =>
+    MEMBER_FIELDS.map((field) => `Member ${slot + 1} ${field}`),
+  ).flat(),
   "Fee tier",
   "Quoted (JOD)",
   "Discount (JOD)",
@@ -136,23 +174,56 @@ export const TEAM_HEADERS = [
   "Consent version",
   "Consent accepted",
   "Registered at",
-] as const;
+];
 
 /**
- * One row per team.
+ * The cells for one member slot, or a run of empty cells if the team has no
+ * one in it.
+ *
+ * Empty rather than omitted: a two-person team must still occupy the same
+ * columns as a three-person one, or the fee columns shift left on some rows and
+ * the sheet becomes unreadable the moment anyone sorts it.
+ */
+function memberCells(member: MemberRowSource | undefined): unknown[] {
+  return [
+    member?.firstName ?? null,
+    member?.lastName ?? null,
+    member?.email ?? null,
+    member?.whatsapp ?? null,
+    member?.university ?? null,
+    member?.ieeeStatus ?? null,
+    member?.ieeeMembershipId ?? null,
+    member?.major ?? null,
+  ];
+}
+
+/**
+ * One row per team, carrying the whole team.
  *
  * The resume code is deliberately absent. It is a credential — anyone holding
  * it can reopen that team's registration and change what was submitted — and a
  * spreadsheet that gets mailed around is the last place it should be. The
  * screenshot is reported as a yes/no for the same reason: its URL is the one
  * thing the admin screenshot route exists to keep out of circulation.
+ *
+ * Members are sorted here rather than trusted to arrive in order, so "member 1"
+ * means the same person as the team saw on the form no matter how they were
+ * fetched. Anyone beyond the last slot is dropped — which cannot happen while
+ * TEAM_MEMBER_SLOTS tracks MAX_TEAM_SIZE, and is why a test holds those
+ * together.
  */
-export function teamRow(registration: TeamRowSource): unknown[] {
+export function teamRow(
+  registration: TeamRowSource,
+  members: readonly MemberRowSource[] = [],
+): unknown[] {
+  const ordered = [...members].sort((a, b) => a.order - b.order);
+
   return [
     registration.teamName,
     registration.submitterEmail,
     registration.status,
     registration.memberCount,
+    ...Array.from({ length: TEAM_MEMBER_SLOTS }, (_, slot) => memberCells(ordered[slot])).flat(),
     registration.feeTier,
     filsToAmount(registration.feeDueFils),
     filsToAmount(registration.feeDiscountFils),

@@ -22,10 +22,11 @@ import {
  * with ?token=. Keeping both on one route is what stops the two from drifting
  * into disagreeing about what a row contains.
  *
- * ?sheet=teams (default) is one row per team; ?sheet=members is one row per
- * person. Two sheets rather than one wide table because a team of three would
- * otherwise need nine repeated columns, and filtering people by university —
- * the thing this file actually gets used for — would be impossible.
+ * ?sheet=teams (default) is one row per team, carrying every member inline —
+ * one block of columns per slot, empty where a team has fewer people, so
+ * column N is the same field on every row. ?sheet=members is the same people
+ * one per row instead, which is the shape to filter or pivot on when chasing
+ * a missing WhatsApp number across every team at once.
  */
 
 // Reads live rows and must never be cached: a stale export is worse than no
@@ -56,27 +57,27 @@ export async function GET(request: Request) {
 
   const sheet = parseSheet(url.searchParams.get("sheet"));
 
-  // Two queries rather than one with a conditional `include`: the members are
-  // only fetched for the sheet that needs them, and each branch has a type
-  // that actually describes what came back.
-  let csv: string;
-  if (sheet === "members") {
-    const registrations = await prisma.registration.findMany({
-      orderBy: { createdAt: "asc" },
-      include: { members: { orderBy: { order: "asc" } } },
-    });
-    csv = toCsv(
-      MEMBER_HEADERS,
-      registrations.flatMap((registration) =>
-        registration.members.map((member) =>
-          memberRow(registration.teamName, registration.status, member),
-        ),
-      ),
-    );
-  } else {
-    const registrations = await prisma.registration.findMany({ orderBy: { createdAt: "asc" } });
-    csv = toCsv(TEAM_HEADERS, registrations.map(teamRow));
-  }
+  // Both sheets need the members now that a team row carries its whole team,
+  // so there is one query rather than a branch.
+  const registrations = await prisma.registration.findMany({
+    orderBy: { createdAt: "asc" },
+    include: { members: { orderBy: { order: "asc" } } },
+  });
+
+  const csv =
+    sheet === "members"
+      ? toCsv(
+          MEMBER_HEADERS,
+          registrations.flatMap((registration) =>
+            registration.members.map((member) =>
+              memberRow(registration.teamName, registration.status, member),
+            ),
+          ),
+        )
+      : toCsv(
+          TEAM_HEADERS,
+          registrations.map((registration) => teamRow(registration, registration.members)),
+        );
 
   return new NextResponse(csv, {
     headers: {
