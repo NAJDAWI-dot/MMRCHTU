@@ -291,6 +291,22 @@
   animation: cheddarPopUp 620ms cubic-bezier(0.18, 0.9, 0.28, 1.2) both;
 }
 
+/*
+  One of the five hand-drawn variations.
+
+  A fixed square box with object-fit rather than a width and an automatic
+  height: the drawings have quite different proportions — one is a tall
+  standing mouse, another a wide face — and letting each size itself would move
+  the speech bubble and the card up and down depending on which one you were
+  given. The box stays put and the drawing fits inside it.
+*/
+.cheddar-portrait {
+  display: block;
+  width: clamp(150px, 34vmin, 220px);
+  height: clamp(150px, 34vmin, 220px);
+  object-fit: contain;
+}
+
 .cheddar-move-scurry > * {
   animation: cheddarScurry 1.5s ease-in-out 620ms 2;
 }

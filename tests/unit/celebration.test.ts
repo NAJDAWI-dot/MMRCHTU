@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CHEDDAR_MOVES,
+  CHEDDAR_PORTRAITS,
   CHEDDAR_QUIPS,
   CELEBRATION_FADE_MS,
   pickCelebration,
@@ -35,13 +36,49 @@ describe("CHEDDAR_MOVES", () => {
   });
 });
 
+describe("CHEDDAR_PORTRAITS", () => {
+  it("offers more than one drawing, or there is nothing to vary", () => {
+    expect(CHEDDAR_PORTRAITS.length).toBeGreaterThan(1);
+  });
+
+  it("points every drawing at a distinct file under public/", () => {
+    const sources = CHEDDAR_PORTRAITS.map((p) => p.src);
+    expect(new Set(sources).size).toBe(sources.length);
+    for (const src of sources) {
+      expect(src.startsWith("/brand/cheddar/")).toBe(true);
+      expect(src.endsWith(".svg")).toBe(true);
+    }
+  });
+
+  it("describes each drawing rather than repeating one label", () => {
+    // Which one you got is the point of there being five, so the alt text has
+    // to say which one it is.
+    const alts = CHEDDAR_PORTRAITS.map((p) => p.alt);
+    expect(new Set(alts).size).toBe(alts.length);
+    for (const alt of alts) {
+      expect(alt.trim()).toBe(alt);
+      expect(alt.length).toBeGreaterThan(10);
+    }
+  });
+});
+
 describe("pickCelebration", () => {
-  it("picks the quip and the move independently", () => {
-    // First call feeds the quip, second the move. Reading the same value twice
-    // would lock move N to quip N and quietly collapse the variety.
-    const { quip, move } = pickCelebration(scripted(0, 0.99));
+  it("picks the quip, the move and the drawing independently", () => {
+    // One call each, in order. Reading the same value three times would lock
+    // move N and drawing N to quip N and quietly collapse the variety.
+    const { quip, move, portrait } = pickCelebration(scripted(0, 0.99, 0));
     expect(quip).toBe(CHEDDAR_QUIPS[0]);
     expect(move).toBe(CHEDDAR_MOVES[CHEDDAR_MOVES.length - 1]);
+    expect(portrait).toBe(CHEDDAR_PORTRAITS[0]);
+  });
+
+  it("can reach every drawing", () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < CHEDDAR_PORTRAITS.length; i++) {
+      // Third call is the drawing; the first two feed quip and move.
+      seen.add(pickCelebration(scripted(0, 0, (i + 0.5) / CHEDDAR_PORTRAITS.length)).portrait.src);
+    }
+    expect(seen.size).toBe(CHEDDAR_PORTRAITS.length);
   });
 
   it("is deterministic for a given source", () => {
@@ -67,16 +104,19 @@ describe("pickCelebration", () => {
     // one moment that is supposed to be fun, so out-of-contract values are
     // clamped rather than trusted.
     for (const value of [0, 0.999_999_999, 1, 1.5, -0.4, Number.NaN, Number.POSITIVE_INFINITY]) {
-      const { quip, move } = pickCelebration(scripted(value));
+      const { quip, move, portrait } = pickCelebration(scripted(value));
       expect(CHEDDAR_QUIPS).toContain(quip);
       expect(CHEDDAR_MOVES).toContain(move);
+      // A missing drawing would be an empty box where the mouse should be.
+      expect(CHEDDAR_PORTRAITS).toContain(portrait);
     }
   });
 
   it("defaults to real randomness without an argument", () => {
-    const { quip, move } = pickCelebration();
+    const { quip, move, portrait } = pickCelebration();
     expect(CHEDDAR_QUIPS).toContain(quip);
     expect(CHEDDAR_MOVES).toContain(move);
+    expect(CHEDDAR_PORTRAITS).toContain(portrait);
   });
 });
 
