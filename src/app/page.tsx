@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { AmbientMice } from "@/components/brand/AmbientMice";
 import { Countdown } from "@/components/brand/Countdown";
 import { parseStatus } from "@/lib/competition-day";
 import { shouldShowCountdown } from "@/lib/countdown";
@@ -66,6 +67,10 @@ export default async function HomePage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
+      {/* Only here. The mice are the landing page having a bit of character;
+          on the rules or the registration form they would be in the way. */}
+      <AmbientMice />
+
       <section className="text-center">
         <p className="font-mono text-sm uppercase tracking-widest text-ras-crimson dark:text-mood-rose">
           IEEE RAS HTU Student Chapter presents

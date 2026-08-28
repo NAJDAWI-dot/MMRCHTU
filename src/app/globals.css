@@ -523,6 +523,19 @@
     animation: none;
   }
 
+  /*
+    The wandering mice do not slow down under this setting, they stop existing.
+    An animal darting across the page every half minute is precisely what
+    somebody asking for reduced motion is asking not to have.
+
+    AmbientMice already returns null when the preference is set, so this is the
+    second of two — it holds if that check is ever changed or bypassed, and
+    costs a line.
+  */
+  .ambient-mice {
+    display: none;
+  }
+
   .cheddar-actor,
   .cheddar-actor > *,
   .cheddar-bubble,
@@ -914,6 +927,176 @@
 
 .tick-in {
   animation: tick-in 280ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+/*
+  Mice wandering the landing page.
+
+  The layer is fixed and covers the viewport, so a mouse can come in from any
+  edge regardless of where the page is scrolled. Two things make it safe to put
+  over the whole page: pointer-events is none, so every click lands on whatever
+  is underneath; and the z-index sits below the phone menu (50), the route
+  loader (90) and the splash (100), so nothing important is ever behind a mouse.
+
+  overflow: hidden is load-bearing. Each animation starts and ends outside the
+  viewport, and without it those positions would extend the scrollable area —
+  a page that grows a horizontal scrollbar every thirty seconds.
+*/
+.ambient-mice {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ambient-mouse {
+  display: block;
+  width: clamp(76px, 11vmin, 122px);
+  height: auto;
+  /* The drawings are pale grey on a white page; without this the peek reads as
+     a smudge rather than a mouse. */
+  filter: drop-shadow(0 6px 14px rgb(55 51 61 / 0.22));
+}
+
+/* Every peek shares the timing; only the direction it travels differs. */
+.ambient-peek {
+  position: absolute;
+  animation-duration: 5600ms;
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+  animation-fill-mode: both;
+}
+
+.ambient-peek--left {
+  left: 0;
+  top: 46%;
+  animation-name: ambientPeekLeft;
+}
+
+.ambient-peek--right {
+  right: 0;
+  top: 38%;
+  animation-name: ambientPeekRight;
+}
+
+.ambient-peek--top-right {
+  right: 12%;
+  top: 0;
+  animation-name: ambientPeekTop;
+}
+
+.ambient-peek--bottom-left {
+  left: 8%;
+  bottom: 0;
+  animation-name: ambientPeekBottom;
+}
+
+.ambient-peek--bottom-right {
+  right: 6%;
+  bottom: 0;
+  animation-name: ambientPeekBottom;
+}
+
+/*
+  In, a pause, then back the way it came.
+
+  The percentages are the shape of the whole thing: a fifth of the time arriving,
+  half of it sitting there being looked at, a fifth leaving.
+*/
+@keyframes ambientPeekLeft {
+  0% { transform: translateX(-115%); opacity: 0; }
+  18% { transform: translateX(0); opacity: 1; }
+  74% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(-115%); opacity: 0; }
+}
+
+@keyframes ambientPeekRight {
+  0% { transform: translateX(115%); opacity: 0; }
+  18% { transform: translateX(0); opacity: 1; }
+  74% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(115%); opacity: 0; }
+}
+
+@keyframes ambientPeekTop {
+  0% { transform: translateY(-115%); opacity: 0; }
+  18% { transform: translateY(-12%); opacity: 1; }
+  74% { transform: translateY(-12%); opacity: 1; }
+  100% { transform: translateY(-115%); opacity: 0; }
+}
+
+@keyframes ambientPeekBottom {
+  0% { transform: translateY(115%); opacity: 0; }
+  18% { transform: translateY(14%); opacity: 1; }
+  74% { transform: translateY(14%); opacity: 1; }
+  100% { transform: translateY(115%); opacity: 0; }
+}
+
+/*
+  The chase along the bottom.
+
+  The mouse and the cheese are one element that crosses together, with the
+  cheese held ahead of the mouse — so the gap between them never changes and
+  the mouse never catches it, which is the joke.
+*/
+.ambient-chase {
+  position: absolute;
+  bottom: clamp(8px, 2vh, 28px);
+  left: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(14px, 4vw, 54px);
+  animation-duration: 7400ms;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+
+/* Cheese first in the DOM, so it leads when travelling right. */
+.ambient-chase--rightward {
+  flex-direction: row-reverse;
+  animation-name: ambientChaseRight;
+}
+
+.ambient-chase--leftward {
+  flex-direction: row;
+  animation-name: ambientChaseLeft;
+}
+
+/* The drawings mostly face forward or left, so this only needs to flip one way
+   for the mouse to read as running after the cheese rather than away from it. */
+.ambient-chase--rightward .ambient-mouse--chasing {
+  transform: scaleX(-1);
+}
+
+.ambient-cheese {
+  width: clamp(30px, 4.4vmin, 46px);
+  height: auto;
+  align-self: center;
+  animation: ambientCheeseWobble 620ms ease-in-out infinite;
+}
+
+.ambient-mouse--chasing {
+  animation: ambientScamper 380ms ease-in-out infinite;
+}
+
+@keyframes ambientChaseRight {
+  0% { transform: translateX(-40vw); }
+  100% { transform: translateX(112vw); }
+}
+
+@keyframes ambientChaseLeft {
+  0% { transform: translateX(112vw); }
+  100% { transform: translateX(-40vw); }
+}
+
+/* Small vertical bob, so the run has feet under it rather than sliding. */
+@keyframes ambientScamper {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -7%; }
+}
+
+@keyframes ambientCheeseWobble {
+  0%, 100% { rotate: -7deg; }
+  50% { rotate: 7deg; }
 }
 
 /*
