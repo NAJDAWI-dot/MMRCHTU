@@ -3,6 +3,7 @@ import Link from "next/link";
 import { highlight, search, tokenize } from "@/lib/search";
 import { searchCorpus } from "@/lib/search-content";
 import { SearchBox } from "@/app/search/SearchBox";
+import { PageLink } from "@/components/layout/PageLink";
 
 // The corpus is the rulebook file plus published FAQ entries, both of which
 // change rarely and revalidate on admin save.
@@ -75,9 +76,12 @@ export default async function SearchPage({
               </p>
               <p className="mt-3">
                 Still stuck?{" "}
-                <Link href="/faq" className="font-semibold text-ras-crimson hover:underline dark:text-mood-rose">
+                <PageLink
+                  href="/faq"
+                  className="font-semibold text-ras-crimson hover:underline dark:text-mood-rose"
+                >
                   Ask a question
-                </Link>{" "}
+                </PageLink>{" "}
                 and the committee will answer it.
               </p>
             </div>

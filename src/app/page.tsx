@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { Countdown } from "@/components/brand/Countdown";
 import { parseStatus } from "@/lib/competition-day";
 import { shouldShowCountdown } from "@/lib/countdown";
+import { hiddenPageHrefs } from "@/lib/page-visibility";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 
 // The countdown reads a live config row, so this page cannot be baked at
@@ -13,8 +14,39 @@ import { getCompetitionDayConfig } from "@/lib/site-config";
 // "layout"), so a changed date appears at once rather than in five minutes.
 export const revalidate = 300;
 
+/**
+ * The three cards under the hero.
+ *
+ * Data rather than markup so they can be filtered against the pages an admin
+ * has switched off. They used to be written out one by one, which meant the
+ * site menu dropped a hidden page while the homepage went on advertising it —
+ * a card leading straight to "not found", which is the exact outcome the Pages
+ * tab exists to prevent.
+ */
+const FEATURE_CARDS = [
+  {
+    href: "/rules",
+    title: "Rules & scoring",
+    blurb: "Read the full MMRC 26 rulebook before you build.",
+    cta: "View rules",
+  },
+  {
+    href: "/schedule",
+    title: "Schedule",
+    blurb: "Key dates from registration to the final run.",
+    cta: "View schedule",
+  },
+  {
+    href: "/faq",
+    title: "FAQ",
+    blurb: "Answers to common questions from past competitors.",
+    cta: "View FAQ",
+  },
+] as const;
+
 export default async function HomePage() {
-  const config = await getCompetitionDayConfig();
+  const [config, hidden] = await Promise.all([getCompetitionDayConfig(), hiddenPageHrefs()]);
+
   /*
     Whether the Competition Day *page* is reachable. It gates the link below,
     not the clock.
@@ -23,9 +55,14 @@ export default async function HomePage() {
     its running order was being written left the homepage saying nothing at all
     about when the competition was. The date is the single most useful fact
     here, and it is not a secret — only the details behind it are.
+
+    Two reasons it can be unreachable, and both have to be checked: its own
+    status, and an admin switching it off on the Pages tab.
   */
-  const dayPageVisible = parseStatus(config.status) !== "HIDDEN";
+  const dayPageVisible =
+    parseStatus(config.status) !== "HIDDEN" && !hidden.has("/competition-day");
   const showCountdown = shouldShowCountdown(config.eventDate);
+  const cards = FEATURE_CARDS.filter((card) => !hidden.has(card.href));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
@@ -40,13 +77,20 @@ export default async function HomePage() {
           The 2026 Micro Mouse Robot Competition. Build a maze-solving robot, race the clock,
           and play Pac Mouse — our maze game — while you wait for results.
         </p>
+        {/* The two calls to action go with their pages. Registration closing is
+            a different thing entirely — that leaves the page up and explains
+            itself, so it is not checked here. */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-          <Button asChild>
-            <Link href="/register">Register your team</Link>
-          </Button>
-          <Button variant="ghost" asChild>
-            <Link href="/game">Play Pac Mouse</Link>
-          </Button>
+          {!hidden.has("/register") ? (
+            <Button asChild>
+              <Link href="/register">Register your team</Link>
+            </Button>
+          ) : null}
+          {!hidden.has("/game") ? (
+            <Button variant="ghost" asChild>
+              <Link href="/game">Play Pac Mouse</Link>
+            </Button>
+          ) : null}
         </div>
 
         {showCountdown && config.eventDate ? (
@@ -92,41 +136,26 @@ export default async function HomePage() {
         ) : null}
       </section>
 
-      <section className="stagger mt-20 grid gap-6 sm:grid-cols-3">
-        <Card interactive>
-          <h2 className="font-display text-lg font-bold text-ras-purple dark:text-white">
-            Rules &amp; scoring
-          </h2>
-          <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
-            Read the full MMRC 26 rulebook before you build.
-          </p>
-          <Link href="/rules" className="-mx-2 mt-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline">
-            View rules →
-          </Link>
-        </Card>
-        <Card interactive>
-          <h2 className="font-display text-lg font-bold text-ras-purple dark:text-white">
-            Schedule
-          </h2>
-          <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
-            Key dates from registration to the final run.
-          </p>
-          <Link href="/schedule" className="-mx-2 mt-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline">
-            View schedule →
-          </Link>
-        </Card>
-        <Card interactive>
-          <h2 className="font-display text-lg font-bold text-ras-purple dark:text-white">
-            FAQ
-          </h2>
-          <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
-            Answers to common questions from past competitors.
-          </p>
-          <Link href="/faq" className="-mx-2 mt-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline">
-            View FAQ →
-          </Link>
-        </Card>
-      </section>
+      {/* Nothing at all rather than an empty row, on the off chance an admin
+          hides all three. */}
+      {cards.length > 0 ? (
+        <section className="stagger mt-20 grid gap-6 sm:grid-cols-3">
+          {cards.map((card) => (
+            <Card key={card.href} interactive>
+              <h2 className="font-display text-lg font-bold text-ras-purple dark:text-white">
+                {card.title}
+              </h2>
+              <p className="mt-2 text-sm text-ras-gray dark:text-white/70">{card.blurb}</p>
+              <Link
+                href={card.href}
+                className="-mx-2 mt-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline"
+              >
+                {card.cta} →
+              </Link>
+            </Card>
+          ))}
+        </section>
+      ) : null}
     </div>
   );
 }

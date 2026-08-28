@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
+import { PageLink } from "@/components/layout/PageLink";
 import { sortAlbums } from "@/lib/gallery";
 
 // Albums change when photos are uploaded, and that action revalidates this
@@ -42,9 +43,9 @@ export default async function GalleryPage() {
           </p>
           <p className="mt-2 text-sm text-ras-gray dark:text-white/60">
             They will appear here after the first event. In the meantime, the{" "}
-            <Link href="/schedule" className="font-semibold text-ras-crimson hover:underline">
+            <PageLink href="/schedule" className="font-semibold text-ras-crimson hover:underline">
               schedule
-            </Link>{" "}
+            </PageLink>{" "}
             has what is coming.
           </p>
         </Card>
