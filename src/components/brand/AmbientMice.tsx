@@ -16,10 +16,15 @@ import {
 } from "@/lib/ambient-mice";
 
 /**
- * Mice wandering across the landing page.
+ * Mice wandering across the site.
  *
  * One peeks in from an edge; another runs along the bottom after a piece of
  * cheese. Each on its own timer, offset so they do not arrive together.
+ *
+ * Mounted in the root layout, so they are on every page and — because that is
+ * outside PageTransition — they are not torn down and restarted by a
+ * navigation. The cadence belongs to the visitor rather than to the page they
+ * happen to be looking at.
  *
  * Decoration in the strict sense, and treated as such throughout: the whole
  * layer is aria-hidden and pointer-events: none, so it is invisible to a screen

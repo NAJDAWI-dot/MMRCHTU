@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { AmbientMice } from "@/components/brand/AmbientMice";
 import { ThemeProvider } from "@/components/brand/ThemeProvider";
 import { SplashScreen } from "@/components/brand/SplashScreen";
 import { Header } from "@/components/layout/Header";
@@ -91,6 +92,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ServiceWorkerRegistrar />
           <SplashScreen />
           <RouteLoader />
+          {/*
+            Sitewide, not just the landing page.
+
+            Mounted here rather than inside a page for a reason beyond reach:
+            this sits outside PageTransition, so it survives a navigation
+            instead of being torn down and remounted with it. A mouse halfway
+            across the screen when someone clicks a link keeps going rather
+            than blinking out, and the thirty-second cadence belongs to the
+            visitor rather than restarting on every page.
+          */}
+          <AmbientMice />
           <a href="#main-content" className="skip-link">
             Skip to content
           </a>

@@ -979,9 +979,18 @@
   animation-name: ambientPeekRight;
 }
 
+/*
+  Clear of the header rather than at the very top of the viewport.
+
+  The layer paints above the header — it is positioned, the header is not — so
+  a mouse starting at top: 0 sat over the navigation. Harmless, since the layer
+  takes no clicks, but a mouse parked across "Register" reads as a bug rather
+  than as charm, and now that these run on every page the header is always
+  there to be covered.
+*/
 .ambient-peek--top-right {
   right: 12%;
-  top: 0;
+  top: clamp(76px, 9vh, 108px);
   animation-name: ambientPeekTop;
 }
 
@@ -1017,11 +1026,13 @@
   100% { transform: translateX(115%); opacity: 0; }
 }
 
+/* Rests at 0 rather than -12%: the offset used to buy clearance from the top of
+   the screen, and the position above now does that instead. */
 @keyframes ambientPeekTop {
-  0% { transform: translateY(-115%); opacity: 0; }
-  18% { transform: translateY(-12%); opacity: 1; }
-  74% { transform: translateY(-12%); opacity: 1; }
-  100% { transform: translateY(-115%); opacity: 0; }
+  0% { transform: translateY(-160%); opacity: 0; }
+  18% { transform: translateY(0); opacity: 1; }
+  74% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-160%); opacity: 0; }
 }
 
 @keyframes ambientPeekBottom {
