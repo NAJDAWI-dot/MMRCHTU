@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/Button";
 import { updateRegistrationStatus } from "./actions";
 import { PaymentBadge } from "@/components/payment/PaymentBadge";
 import { DeleteRegistration } from "@/components/admin/DeleteRegistration";
+import { RegistrationExport } from "@/components/admin/RegistrationExport";
 import { formatFils } from "@/lib/payment";
+import { MIN_EXPORT_TOKEN_LENGTH } from "@/lib/export-token";
 
 export const metadata: Metadata = {
   title: "Admin — Registrations",
@@ -30,6 +32,17 @@ export default async function AdminRegistrationsPage() {
         {registrations.length} teams registered · {paid} paid
         {awaiting > 0 ? ` · ${awaiting} awaiting a payment check` : ""}
       </p>
+
+      {/*
+        Only whether a token is configured crosses to the browser, never the
+        token itself — rendering the secret would put it in the page source of
+        this screen and in every screenshot of it.
+      */}
+      <RegistrationExport
+        feedConfigured={
+          (process.env.REGISTRATIONS_EXPORT_TOKEN ?? "").trim().length >= MIN_EXPORT_TOKEN_LENGTH
+        }
+      />
 
       <div className="mt-6 space-y-4">
         {registrations.map((reg) => (
