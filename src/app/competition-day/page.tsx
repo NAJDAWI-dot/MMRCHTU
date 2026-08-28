@@ -6,6 +6,8 @@ import { parseStatus, toParagraphs } from "@/lib/competition-day";
 import { shouldShowCountdown } from "@/lib/countdown";
 import { buildTimeline, focusEvent } from "@/lib/schedule";
 import { getCompetitionDayConfig } from "@/lib/site-config";
+import { hiddenPageHrefs } from "@/lib/page-visibility";
+import { PageLink } from "@/components/layout/PageLink";
 import { prisma } from "@/lib/prisma";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { eventJsonLd } from "@/lib/structured-data";
@@ -20,9 +22,10 @@ export const metadata: Metadata = {
 };
 
 export default async function CompetitionDayPage() {
-  const [config, events] = await Promise.all([
+  const [config, events, hidden] = await Promise.all([
     getCompetitionDayConfig(),
     prisma.scheduleEvent.findMany({ orderBy: { startsAt: "asc" } }),
+    hiddenPageHrefs(),
   ]);
 
   const status = parseStatus(config.status);
@@ -121,7 +124,12 @@ export default async function CompetitionDayPage() {
       {/*
         The page used to dead-end. Whatever state it is in, the schedule is the
         useful next click, and naming the next date makes it worth taking.
+
+        The whole section goes when the schedule is hidden, rather than only its
+        link: it exists to send people there, and a panel headed "The full
+        schedule" with nothing to click is worse than no panel.
       */}
+      {!hidden.has("/schedule") ? (
       <section className="mt-12 rounded-lg border border-ras-gray/20 bg-[var(--color-surface)] p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
           <div className="min-w-0">
@@ -140,6 +148,7 @@ export default async function CompetitionDayPage() {
           </Link>
         </div>
       </section>
+      ) : null}
     </div>
   );
 }
@@ -162,9 +171,12 @@ function HoldingNote({ text }: { text: string }) {
       <p className="text-lg font-medium text-ras-purple dark:text-white">{text}</p>
       <p className="mt-3 text-sm text-ras-gray dark:text-white/60">
         Everything already announced is on the{" "}
-        <Link href="/schedule" className="font-semibold text-ras-crimson hover:underline dark:text-mood-rose">
+        <PageLink
+          href="/schedule"
+          className="font-semibold text-ras-crimson hover:underline dark:text-mood-rose"
+        >
           schedule
-        </Link>
+        </PageLink>
         .
       </p>
     </section>
