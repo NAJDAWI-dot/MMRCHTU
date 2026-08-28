@@ -46,7 +46,9 @@ describe("CHEDDAR_PORTRAITS", () => {
     expect(new Set(sources).size).toBe(sources.length);
     for (const src of sources) {
       expect(src.startsWith("/brand/cheddar/")).toBe(true);
-      expect(src.endsWith(".svg")).toBe(true);
+      // The raster copies, not the vectors beside them: 65KB against 900KB,
+      // and the landing page now shows one every thirty seconds.
+      expect(src.endsWith(".webp")).toBe(true);
     }
   });
 

@@ -50,10 +50,14 @@ export const CHEDDAR_MOVES: readonly CheddarMove[] = [
  * The drawings Cheddar can turn up as.
  *
  * Five hand-drawn variations, prepared from mouse_SVG/ by
- * scripts/prepare-cheddar-svgs.mjs. Referenced by URL rather than inlined: the
- * files are several hundred kilobytes each and only one is ever shown, so
- * bundling all five into the JavaScript would send four of them to every
- * visitor who never registers.
+ * scripts/prepare-cheddar-svgs.mjs. Referenced by URL rather than inlined, so
+ * a visitor who never registers never fetches one.
+ *
+ * The raster copies rather than the vectors beside them. The sources are traced
+ * *from* drawings, so there is no vector detail underneath to lose, and the
+ * difference is 65KB against 900KB each — which stopped being a detail once the
+ * landing page began showing one every thirty seconds rather than once at the
+ * end of a registration.
  *
  * The alt text describes each drawing rather than repeating "Cheddar", because
  * which one you got is the whole point of there being five.
@@ -64,11 +68,11 @@ export interface CheddarPortrait {
 }
 
 export const CHEDDAR_PORTRAITS: readonly CheddarPortrait[] = [
-  { src: "/brand/cheddar/cheddar-1.svg", alt: "Cheddar standing with his paws folded" },
-  { src: "/brand/cheddar/cheddar-2.svg", alt: "Cheddar's face, ears wide, tongue out" },
-  { src: "/brand/cheddar/cheddar-3.svg", alt: "Cheddar mid-scurry with his tail curled" },
-  { src: "/brand/cheddar/cheddar-4.svg", alt: "Cheddar peering sideways, one eye huge" },
-  { src: "/brand/cheddar/cheddar-5.svg", alt: "Cheddar as a unicorn, horn and all" },
+  { src: "/brand/cheddar/cheddar-1.webp", alt: "Cheddar standing with his paws folded" },
+  { src: "/brand/cheddar/cheddar-2.webp", alt: "Cheddar's face, ears wide, tongue out" },
+  { src: "/brand/cheddar/cheddar-3.webp", alt: "Cheddar mid-scurry with his tail curled" },
+  { src: "/brand/cheddar/cheddar-4.webp", alt: "Cheddar peering sideways, one eye huge" },
+  { src: "/brand/cheddar/cheddar-5.webp", alt: "Cheddar as a unicorn, horn and all" },
 ] as const;
 
 export interface Celebration {

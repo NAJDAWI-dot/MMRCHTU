@@ -35,6 +35,15 @@ const PADDING = 0.03;
 const PRECISION = 1;
 
 /**
+ * Width of the raster copies, in pixels.
+ *
+ * Nothing on the site shows a mouse above about 220px, so this is roughly four
+ * times the largest use — enough for a high-density screen and for the drawing
+ * to survive being scaled up later, without paying for detail no one sees.
+ */
+const RASTER_WIDTH = 900;
+
+/**
  * A background path is matched on covering essentially the whole canvas rather
  * than on its colour: a white shape that is genuinely part of the mouse — an
  * eye glint — has to survive, and the only reliable difference between the two
@@ -56,6 +65,16 @@ function round(svg) {
 
 const browser = await chromium.launch();
 const page = await browser.newPage();
+
+/**
+ * A second, ordinary HTML page, used only for the WebP encoding.
+ *
+ * `page` is sitting on the SVG file itself, and in an SVG document
+ * `createElement` resolves into the SVG namespace — so asking it for a canvas
+ * hands back an SVGElement with no getContext on it.
+ */
+const rasterPage = await browser.newPage();
+await rasterPage.setContent("<!doctype html><meta charset='utf-8'><body></body>");
 
 mkdirSync(OUT_DIR, { recursive: true });
 
@@ -131,15 +150,62 @@ for (const [index, file] of files.entries()) {
   const destination = `${OUT_DIR}/cheddar-${index + 1}.svg`;
   writeFileSync(destination, out, "utf8");
 
+  /*
+    A raster copy alongside the vector one.
+
+    Even cropped and rounded these are three quarters of a megabyte each, and
+    the landing page shows one every thirty seconds to anyone who sits there —
+    which turns a one-off cost at the end of a registration into a continuous
+    one for every visitor. Re-encoded at 900px they are around sixty kilobytes.
+
+    Nothing is lost by it: the sources are traced *from* raster drawings, so
+    there is no vector detail underneath to preserve, and nothing on the site
+    shows them larger than about 220px.
+
+    Encoded in the browser because Node has no WebP encoder and this script is
+    already driving one.
+  */
+  const raster = await rasterPage.evaluate(
+    async ({ markup, width }) => {
+      const holder = document.createElement("div");
+      holder.innerHTML = markup;
+      const svg = holder.querySelector("svg");
+      svg.setAttribute("width", String(width));
+      svg.removeAttribute("height");
+
+      const url = URL.createObjectURL(
+        new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" }),
+      );
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext("2d").drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.92));
+      return Array.from(new Uint8Array(await blob.arrayBuffer()));
+    },
+    { markup: out, width: RASTER_WIDTH },
+  );
+
+  const webpPath = `${OUT_DIR}/cheddar-${index + 1}.webp`;
+  writeFileSync(webpPath, Buffer.from(raster));
+
   const before = statSync(source).size;
   const after = statSync(destination).size;
+  const webpSize = statSync(webpPath).size;
   totalBefore += before;
-  totalAfter += after;
+  totalAfter += webpSize;
 
   console.log(
-    `${file} -> ${destination}  ${(before / 1024 / 1024).toFixed(2)}MB -> ${(after / 1024).toFixed(0)}KB` +
-      `  (${Math.round((1 - after / before) * 100)}% smaller, ${pathTags.length - kept.length} background path(s) dropped,` +
-      ` viewBox ${w}x${h})`,
+    `${file}  ${(before / 1024 / 1024).toFixed(2)}MB` +
+      ` -> svg ${(after / 1024).toFixed(0)}KB` +
+      ` -> webp ${(webpSize / 1024).toFixed(0)}KB` +
+      `  (${pathTags.length - kept.length} background path(s) dropped, viewBox ${w}x${h})`,
   );
 }
 
