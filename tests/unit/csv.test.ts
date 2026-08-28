@@ -3,6 +3,7 @@ import {
   BOM,
   MEMBER_HEADERS,
   TEAM_HEADERS,
+  TEAM_MEMBER_SLOTS,
   escapeCsvField,
   filsToAmount,
   memberRow,
@@ -10,6 +11,7 @@ import {
   teamRow,
   toCsv,
 } from "@/lib/csv";
+import { MAX_TEAM_SIZE } from "@/lib/registration";
 
 describe("sanitiseCell", () => {
   it("neutralises a value Excel would run as a formula", () => {
@@ -127,27 +129,96 @@ const REG = {
   createdAt: new Date(Date.UTC(2026, 0, 31)),
 };
 
+const member = (order: number, first: string) => ({
+  order,
+  firstName: first,
+  lastName: `Last${order}`,
+  email: `${first.toLowerCase()}@example.com`,
+  whatsapp: `+96279000000${order}`,
+  university: "HTU",
+  major: "Mechatronics",
+  ieeeStatus: order === 1 ? "RAS_MEMBER" : "NON_MEMBER",
+  ieeeMembershipId: `ID-${order}`,
+});
+
+describe("TEAM_MEMBER_SLOTS", () => {
+  it("matches the largest team the site accepts", () => {
+    // csv.ts cannot import registration.ts — that would drag Prisma and the
+    // mail client into every consumer — so this is what stops the export
+    // silently truncating a team if the limit is ever raised.
+    expect(TEAM_MEMBER_SLOTS).toBe(MAX_TEAM_SIZE);
+  });
+});
+
 describe("teamRow", () => {
   it("produces exactly one cell per header", () => {
-    expect(teamRow(REG)).toHaveLength(TEAM_HEADERS.length);
+    expect(teamRow(REG, [member(1, "Sara")])).toHaveLength(TEAM_HEADERS.length);
+  });
+
+  it("keeps the column count identical however many members a team has", () => {
+    // A short team must not shift the fee columns left, or the sheet becomes
+    // unreadable the moment anyone sorts it.
+    const widths = [0, 1, 2, 3].map(
+      (n) => teamRow(REG, [1, 2, 3].slice(0, n).map((i) => member(i, `M${i}`))).length,
+    );
+    expect(new Set(widths).size).toBe(1);
+  });
+
+  it("carries every member inline, in slot order", () => {
+    const row = teamRow(REG, [member(1, "Sara"), member(2, "Omar"), member(3, "Lina")]);
+    const at = (name: string) => row[TEAM_HEADERS.indexOf(name)];
+    expect(at("Member 1 first name")).toBe("Sara");
+    expect(at("Member 2 first name")).toBe("Omar");
+    expect(at("Member 3 first name")).toBe("Lina");
+  });
+
+  it("sorts members rather than trusting the order they arrive in", () => {
+    // "Member 1" must mean the person the team put first, however they were
+    // fetched.
+    const row = teamRow(REG, [member(3, "Lina"), member(1, "Sara"), member(2, "Omar")]);
+    expect(row[TEAM_HEADERS.indexOf("Member 1 first name")]).toBe("Sara");
+    expect(row[TEAM_HEADERS.indexOf("Member 3 first name")]).toBe("Lina");
+  });
+
+  it("carries each member's IEEE status and membership id", () => {
+    const row = teamRow(REG, [member(1, "Sara"), member(2, "Omar")]);
+    expect(row[TEAM_HEADERS.indexOf("Member 1 IEEE status")]).toBe("RAS_MEMBER");
+    expect(row[TEAM_HEADERS.indexOf("Member 1 IEEE membership ID")]).toBe("ID-1");
+    expect(row[TEAM_HEADERS.indexOf("Member 2 IEEE status")]).toBe("NON_MEMBER");
+  });
+
+  it("leaves unused member slots empty rather than absent", () => {
+    const row = teamRow(REG, [member(1, "Sara")]);
+    expect(row[TEAM_HEADERS.indexOf("Member 2 first name")]).toBeNull();
+    expect(row[TEAM_HEADERS.indexOf("Member 3 IEEE membership ID")]).toBeNull();
+  });
+
+  it("writes an empty cell, not the word null, for an unused slot", () => {
+    const csv = toCsv(TEAM_HEADERS, [teamRow(REG, [member(1, "Sara")])]);
+    expect(csv).not.toContain("null");
   });
 
   it("reports the screenshot as a yes/no and never as its URL", () => {
-    const row = teamRow(REG);
+    const row = teamRow(REG, []);
     expect(row).toContain(true);
     expect(row.some((cell) => String(cell).includes("blob.example"))).toBe(false);
   });
 
   it("never carries the resume code, which is a credential", () => {
     // Anyone holding it can reopen that team's registration and change it.
-    const rendered = toCsv(TEAM_HEADERS, [teamRow({ ...REG })]);
+    const rendered = toCsv(TEAM_HEADERS, [teamRow(REG, [member(1, "Sara")])]);
     expect(rendered.toLowerCase()).not.toContain("resume");
   });
 
   it("reports money as numbers rather than formatted strings", () => {
-    const row = teamRow(REG);
+    const row = teamRow(REG, []);
     expect(row).toContain(20);
     expect(row).toContain(5);
+  });
+
+  it("protects a member phone number from Excel's formula parser", () => {
+    const csv = toCsv(TEAM_HEADERS, [teamRow(REG, [member(1, "Sara")])]);
+    expect(csv).toContain("'+962790000001");
   });
 });
 
