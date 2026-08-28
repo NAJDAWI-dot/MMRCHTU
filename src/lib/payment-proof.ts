@@ -12,14 +12,23 @@
  * bank receipt, and two copies of that answer would drift.
  */
 
-import { isAllowedImageType } from "@/lib/gallery";
+import {
+  EXTENSION_FOR_IMAGE_TYPE,
+  isAllowedImageType,
+  type AllowedImageType,
+} from "@/lib/gallery";
 
 /**
  * A storage key for one screenshot.
  *
- * The uploaded filename is never trusted: it can carry path separators, "..",
- * or arbitrary unicode. Only a sanitised extension survives; the rest of the
- * key is built from the registration id and a caller-supplied unique part.
+ * Nothing from the upload reaches this key. It used to keep the filename's
+ * extension, which is the part that matters most: blob storage picks the
+ * content type it serves a file under from its extension, so an extension
+ * taken from the upload let the uploader choose it. This form is open to the
+ * public, so "the uploader" is anyone — a file named "receipt.html" and
+ * declared as image/png passed every check and was then served as a web page
+ * from a permanent public URL. The extension now comes from the type the bytes
+ * were verified to be.
  *
  * Deliberately not gallery.ts's `storageKey`, which hard-codes a `gallery/`
  * prefix — payment proofs are not gallery photos and must not be reachable by
@@ -27,12 +36,11 @@ import { isAllowedImageType } from "@/lib/gallery";
  */
 export function paymentScreenshotKey(
   registrationId: string,
-  originalName: string,
+  imageType: AllowedImageType,
   unique: string,
 ): string {
-  const ext = (originalName.match(/\.([a-zA-Z0-9]{1,5})$/)?.[1] ?? "jpg").toLowerCase();
   const safeId = registrationId.replace(/[^a-zA-Z0-9]/g, "");
-  return `payments/${safeId}/${safeId}-${unique}.${ext}`;
+  return `payments/${safeId}/${safeId}-${unique}.${EXTENSION_FOR_IMAGE_TYPE[imageType]}`;
 }
 
 /**

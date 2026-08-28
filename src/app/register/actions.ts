@@ -16,7 +16,7 @@ import { isPaymentConfigured, validatePayment, type CliqDetails } from "@/lib/pa
 import { computeFee, type FeeBreakdown } from "@/lib/pricing";
 import { getPaymentConfig, getRegisterFormConfig } from "@/lib/site-config";
 import { paymentScreenshotKey } from "@/lib/payment-proof";
-import { checkUpload } from "@/lib/gallery";
+import { SNIFF_BYTES, checkUpload, sniffImageType } from "@/lib/gallery";
 import { StorageNotConfiguredError, removePhoto, storePhoto } from "@/lib/photo-storage";
 import { createRateLimiter, clientKey } from "@/lib/rate-limit";
 
@@ -251,17 +251,34 @@ export async function completeRegistration(
   }
 
   const screenshot = file as File;
+
+  // The declared type got the file this far; the bytes decide whether it is
+  // stored. Only the head is read — the format's own signature lives there, and
+  // pulling four megabytes into memory to look at sixteen bytes would be a
+  // second way for this public endpoint to be abused.
+  const head = new Uint8Array(await screenshot.slice(0, SNIFF_BYTES).arrayBuffer());
+  const imageType = sniffImageType(head);
+  if (!imageType) {
+    return {
+      status: "error",
+      errors: {
+        screenshot: "That file is not a JPEG, PNG, WebP or AVIF image. Try the screenshot again.",
+      },
+    };
+  }
+
   // Keyed on a fresh id rather than the registration's, which does not exist
-  // yet — the row is created immediately below, in this same call.
+  // yet — the row is created immediately below, in this same call. The
+  // extension comes from `imageType`, never from screenshot.name.
   const key = paymentScreenshotKey(
     randomUUID().replace(/-/g, ""),
-    screenshot.name,
+    imageType,
     randomUUID().slice(0, 8),
   );
 
   let stored;
   try {
-    stored = await storePhoto(key, screenshot);
+    stored = await storePhoto(key, screenshot, imageType);
   } catch (error) {
     if (error instanceof StorageNotConfiguredError) {
       return { status: "error", errors: { screenshot: error.message } };

@@ -10,6 +10,80 @@
 /** Image types the browser can reliably display and re-encode. */
 export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"] as const;
 
+export type AllowedImageType = (typeof ALLOWED_IMAGE_TYPES)[number];
+
+/**
+ * The file extension to store each type under.
+ *
+ * Storage keys are built from this rather than from the uploaded filename.
+ * That filename is chosen by whoever is uploading, and the payment-proof form
+ * is open to the public — so an extension taken from it is an extension an
+ * attacker picked. Blob storage decides what content type to serve a file as
+ * from its extension, which makes that choice theirs rather than ours: a file
+ * named "receipt.html", declared as image/png, passed every check the size and
+ * type validation could make and was then served as a web page from a
+ * permanent public URL.
+ */
+export const EXTENSION_FOR_IMAGE_TYPE: Record<AllowedImageType, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/avif": "avif",
+};
+
+/** Enough of the head of a file to identify any of the formats below. */
+export const SNIFF_BYTES = 32;
+
+function ascii(bytes: Uint8Array, start: number, end: number): string {
+  return String.fromCharCode(...bytes.subarray(start, end));
+}
+
+function startsWith(bytes: Uint8Array, signature: readonly number[]): boolean {
+  if (bytes.length < signature.length) return false;
+  return signature.every((byte, i) => bytes[i] === byte);
+}
+
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
+const JPEG_SIGNATURE = [0xff, 0xd8, 0xff] as const;
+
+/**
+ * What a file actually is, from its opening bytes — or null if it is not one of
+ * the types we accept.
+ *
+ * The declared MIME type is not evidence. It is a string in the upload request,
+ * chosen by the client, and `checkUpload` believing it is what let arbitrary
+ * content through. This reads the format's own header instead, which the file
+ * cannot lie about and still be a working image.
+ *
+ * Only the head is examined, and that is sufficient for the threat: what a
+ * browser does with the file is decided by the content type we store it under,
+ * so establishing that the file genuinely opens as the image it claims to be is
+ * the whole job. This is not a malware scanner and is not trying to be.
+ */
+export function sniffImageType(bytes: Uint8Array): AllowedImageType | null {
+  if (startsWith(bytes, PNG_SIGNATURE)) return "image/png";
+  if (startsWith(bytes, JPEG_SIGNATURE)) return "image/jpeg";
+
+  // RIFF container with a WEBP form type: "RIFF", four bytes of length, "WEBP".
+  if (bytes.length >= 12 && ascii(bytes, 0, 4) === "RIFF" && ascii(bytes, 8, 12) === "WEBP") {
+    return "image/webp";
+  }
+
+  // ISO base media: a "ftyp" box whose major or compatible brands include avif.
+  // The brand list is scanned rather than only the major brand, because plenty
+  // of encoders write a generic major brand and put "avif" among the compatible
+  // ones. HEIC files share this container and are deliberately not matched.
+  if (bytes.length >= 12 && ascii(bytes, 4, 8) === "ftyp") {
+    const brands: string[] = [ascii(bytes, 8, 12)];
+    for (let i = 16; i + 4 <= bytes.length; i += 4) {
+      brands.push(ascii(bytes, i, i + 4));
+    }
+    if (brands.some((brand) => brand === "avif" || brand === "avis")) return "image/avif";
+  }
+
+  return null;
+}
+
 /**
  * Ceiling on an uploaded file, after the browser has downscaled it.
  *
@@ -68,19 +142,21 @@ export function uniqueSlug(title: string, taken: readonly string[]): string {
 /**
  * A safe storage key for an upload.
  *
- * The original filename is never trusted: it can carry path separators, "..",
- * or arbitrary unicode, none of which belong in a storage key. Only a
- * sanitised extension is kept, and the name itself is generated.
+ * Nothing from the uploaded filename survives — not even the extension, which
+ * this used to keep. The extension decides what content type blob storage
+ * serves the file as, so taking it from the upload handed that decision to
+ * whoever sent the file; it now comes from the type the bytes were verified to
+ * be. Path separators and ".." cannot appear because no part of the key is
+ * copied from input any more.
  *
  * The album name is repeated in the file part rather than only in the folder,
  * because downloads are named after the file alone — a visitor saving a photo
  * should end up with "mmrc-26-finals-k3f9a1.jpg" in their downloads folder,
  * not a bare timestamp they cannot place a week later.
  */
-export function storageKey(albumSlug: string, originalName: string, unique: string): string {
-  const ext = (originalName.match(/\.([a-zA-Z0-9]{1,5})$/)?.[1] ?? "jpg").toLowerCase();
+export function storageKey(albumSlug: string, imageType: AllowedImageType, unique: string): string {
   const folder = slugify(albumSlug) || "album";
-  return `gallery/${folder}/${folder}-${unique}.${ext}`;
+  return `gallery/${folder}/${folder}-${unique}.${EXTENSION_FOR_IMAGE_TYPE[imageType]}`;
 }
 
 export interface UploadProblem {
