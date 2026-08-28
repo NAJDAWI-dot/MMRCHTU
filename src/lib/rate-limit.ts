@@ -42,6 +42,15 @@ export interface RateLimiterOptions {
 
 export interface RateLimiter {
   check(key: string): RateLimitResult;
+  /**
+   * Clears one key's history.
+   *
+   * For limiters counting failures: a successful attempt should not leave the
+   * caller closer to a lockout. Without this, an admin signing in on a laptop,
+   * a phone and a spare browser spends the same budget an attacker does, and
+   * the throttle ends up locking out the only person it was meant to protect.
+   */
+  forget(key: string): void;
   /** Testing and teardown: forget everything currently tracked. */
   reset(): void;
   /** Number of keys currently held, for assertions about memory growth. */
@@ -82,6 +91,9 @@ export function createRateLimiter({
       }
 
       return { allowed: true, remaining: limit - recent.length, retryAfterMs: 0 };
+    },
+    forget(key: string) {
+      hits.delete(key);
     },
     reset() {
       hits.clear();

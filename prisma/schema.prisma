@@ -109,6 +109,15 @@ model AdminUser {
   passwordHash String
   createdAt    DateTime  @default(now())
   lastLoginAt  DateTime?
+
+  /// Invalidates every session this admin currently holds when incremented.
+  ///
+  /// Sessions are stateless HMAC tokens, so without this there is no way to
+  /// revoke one: a stolen cookie stayed valid for its full seven days and
+  /// changing the password did nothing about it. The number is signed into the
+  /// token and compared on every request, so bumping it makes every token
+  /// issued before now fail to verify.
+  tokenVersion Int       @default(0)
 }
 
 model ScheduleEvent {

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { deleteAdmin } from "./actions";
+import { deleteAdmin, signOutEverywhere } from "./actions";
 import { CreateAdminForm } from "./CreateAdminForm";
 
 export const metadata: Metadata = {
@@ -45,6 +45,22 @@ export default async function AdminAdminsPage() {
           </Card>
         ))}
       </div>
+
+      <Card className="mt-6">
+        <h2 className="font-display text-sm font-bold uppercase tracking-wide text-ras-gray dark:text-white/70">
+          Your sessions
+        </h2>
+        <p className="mt-2 max-w-prose text-sm text-ras-gray dark:text-white/70">
+          Signing in leaves a session that lasts a week. If you have signed in on a shared or lost
+          device, this ends every one of them at once — including this browser, so you will be asked
+          to sign in again. It does not affect other admins.
+        </p>
+        <form action={signOutEverywhere} className="mt-3">
+          <Button type="submit" variant="ghost" className="text-ras-crimson">
+            Sign out everywhere
+          </Button>
+        </form>
+      </Card>
     </div>
   );
 }

@@ -38,6 +38,20 @@ describe("generateResumeCode", () => {
     const codes = new Set(Array.from({ length: 500 }, () => generateResumeCode()));
     expect(codes.size).toBe(500);
   });
+
+  it("never draws from Math.random, whose state an observer can recover", () => {
+    // V8 generates Math.random with xorshift128+, and its internal state is
+    // recoverable from a handful of outputs. Anyone can harvest their own codes
+    // by registering, so a predictable source would let them work out the codes
+    // issued around theirs — enough to open another team's resume page.
+    const spy = vi.spyOn(Math, "random");
+    try {
+      generateResumeCode();
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
 
 describe("normaliseResumeCode", () => {

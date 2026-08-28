@@ -11,6 +11,14 @@ const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
 
 interface SessionPayload {
   adminId: string;
+  /**
+   * The admin's tokenVersion at the moment this session was issued.
+   *
+   * Compared against the stored value on every request, which is what makes a
+   * stateless token revocable: incrementing the column leaves every token
+   * carrying the old number unable to match, and they all stop working at once.
+   */
+  tokenVersion: number;
   iat: number;
 }
 
@@ -22,8 +30,10 @@ function sign(payload: string): string {
   return createHmac("sha256", env.sessionSecret).update(payload).digest("base64url");
 }
 
-export function signSession(adminId: string): string {
-  const payload = base64url(JSON.stringify({ adminId, iat: Date.now() } satisfies SessionPayload));
+export function signSession(adminId: string, tokenVersion: number): string {
+  const payload = base64url(
+    JSON.stringify({ adminId, tokenVersion, iat: Date.now() } satisfies SessionPayload),
+  );
   return `${payload}.${sign(payload)}`;
 }
 
@@ -42,6 +52,11 @@ export function verifySessionSignature(cookieValue: string | undefined): Session
   try {
     const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as SessionPayload;
     if (typeof parsed.adminId !== "string" || typeof parsed.iat !== "number") return null;
+    // A token from before tokenVersion existed has no version to compare, so it
+    // cannot be shown to be current. Rejecting it signs those sessions out once,
+    // at deploy, which is the correct answer for a change whose entire purpose
+    // is that an old token stops being trusted.
+    if (typeof parsed.tokenVersion !== "number") return null;
     if (Date.now() - parsed.iat > SESSION_MAX_AGE_SECONDS * 1000) return null;
     return parsed;
   } catch {
@@ -72,6 +87,13 @@ export async function requireAdmin() {
     redirect("/admin/login");
   }
 
+  // The revocation check. A token signed before the admin last signed out
+  // everywhere carries a lower version and is refused from here on, even though
+  // its signature is still perfectly valid.
+  if (admin.tokenVersion !== session.tokenVersion) {
+    redirect("/admin/login");
+  }
+
   return admin;
 }
 
@@ -81,5 +103,12 @@ export async function requireAdminApi() {
   const session = verifySessionSignature(cookieValue);
   if (!session) return null;
 
-  return prisma.adminUser.findUnique({ where: { id: session.adminId } });
+  const admin = await prisma.adminUser.findUnique({ where: { id: session.adminId } });
+  // Same revocation check as requireAdmin. Kept in both rather than shared,
+  // because the two differ in what they do about a failure — one redirects, one
+  // returns null — and a single helper returning "who, if anyone" would have to
+  // be unwrapped identically at both call sites anyway.
+  if (!admin || admin.tokenVersion !== session.tokenVersion) return null;
+
+  return admin;
 }

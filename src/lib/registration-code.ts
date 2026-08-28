@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 /**
  * The short code that lets a team reopen the payment stage.
  *
@@ -42,13 +44,33 @@ const CONFUSABLES: Record<string, string> = {
 };
 
 /**
+ * A uniform float in [0, 1), drawn from the OS entropy source.
+ *
+ * Replaces Math.random, which is not just "not cryptographic" in the abstract:
+ * V8 generates it with xorshift128+, whose internal state can be recovered from
+ * a handful of observed outputs. Anyone can harvest their own codes by
+ * registering, and a recovered state predicts the codes issued around them —
+ * which is enough to open another team's resume page and file a payment report
+ * against their registration.
+ *
+ * The modulo bias from mapping 2^32 values onto a 31-character alphabet is
+ * about seven parts in a billion, which is not worth rejection sampling for a
+ * six-character convenience code.
+ */
+function cryptoRandom(): number {
+  return randomBytes(4).readUInt32BE(0) / 2 ** 32;
+}
+
+/**
  * A random code.
  *
- * `random` is injectable purely so tests can pin the output; production always
- * uses Math.random, which is fine here — this is a convenience handle, not a
- * credential, and it is checked for uniqueness against the database anyway.
+ * `random` is injectable purely so tests can pin the output; production uses
+ * the crypto-backed source above. The code is still a convenience handle
+ * rather than a credential — it is checked for uniqueness against the database,
+ * and the pages behind it are rate limited — but there is no reason for it to
+ * be predictable when unpredictable costs one line.
  */
-export function generateResumeCode(random: () => number = Math.random): string {
+export function generateResumeCode(random: () => number = cryptoRandom): string {
   let code = "";
   for (let i = 0; i < RESUME_CODE_LENGTH; i++) {
     const index = Math.floor(random() * RESUME_CODE_ALPHABET.length);
