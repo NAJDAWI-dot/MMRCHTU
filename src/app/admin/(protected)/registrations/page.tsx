@@ -8,12 +8,15 @@ import { DeleteRegistration } from "@/components/admin/DeleteRegistration";
 import { RegistrationExport } from "@/components/admin/RegistrationExport";
 import { formatFils } from "@/lib/payment";
 import { MIN_EXPORT_TOKEN_LENGTH } from "@/lib/export-token";
+import { REGISTRATION_STATUSES } from "@/lib/registration-status";
 
 export const metadata: Metadata = {
   title: "Admin — Registrations",
 };
 
-const STATUS_OPTIONS = ["PENDING", "CONFIRMED", "WAITLISTED", "CANCELLED"];
+// The same list the action validates against, so the dropdown cannot offer a
+// value the write would then refuse.
+const STATUS_OPTIONS = REGISTRATION_STATUSES;
 
 export default async function AdminRegistrationsPage() {
   const registrations = await prisma.registration.findMany({

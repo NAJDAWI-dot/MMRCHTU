@@ -94,6 +94,40 @@ describe("createRateLimiter", () => {
   });
 });
 
+describe("forget", () => {
+  it("clears one key's history so it starts fresh", () => {
+    // The login path calls this on a successful sign-in: proving you know the
+    // password should not leave you closer to being locked out.
+    const clock = fakeClock();
+    const limiter = createRateLimiter({ limit: 2, windowMs: 60_000, now: clock.now });
+
+    limiter.check("a");
+    limiter.check("a");
+    expect(limiter.check("a").allowed).toBe(false);
+
+    limiter.forget("a");
+    expect(limiter.check("a").allowed).toBe(true);
+  });
+
+  it("leaves every other key alone", () => {
+    const clock = fakeClock();
+    const limiter = createRateLimiter({ limit: 1, windowMs: 60_000, now: clock.now });
+
+    limiter.check("a");
+    limiter.check("b");
+    limiter.forget("a");
+
+    expect(limiter.check("a").allowed).toBe(true);
+    expect(limiter.check("b").allowed).toBe(false);
+  });
+
+  it("is harmless for a key that was never seen", () => {
+    const limiter = createRateLimiter({ limit: 1, windowMs: 60_000 });
+    expect(() => limiter.forget("never-used")).not.toThrow();
+    expect(limiter.size()).toBe(0);
+  });
+});
+
 describe("clientKey", () => {
   it("takes the original client from a proxy chain", () => {
     const headers = new Headers({ "x-forwarded-for": "203.0.113.5, 70.41.3.18, 150.172.238.178" });

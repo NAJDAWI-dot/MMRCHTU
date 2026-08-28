@@ -4,13 +4,21 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { removePhoto } from "@/lib/photo-storage";
+import { parseRegistrationStatus } from "@/lib/registration-status";
 
 export async function updateRegistrationStatus(formData: FormData) {
   await requireAdmin();
 
   const id = String(formData.get("id") ?? "");
-  const status = String(formData.get("status") ?? "");
-  if (!id || !status) throw new Error("Missing registration id or status.");
+  if (!id) throw new Error("Missing registration id.");
+
+  // Checked against the list rather than written through. The value arrives
+  // from a form field, so before this any string at all could be persisted —
+  // and a status nothing recognises silently drops the team out of every count
+  // and filter that switches on it, including the confirmed and waiting
+  // broadcast lists, without ever looking like an error.
+  const status = parseRegistrationStatus(formData.get("status"));
+  if (!status) throw new Error("Unrecognised registration status.");
 
   await prisma.registration.update({ where: { id }, data: { status } });
 

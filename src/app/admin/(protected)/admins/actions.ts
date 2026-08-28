@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { requireAdmin, SESSION_COOKIE_NAME } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 
@@ -37,6 +39,35 @@ export async function createAdmin(
 
   revalidatePath("/admin/admins");
   return { status: "idle" };
+}
+
+/**
+ * Signs the current admin out of every device, including this one.
+ *
+ * The trigger for the revocation machinery in auth.ts. Sessions are stateless
+ * signed tokens, so before this existed a cookie copied off a shared machine —
+ * or left on a phone that was lost — stayed valid for its full seven days with
+ * nothing anyone could do about it. Incrementing the version invalidates every
+ * token carrying the old one, in one write.
+ *
+ * Scoped to the admin performing it rather than offered for any account,
+ * because these accounts are peers with no roles between them: an "sign
+ * everyone out" button would let any admin lock out the rest, which is a
+ * different feature with a different set of questions attached to it.
+ */
+export async function signOutEverywhere() {
+  const admin = await requireAdmin();
+
+  await prisma.adminUser.update({
+    where: { id: admin.id },
+    data: { tokenVersion: { increment: 1 } },
+  });
+
+  // The cookie in this browser is now signed with a stale version, so it is
+  // already refused; clearing it means the next page is the login form rather
+  // than a redirect from a request that looked authenticated and was not.
+  cookies().delete(SESSION_COOKIE_NAME);
+  redirect("/admin/login");
 }
 
 export async function deleteAdmin(formData: FormData) {
