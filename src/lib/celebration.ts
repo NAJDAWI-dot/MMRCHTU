@@ -5,10 +5,10 @@
  * to get wrong — picking a line and a move fairly, from an injected source of
  * randomness — is tested directly rather than by watching a mouse jump around.
  *
- * The quip and the move are chosen independently. Twelve lines and six moves
- * is seventy-two combinations, which is what makes "everyone gets a different
- * one" true in practice for a competition this size rather than merely
- * technically.
+ * The quip, the move and the drawing are chosen independently. Twelve lines,
+ * six moves and five drawings is three hundred and sixty combinations, which is
+ * what makes "everyone gets a different one" true in practice for a competition
+ * this size rather than merely technically.
  */
 
 /**
@@ -46,9 +46,35 @@ export const CHEDDAR_MOVES: readonly CheddarMove[] = [
   "bounce",
 ] as const;
 
+/**
+ * The drawings Cheddar can turn up as.
+ *
+ * Five hand-drawn variations, prepared from mouse_SVG/ by
+ * scripts/prepare-cheddar-svgs.mjs. Referenced by URL rather than inlined: the
+ * files are several hundred kilobytes each and only one is ever shown, so
+ * bundling all five into the JavaScript would send four of them to every
+ * visitor who never registers.
+ *
+ * The alt text describes each drawing rather than repeating "Cheddar", because
+ * which one you got is the whole point of there being five.
+ */
+export interface CheddarPortrait {
+  src: string;
+  alt: string;
+}
+
+export const CHEDDAR_PORTRAITS: readonly CheddarPortrait[] = [
+  { src: "/brand/cheddar/cheddar-1.svg", alt: "Cheddar standing with his paws folded" },
+  { src: "/brand/cheddar/cheddar-2.svg", alt: "Cheddar's face, ears wide, tongue out" },
+  { src: "/brand/cheddar/cheddar-3.svg", alt: "Cheddar mid-scurry with his tail curled" },
+  { src: "/brand/cheddar/cheddar-4.svg", alt: "Cheddar peering sideways, one eye huge" },
+  { src: "/brand/cheddar/cheddar-5.svg", alt: "Cheddar as a unicorn, horn and all" },
+] as const;
+
 export interface Celebration {
   quip: string;
   move: CheddarMove;
+  portrait: CheddarPortrait;
 }
 
 /**
@@ -75,6 +101,7 @@ export function pickCelebration(random: () => number = Math.random): Celebration
   return {
     quip: pick(CHEDDAR_QUIPS, random()),
     move: pick(CHEDDAR_MOVES, random()),
+    portrait: pick(CHEDDAR_PORTRAITS, random()),
   };
 }
 

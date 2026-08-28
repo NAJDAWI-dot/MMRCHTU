@@ -31,6 +31,15 @@ interface CheddarCelebrationProps {
 export function CheddarCelebration({ random = Math.random }: CheddarCelebrationProps) {
   const [celebration, setCelebration] = useState<Celebration | null>(null);
   const [leaving, setLeaving] = useState(false);
+  /**
+   * Falls back to the drawn Cheddar when a portrait will not load.
+   *
+   * The drawings live in public/ and are fetched at the moment the overlay
+   * appears, so a bad deploy or a dropped connection would otherwise leave a
+   * hole where the mouse should be — in the middle of the one screen that is
+   * meant to feel like a reward. Cheddar.tsx is inline SVG and cannot fail.
+   */
+  const [portraitFailed, setPortraitFailed] = useState(false);
   const dismissRef = useRef<HTMLButtonElement>(null);
   const timersRef = useRef<number[]>([]);
 
@@ -110,7 +119,32 @@ export function CheddarCelebration({ random = Math.random }: CheddarCelebrationP
         <p className="cheddar-bubble">{celebration.quip}</p>
 
         <div className={`cheddar-actor cheddar-move-${celebration.move}`}>
-          <Cheddar size={168} />
+          {/*
+            One of five hand-drawn variations, so a team that registers beside
+            another does not see the same mouse.
+
+            A plain <img> rather than next/image: these are SVGs, which the
+            optimiser passes through untouched anyway, and the drawing is
+            decorative enough that a layout-shift-preventing wrapper would be
+            more machinery than it earns. The falls-back-to-the-drawn-Cheddar
+            branch is what makes that safe — a file that fails to load leaves a
+            mouse behind rather than a gap in the middle of the celebration.
+          */}
+          {portraitFailed ? (
+            <Cheddar size={168} />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element -- decorative SVG, no optimisation to gain
+            <img
+              src={celebration.portrait.src}
+              alt={celebration.portrait.alt}
+              // Square, matching the CSS box. The drawings are not square and
+              // are not stretched to fit it — object-fit does the letterboxing.
+              width={200}
+              height={200}
+              onError={() => setPortraitFailed(true)}
+              className="cheddar-portrait"
+            />
+          )}
         </div>
 
         <div className="cheddar-card">
