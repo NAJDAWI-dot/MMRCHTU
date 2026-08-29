@@ -15,8 +15,15 @@ export { IEEE_STATUS_OPTIONS, type IeeeStatus };
  * changes what somebody consented to. Bump this by hand whenever the wording in
  * content/legal changes materially — a typo fix does not count, a new clause
  * about refunds does.
+ *
+ * The 2026-08-29 bump looks like it breaks that rule, since the rewrite into the
+ * passive voice changed no fee, deadline, right or obligation. It does not: the
+ * documents gained a clause declaring that an unnamed actor means IEEE RAS HTU,
+ * which is an instruction on how to read every other sentence in them. This
+ * field records which text was agreed to, not only what that text meant, and
+ * every sentence in all four was rewritten.
  */
-export const CONSENT_VERSION = "2026-08-25";
+export const CONSENT_VERSION = "2026-08-29";
 
 // Status is constrained in the application rather than the database (see
 // prisma/schema.prisma) — this is the single source of truth for the valid
