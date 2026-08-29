@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { Runner } from "@/components/brand/Runner";
 import { CHEDDAR_PORTRAITS } from "@/lib/celebration";
 import {
   AMBIENT_INTERVAL_MS,
@@ -19,7 +20,8 @@ import {
  * Mice wandering across the site.
  *
  * One peeks in from an edge; another runs along the bottom after a piece of
- * cheese. Each on its own timer, offset so they do not arrive together.
+ * cheese, with a person running after him in turn. Each on its own timer,
+ * offset so they do not arrive together.
  *
  * Mounted in the root layout, so they are on every page and — because that is
  * outside PageTransition — they are not torn down and restarted by a
@@ -177,6 +179,9 @@ export function AmbientMice() {
           key={`chase-${chase.direction}-${chase.portrait}`}
           className={`ambient-chase ambient-chase--${chase.direction}`}
         >
+          {/* Cheese first, mouse after it, runner last — so the order of the
+              chase is the order of the DOM, and row-reverse turns the whole
+              thing round when it travels the other way. */}
           <Cheese className="ambient-cheese" />
           {/* eslint-disable-next-line @next/next/no-img-element -- decorative, fixed size, no optimisation to gain */}
           <img
@@ -186,6 +191,7 @@ export function AmbientMice() {
             height={200}
             className="ambient-mouse ambient-mouse--chasing"
           />
+          <Runner className="ambient-runner" />
         </div>
       ) : null}
     </div>,

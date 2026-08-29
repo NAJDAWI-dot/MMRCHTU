@@ -1045,9 +1045,9 @@
 /*
   The chase along the bottom.
 
-  The mouse and the cheese are one element that crosses together, with the
-  cheese held ahead of the mouse — so the gap between them never changes and
-  the mouse never catches it, which is the joke.
+  The cheese, the mouse and the runner are one element that crosses together,
+  with the cheese held at the front — so the gaps never change and nobody ever
+  catches anybody, which is the joke.
 */
 .ambient-chase {
   position: absolute;
@@ -1073,8 +1073,10 @@
 }
 
 /* The drawings mostly face forward or left, so this only needs to flip one way
-   for the mouse to read as running after the cheese rather than away from it. */
-.ambient-chase--rightward .ambient-mouse--chasing {
+   for the two of them to read as running after the cheese rather than away
+   from it. */
+.ambient-chase--rightward .ambient-mouse--chasing,
+.ambient-chase--rightward .ambient-runner {
   transform: scaleX(-1);
 }
 
@@ -1089,14 +1091,95 @@
   animation: ambientScamper 380ms ease-in-out infinite;
 }
 
+/*
+  The runner behind the mouse.
+
+  Sized by height rather than width, unlike the mice: this drawing is a tall
+  narrow figure where theirs are round, and matching their widths would leave a
+  person shorter than the mouse chasing him. `align-items: flex-end` on the
+  group is what puts his feet on the same line as the mouse's.
+*/
+.ambient-runner {
+  height: clamp(96px, 15vmin, 168px);
+  width: auto;
+  filter: drop-shadow(0 6px 14px rgb(55 51 61 / 0.22));
+  /* `translate` rather than `transform`, so the rightward flip above survives. */
+  animation: ambientRunnerBob 520ms ease-in-out infinite;
+}
+
+/*
+  Each limb turns about its own joint.
+
+  `transform-box: view-box` is what makes the origins below readable: they are
+  written in the drawing's own coordinates, and they are the same numbers the
+  shoulders and hips are drawn at in Runner.tsx. Left to the default the arms
+  and legs would swing about the corner of the viewBox instead.
+
+  Slower than the mouse's 380ms scamper, because a person's stride is longer
+  than a mouse's — the pair moving at the same rate reads as one pace.
+*/
+.runner-leg,
+.runner-arm {
+  transform-box: view-box;
+  animation-duration: 520ms;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+/* Opposite limbs together, as they go: left leg with right arm. */
+.runner-leg--a {
+  transform-origin: 46px 106px;
+  animation-name: ambientRunnerSwingA;
+}
+
+.runner-leg--b {
+  transform-origin: 54px 106px;
+  animation-name: ambientRunnerSwingB;
+}
+
+.runner-arm--front {
+  transform-origin: 33px 88px;
+  animation-name: ambientRunnerSwingB;
+}
+
+.runner-arm--back {
+  transform-origin: 67px 88px;
+  animation-name: ambientRunnerSwingA;
+}
+
+@keyframes ambientRunnerSwingA {
+  0%, 100% { transform: rotate(24deg); }
+  50% { transform: rotate(-26deg); }
+}
+
+@keyframes ambientRunnerSwingB {
+  0%, 100% { transform: rotate(-26deg); }
+  50% { transform: rotate(24deg); }
+}
+
+@keyframes ambientRunnerBob {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -3.5%; }
+}
+
+/*
+  Off one edge and on past the other, whatever the group happens to be.
+
+  The offsets used to be -40vw and 112vw, which were the old two-element width
+  written as constants — and adding the runner made the group wide enough that
+  on a narrow screen he was still visible when the animation ended, popping out
+  of existence in full view. A percentage in translateX resolves against the
+  element's own width, so `-105%` is "entirely off to the left" no matter how
+  many characters end up in the chase.
+*/
 @keyframes ambientChaseRight {
-  0% { transform: translateX(-40vw); }
-  100% { transform: translateX(112vw); }
+  0% { transform: translateX(-105%); }
+  100% { transform: translateX(102vw); }
 }
 
 @keyframes ambientChaseLeft {
-  0% { transform: translateX(112vw); }
-  100% { transform: translateX(-40vw); }
+  0% { transform: translateX(102vw); }
+  100% { transform: translateX(-105%); }
 }
 
 /* Small vertical bob, so the run has feet under it rather than sliding. */
