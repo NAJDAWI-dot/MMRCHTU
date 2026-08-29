@@ -7,7 +7,9 @@
  * homepage with a stopwatch.
  *
  * Two things happen on their own timers: one mouse peeks in from an edge, and
- * one runs along the bottom after a piece of cheese. They are kept separate
+ * one runs along the bottom after a piece of cheese with a person after him.
+ * The chase is drawn as one group, so it needs no choices of its own beyond
+ * which mouse and which way. They are kept separate
  * rather than alternating out of one loop, because they are different lengths
  * and the offset between them is what stops both arriving at once.
  */
