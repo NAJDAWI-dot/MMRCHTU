@@ -20,24 +20,6 @@
   --color-surface: #f7f5f8;
   --color-border: #e3dde5;
 
-  /*
-    The header and the footer sit over the sitewide background image and let it
-    through. These are separate tokens rather than an opacity modifier on
-    --color-bg, because Tailwind can only add an alpha channel to a colour it
-    parsed itself, and it never parses the inside of a var().
-  */
-  --color-bg-translucent: rgb(255 255 255 / 0.72);
-  --color-surface-translucent: rgb(247 245 248 / 0.72);
-
-  /*
-    What is laid over the background image, and the reason one image can serve
-    both themes. The artwork is dark purple; this theme sets near-black text on
-    it, which would be unreadable. So here the image is held behind a
-    near-opaque white wash and reads as a pale tint of itself. The dark theme
-    wants it at full strength and washes it with nothing.
-  */
-  --site-background-wash: rgb(255 255 255 / 0.85);
-
   --font-sans: "Inter", system-ui, sans-serif;
   --font-display: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
@@ -48,14 +30,4 @@
   --color-fg: #f4f2f5;
   --color-surface: #241c28;
   --color-border: #3a2e40;
-
-  --color-bg-translucent: rgb(23 17 26 / 0.72);
-  --color-surface-translucent: rgb(36 28 40 / 0.72);
-
-  /*
-    Nothing laid over the image. `transparent` rather than dropping the wash
-    layer entirely, so both themes paint the same two background layers and
-    only the colour of the top one changes.
-  */
-  --site-background-wash: transparent;
 }

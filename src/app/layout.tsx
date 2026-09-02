@@ -88,16 +88,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd data={webSiteJsonLd()} />
       </head>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
-        {/*
-          The sitewide background image, behind every page.
-
-          A real element rather than a background on <body> — see
-          .site-background in globals.css for why, and for how one dark image
-          serves both themes. Outside ThemeProvider because it is static markup
-          that reads the theme through CSS alone, and aria-hidden because it is
-          decoration with nothing to announce.
-        */}
-        <div className="site-background" aria-hidden="true" />
         <ThemeProvider>
           <ServiceWorkerRegistrar />
           <SplashScreen />
