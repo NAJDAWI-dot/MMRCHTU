@@ -13,12 +13,7 @@ export function Header() {
     // invisible against either background and left the header floating with no
     // edge at all. The shadow does the separating on a light background; the
     // rule is what makes the edge deliberate rather than incidental.
-    //
-    // Translucent rather than solid, so the background image runs behind it and
-    // the artwork's top corners are not sliced off by a bar across the top of
-    // every page. The blur is what keeps the nav legible over whatever part of
-    // the image happens to be under it.
-    <header className="relative bg-[var(--color-bg-translucent)] shadow-[0_4px_16px_-10px_rgba(95,33,103,0.45)] backdrop-blur-md dark:shadow-none">
+    <header className="relative bg-[var(--color-bg)] shadow-[0_4px_16px_-10px_rgba(95,33,103,0.45)] dark:shadow-none">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4">
         <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3" aria-label="MMRC 26 home">
           <Logo enforceMinSize={false} className="h-9 shrink-0 sm:h-10" />

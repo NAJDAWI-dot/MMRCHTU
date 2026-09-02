@@ -121,59 +121,6 @@
   }
 }
 
-/* ---------------------------------------------------------------------------
-   The sitewide background
-   --------------------------------------------------------------------------- */
-
-/*
-  One fixed layer behind every page, mounted once in the root layout.
-
-  Not a background on <body>, which would want `background-attachment: fixed` to
-  hold still while the page scrolls. iOS Safari does not honour that reliably —
-  the image lurches as the address bar collapses — and where it does work the
-  browser repaints the layer on every scroll frame. A fixed element is
-  composited once and then left alone.
-
-  `z-index: -1` puts it behind everything else in the body without needing a
-  single rule anywhere else. It does not vanish behind the page's own colour:
-  <html> has no background, so the body's background-color propagates to the
-  canvas and is painted before any element — including this one. That colour is
-  still doing a job, as what shows while the image is being fetched and if it
-  ever fails to arrive.
-
-  Two layers, always in this order: the theme's wash over the artwork. The wash
-  is what lets one dark image serve a light theme — see --site-background-wash
-  in tokens.css.
-
-  The artwork is drawn as a single screen — maze in one corner, arcs, stars and
-  checks in the others, nothing in the middle where the text goes — so it is
-  placed once at `cover` and never tiled. A repeat would run a maze through the
-  middle of a paragraph.
-*/
-.site-background {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  /* Decoration. It must never take a click meant for the page. */
-  pointer-events: none;
-  background-image:
-    linear-gradient(var(--site-background-wash), var(--site-background-wash)),
-    url("/brand/site-background.webp");
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-}
-
-/*
-  Printed pages get the words and none of the artwork — it would drink a
-  cartridge, and the policies in particular are written to be printed out.
-*/
-@media print {
-  .site-background {
-    display: none;
-  }
-}
-
 /*
  * The game stage is the element handed to requestFullscreen(). A plain block
  * element goes fullscreen pinned to the top-left against a default black
