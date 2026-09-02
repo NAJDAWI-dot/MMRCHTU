@@ -30,7 +30,7 @@ export default async function FaqPage() {
         <SearchBox />
       </div>
 
-      <div className="stagger prose prose-headings:font-display prose-headings:text-ras-purple dark:prose-invert mt-8 max-w-none">
+      <div className="stagger prose prose-headings:font-display prose-headings:text-ras-purple dark:prose-invert dark:prose-headings:text-white mt-8 max-w-none">
         {entries.map((entry) => (
           <div key={entry.id}>
             <h2>{entry.question}</h2>
