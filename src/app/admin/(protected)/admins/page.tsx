@@ -37,7 +37,7 @@ export default async function AdminAdminsPage() {
             {admins.length > 1 ? (
               <form action={deleteAdmin}>
                 <input type="hidden" name="id" value={admin.id} />
-                <Button type="submit" variant="ghost" className="text-ras-crimson">
+                <Button type="submit" variant="ghost" className="text-accent">
                   Remove
                 </Button>
               </form>
@@ -56,7 +56,7 @@ export default async function AdminAdminsPage() {
           to sign in again. It does not affect other admins.
         </p>
         <form action={signOutEverywhere} className="mt-3">
-          <Button type="submit" variant="ghost" className="text-ras-crimson">
+          <Button type="submit" variant="ghost" className="text-accent">
             Sign out everywhere
           </Button>
         </form>

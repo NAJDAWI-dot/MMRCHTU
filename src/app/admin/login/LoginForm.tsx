@@ -36,7 +36,7 @@ export function LoginForm() {
         />
       </div>
       {state.status === "error" ? (
-        <p role="alert" className="text-sm text-ras-crimson">
+        <p role="alert" className="text-sm text-accent">
           {state.error}
         </p>
       ) : null}

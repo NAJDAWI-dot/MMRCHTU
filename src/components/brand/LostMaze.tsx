@@ -139,7 +139,7 @@ export function LostMaze() {
       <button
         type="button"
         onClick={reset}
-        className="mt-4 min-h-[44px] rounded-md px-3 text-sm font-semibold text-ras-crimson transition-colors hover:underline dark:text-mood-rose"
+        className="mt-4 min-h-[44px] rounded-md px-3 text-sm font-semibold text-accent transition-colors hover:underline"
       >
         {escaped ? "Another one" : "New maze"}
       </button>

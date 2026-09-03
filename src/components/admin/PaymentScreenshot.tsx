@@ -61,7 +61,7 @@ export function PaymentScreenshot({
               This screenshot could not be displayed here. Download it instead:{" "}
               <a
                 href={`${src}?download=1`}
-                className="font-semibold text-ras-crimson underline dark:text-mood-rose"
+                className="font-semibold text-accent underline"
               >
                 {teamName} payment screenshot
               </a>

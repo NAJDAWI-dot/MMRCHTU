@@ -15,6 +15,21 @@ export default {
           purple: "#5F2167", // Pantone 2623
           gray: "#57565B", // PMS Cool Gray 11C
         },
+        /*
+          Brand accent for TEXT, and only text.
+
+          ras.crimson is the brand ink and stays exactly what the guidelines
+          say. But #862633 on a dark surface is 2.1:1, and on the background
+          artwork it falls to 1.0:1 — the words disappear. So text takes this
+          token instead, which is the crimson in the light theme and a light
+          tint of it, at the same hue, in the dark one. Backgrounds, borders
+          and gradients keep using ras.crimson directly: they are not being
+          read, so they do not need to clear a contrast threshold.
+
+          Written as rgb(var(--x) / <alpha-value>) rather than a plain var,
+          which is what lets `text-accent/70` still work.
+        */
+        accent: "rgb(var(--color-accent-rgb) / <alpha-value>)",
         mood: {
           // secondary moodboard palette, decorative use only (see a11y notes)
           plum: "#611169",

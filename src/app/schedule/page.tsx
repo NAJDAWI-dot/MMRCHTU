@@ -48,7 +48,7 @@ export default async function SchedulePage() {
               <p className="font-display text-lg font-bold text-ras-purple dark:text-white">
                 {focus ? focus.title : "That is the lot"}
               </p>
-              <p className="text-sm font-medium text-ras-crimson dark:text-mood-rose">
+              <p className="text-sm font-medium text-accent">
                 {focus ? focus.when : "Every date has passed"}
               </p>
             </div>
@@ -102,7 +102,7 @@ const TONE: Record<ScheduleItem["state"], { dot: string; badge: string; rail: st
   },
   today: {
     dot: "border-ras-crimson bg-ras-crimson/70",
-    badge: "bg-ras-crimson/15 text-ras-crimson dark:bg-rose-400/20 dark:text-rose-300",
+    badge: "bg-ras-crimson/15 text-accent dark:bg-rose-400/20 dark:text-rose-300",
     rail: "bg-ras-crimson/30",
   },
   next: {
@@ -162,7 +162,7 @@ function TimelineRow({ item, last }: { item: ScheduleItem; last: boolean }) {
               })}
             </time>
           </Badge>
-          <span className="font-medium text-ras-crimson dark:text-mood-rose">{item.when}</span>
+          <span className="font-medium text-accent">{item.when}</span>
           {item.location ? <span>{item.location}</span> : null}
         </div>
 
@@ -171,7 +171,7 @@ function TimelineRow({ item, last }: { item: ScheduleItem; last: boolean }) {
           <a
             href={`/api/schedule/${item.id}/ics`}
             download
-            className="-mx-2 mt-1 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson transition-colors hover:underline dark:text-mood-rose"
+            className="-mx-2 mt-1 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-accent transition-colors hover:underline"
           >
             Add to calendar
           </a>

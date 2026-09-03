@@ -111,7 +111,7 @@ export default async function AdminSchedulePage() {
             </form>
             <form action={deleteEvent} className="mt-2">
               <input type="hidden" name="id" value={event.id} />
-              <Button type="submit" variant="ghost" className="text-ras-crimson">
+              <Button type="submit" variant="ghost" className="text-accent">
                 Delete
               </Button>
             </form>

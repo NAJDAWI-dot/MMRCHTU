@@ -188,7 +188,7 @@ function ProgressSummary({ summary }: { summary: ReturnType<typeof checklistSumm
         // Genuinely mounting for the first time when it appears — unlike the
         // maze figures, this one needs no key trick to replay the entrance.
         <div className="figure-in mt-4">
-          <p className="text-sm font-semibold text-ras-crimson dark:text-rose-300">
+          <p className="text-sm font-semibold text-accent dark:text-rose-300">
             Still to settle before you can compete:
           </p>
           <ul className="mt-1 list-disc pl-5 text-sm text-ras-gray dark:text-white/70">
@@ -202,7 +202,7 @@ function ProgressSummary({ summary }: { summary: ReturnType<typeof checklistSumm
       {summary.state === "ready" ? (
         <p className="figure-in mt-4 text-sm text-ras-gray dark:text-white/70">
           Nothing left to check.{" "}
-          <Link href="/schedule" className="font-semibold text-ras-crimson hover:underline">
+          <Link href="/schedule" className="font-semibold text-accent hover:underline">
             Check the schedule
           </Link>{" "}
           for competition day.
@@ -254,14 +254,14 @@ function Row({
             Advice
           </span>
         ) : (
-          <span className="rounded-full bg-ras-crimson/10 px-2 py-0.5 text-xs font-medium text-ras-crimson dark:bg-rose-400/15 dark:text-rose-300">
+          <span className="rounded-full bg-ras-crimson/10 px-2 py-0.5 text-xs font-medium text-accent dark:bg-rose-400/15 dark:text-rose-300">
             Rule
           </span>
         )}
         {item.help ? (
           <Link
             href={item.help.href}
-            className="text-xs font-semibold text-ras-crimson hover:underline dark:text-rose-300"
+            className="text-xs font-semibold text-accent hover:underline dark:text-rose-300"
           >
             {item.help.label}
           </Link>

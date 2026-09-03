@@ -76,7 +76,7 @@ export default async function AdminPagesPage() {
                     <span
                       className={
                         isHidden
-                          ? "rounded-full bg-ras-crimson/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-ras-crimson dark:bg-mood-rose/20 dark:text-mood-rose"
+                          ? "rounded-full bg-ras-crimson/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-accent dark:bg-mood-rose/20"
                           : "rounded-full bg-ras-purple/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-ras-purple dark:bg-white/10 dark:text-white/80"
                       }
                     >
@@ -103,7 +103,7 @@ export default async function AdminPagesPage() {
                     href={page.href}
                     target="_blank"
                     rel="noreferrer"
-                    className="-mx-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline dark:text-mood-rose"
+                    className="-mx-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-accent hover:underline"
                   >
                     Open ↗
                   </Link>

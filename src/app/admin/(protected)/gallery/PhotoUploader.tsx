@@ -165,7 +165,7 @@ export function PhotoUploader({ albumId, disabled }: { albumId: string; disabled
       {errors.length > 0 && (
         <ul className="mt-3 space-y-1" role="alert">
           {errors.map((message) => (
-            <li key={message} className="text-sm text-ras-crimson">
+            <li key={message} className="text-sm text-accent">
               {message}
             </li>
           ))}

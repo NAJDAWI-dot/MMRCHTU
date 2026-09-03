@@ -16,7 +16,7 @@ export function PaymentBadge({ status }: { status: string }) {
       : known === "SUBMITTED"
         ? "bg-[#F2A900]/20 text-[#8a6200] dark:text-[#F2A900]"
         : known === "REJECTED"
-          ? "bg-ras-crimson/15 text-ras-crimson dark:text-rose-300"
+          ? "bg-ras-crimson/15 text-accent dark:text-rose-300"
           : "bg-ras-gray/15 text-ras-gray dark:text-white/60";
 
   return (

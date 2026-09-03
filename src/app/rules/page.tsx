@@ -27,13 +27,13 @@ export default async function RulesPage() {
         Run the readiness checklist
       </Link>
 
-      <div className="prose prose-headings:font-display prose-headings:text-ras-purple dark:prose-invert mt-8 max-w-none">
+      <div className="prose prose-headings:font-display prose-headings:text-ras-purple dark:prose-invert dark:prose-headings:text-white mt-8 max-w-none">
         <Rulebook />
       </div>
 
       <p className="mt-10 border-t border-ras-gray/15 pt-6 text-sm text-ras-gray dark:text-white/70">
         Read it all?{" "}
-        <Link href="/rules/checklist" className="font-semibold text-ras-crimson hover:underline">
+        <Link href="/rules/checklist" className="font-semibold text-accent hover:underline">
           Check your team against it
         </Link>{" "}
         before competition day.

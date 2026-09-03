@@ -83,7 +83,7 @@ export default async function RegisterPage({
           ) : null}
 
           {status === "REJECTED" && registration.paymentNote ? (
-            <p className="mt-2 text-sm text-ras-crimson">{registration.paymentNote}</p>
+            <p className="mt-2 text-sm text-accent">{registration.paymentNote}</p>
           ) : null}
         </div>
       </Shell>

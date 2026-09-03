@@ -67,7 +67,7 @@ export default async function HomePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
       <section className="text-center">
-        <p className="font-mono text-sm uppercase tracking-widest text-ras-crimson dark:text-mood-rose">
+        <p className="font-mono text-sm uppercase tracking-widest text-accent">
           IEEE RAS HTU Student Chapter presents
         </p>
         <h1 className="mt-3 font-display text-5xl font-extrabold text-ras-purple dark:text-white">
@@ -112,7 +112,7 @@ export default async function HomePage() {
                 aria-hidden="true"
                 className="pointer-events-none absolute -bottom-20 -left-20 -z-10 h-52 w-52 rounded-full bg-mood-orchid/25 blur-3xl"
               />
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-ras-crimson dark:text-mood-rose">
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
                 Competition day in
               </p>
               <div className="mt-4 flex justify-center">
@@ -126,7 +126,7 @@ export default async function HomePage() {
               {dayPageVisible ? (
                 <Link
                   href="/competition-day"
-                  className="-mx-2 mt-1 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline dark:text-mood-rose"
+                  className="-mx-2 mt-1 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-accent hover:underline"
                 >
                   Competition day details →
                 </Link>
@@ -148,7 +148,7 @@ export default async function HomePage() {
               <p className="mt-2 text-sm text-ras-gray dark:text-white/70">{card.blurb}</p>
               <Link
                 href={card.href}
-                className="-mx-2 mt-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline"
+                className="-mx-2 mt-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-accent hover:underline"
               >
                 {card.cta} →
               </Link>

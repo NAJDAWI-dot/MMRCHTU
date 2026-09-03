@@ -78,7 +78,7 @@ export default async function SearchPage({
                 Still stuck?{" "}
                 <PageLink
                   href="/faq"
-                  className="font-semibold text-ras-crimson hover:underline dark:text-mood-rose"
+                  className="font-semibold text-accent hover:underline"
                 >
                   Ask a question
                 </PageLink>{" "}
@@ -95,7 +95,7 @@ export default async function SearchPage({
               <li key={term}>
                 <Link
                   href={`/search?q=${encodeURIComponent(term)}`}
-                  className="-mx-2 inline-flex min-h-[44px] items-center rounded-md px-2 font-semibold text-ras-crimson hover:underline dark:text-mood-rose"
+                  className="-mx-2 inline-flex min-h-[44px] items-center rounded-md px-2 font-semibold text-accent hover:underline"
                 >
                   {term}
                 </Link>

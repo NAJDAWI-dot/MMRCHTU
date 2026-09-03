@@ -43,7 +43,7 @@ export default async function GalleryPage() {
           </p>
           <p className="mt-2 text-sm text-ras-gray dark:text-white/60">
             They will appear here after the first event. In the meantime, the{" "}
-            <PageLink href="/schedule" className="font-semibold text-ras-crimson hover:underline">
+            <PageLink href="/schedule" className="font-semibold text-accent hover:underline">
               schedule
             </PageLink>{" "}
             has what is coming.
