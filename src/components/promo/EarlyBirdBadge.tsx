@@ -19,6 +19,10 @@ import { EARLY_BIRD_LABEL_AR } from "@/lib/early-bird";
  * ras-crimson rather than the accent token because this is a filled background
  * with white on it, not brand ink being read against the page — see the note on
  * the accent colour in tailwind.config.ts.
+ *
+ * The halo and its slow pulse live in globals.css under .eb-glow, because a
+ * keyframed shadow is not something Tailwind expresses and because the pulse
+ * has to be dropped under reduced motion without losing the glow itself.
  */
 export function EarlyBirdBadge({
   /**
@@ -50,7 +54,7 @@ export function EarlyBirdBadge({
       // carry the actual offer. So it is announced as what it is, once, and
       // takes no tab stop.
       aria-label="Early bird discount"
-      className={`inline-flex select-none items-center whitespace-nowrap rounded-full bg-ras-crimson px-2 py-0.5 font-arabic text-[10px] font-bold leading-none text-white shadow-sm ring-1 ring-white/50 dark:ring-black/40 ${position} ${className}`}
+      className={`inline-flex select-none items-center whitespace-nowrap eb-glow rounded-full bg-ras-crimson px-2 py-0.5 font-arabic text-[10px] font-bold leading-none text-white ring-1 ring-white/60 dark:bg-mood-rose dark:ring-white/25 ${position} ${className}`}
     >
       {EARLY_BIRD_LABEL_AR}
     </span>

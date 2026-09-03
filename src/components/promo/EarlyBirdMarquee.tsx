@@ -24,7 +24,7 @@ export function EarlyBirdMarquee() {
   const run = Array.from({ length: REPEATS }, (_, i) => i);
 
   return (
-    <div className="relative overflow-hidden border-y border-white/15 bg-gradient-to-r from-ras-crimson via-mood-garnet to-ras-crimson py-2">
+    <div className="eb-marquee-strip relative overflow-hidden border-y border-white/25 bg-gradient-to-r from-ras-crimson via-mood-garnet to-ras-crimson py-2">
       <p className="sr-only">An early bird discount is currently running on registration.</p>
 
       <div aria-hidden="true" className="eb-marquee-track">
@@ -32,10 +32,10 @@ export function EarlyBirdMarquee() {
           <div key={copy} className="flex shrink-0 items-center">
             {run.map((i) => (
               <span key={i} className="flex shrink-0 items-center gap-6 px-6">
-                <span dir="rtl" lang="ar" className="font-arabic text-sm font-bold text-white">
+                <span dir="rtl" lang="ar" className="eb-marquee-word font-arabic text-sm font-bold text-white">
                   {EARLY_BIRD_LABEL_AR}
                 </span>
-                <span className="text-xs text-white/45">&#9733;</span>
+                <span className="eb-marquee-star text-xs text-white/60">&#9733;</span>
               </span>
             ))}
           </div>
