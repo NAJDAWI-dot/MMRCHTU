@@ -24,7 +24,7 @@ export function CreateAdminForm() {
         <input name="password" type="password" required minLength={8} className={inputClass} />
       </div>
       {state.status === "error" ? (
-        <p role="alert" className="text-sm text-ras-crimson sm:col-span-2">
+        <p role="alert" className="text-sm text-accent sm:col-span-2">
           {state.error}
         </p>
       ) : null}

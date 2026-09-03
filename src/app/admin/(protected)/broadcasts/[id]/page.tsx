@@ -43,7 +43,7 @@ export default async function BroadcastListPage({ params }: { params: { id: stri
         </div>
         <form action={deleteBroadcastList}>
           <input type="hidden" name="id" value={list.id} />
-          <Button type="submit" variant="ghost" className="px-3 py-1 text-xs text-ras-crimson">
+          <Button type="submit" variant="ghost" className="px-3 py-1 text-xs text-accent">
             Delete list
           </Button>
         </form>

@@ -86,6 +86,11 @@ export function MobileNav({ links }: { links: NavLink[] }) {
           // The bottom border matches the rule the header now carries, so the
           // open panel reads as the header extended rather than as a separate
           // sheet with a fainter edge.
+          // The attribute is what the header keys off to drop its
+          // translucency while the menu is open — see globals.css. An
+          // attribute rather than the generated id, because the id changes
+          // between renders and a stylesheet cannot follow it.
+          data-mobile-nav-open=""
           className="page-enter absolute left-0 right-0 top-full z-50 border-b-2 border-ras-crimson/50 bg-[var(--color-bg)] shadow-lg dark:border-mood-rose/60"
         >
           <nav aria-label="Site" className="mx-auto max-w-6xl px-4 py-2">

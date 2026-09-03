@@ -41,7 +41,7 @@ export function RegistrationExport({ feedConfigured }: { feedConfigured: boolean
           type="button"
           onClick={() => setShowHelp((v) => !v)}
           aria-expanded={showHelp}
-          className="text-sm font-semibold text-ras-crimson underline dark:text-mood-rose"
+          className="text-sm font-semibold text-accent underline"
         >
           {showHelp ? "Hide Excel setup" : "Keep an Excel file up to date"}
         </button>

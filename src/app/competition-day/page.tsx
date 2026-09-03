@@ -68,7 +68,7 @@ export default async function CompetitionDayPage() {
         />
 
         <div className="relative">
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-ras-crimson dark:text-mood-rose">
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
             {published ? "Competition day" : "Coming soon"}
           </p>
           <h1 className="mt-3 font-display text-4xl font-extrabold text-ras-purple dark:text-white sm:text-5xl">
@@ -142,7 +142,7 @@ export default async function CompetitionDayPage() {
           </div>
           <Link
             href="/schedule"
-            className="-mx-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson transition-colors hover:underline dark:text-mood-rose"
+            className="-mx-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-accent transition-colors hover:underline"
           >
             See the schedule →
           </Link>
@@ -173,7 +173,7 @@ function HoldingNote({ text }: { text: string }) {
         Everything already announced is on the{" "}
         <PageLink
           href="/schedule"
-          className="font-semibold text-ras-crimson hover:underline dark:text-mood-rose"
+          className="font-semibold text-accent hover:underline"
         >
           schedule
         </PageLink>

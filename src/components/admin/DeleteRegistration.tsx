@@ -23,7 +23,7 @@ export function DeleteRegistration({ id, teamName }: { id: string; teamName: str
       <button
         type="button"
         onClick={() => setArmed(true)}
-        className="rounded px-2 py-1 text-xs font-semibold text-ras-crimson hover:bg-ras-crimson/10"
+        className="rounded px-2 py-1 text-xs font-semibold text-accent hover:bg-ras-crimson/10"
       >
         Delete
       </button>
@@ -36,7 +36,7 @@ export function DeleteRegistration({ id, teamName }: { id: string; teamName: str
       className="flex flex-wrap items-center justify-end gap-2 rounded-md border border-ras-crimson/40 bg-ras-crimson/5 p-2"
     >
       <input type="hidden" name="id" value={id} />
-      <span className="text-xs text-ras-crimson">
+      <span className="text-xs text-accent">
         Delete <strong>{teamName}</strong>, its members and its payment screenshot? This cannot be
         undone.
       </span>

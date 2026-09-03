@@ -34,7 +34,7 @@ export default async function AdminGalleryPage() {
 
       {!storageReady && (
         <Card className="mt-6 border-ras-crimson/40">
-          <p className="text-sm font-semibold text-ras-crimson">
+          <p className="text-sm font-semibold text-accent">
             This deployment cannot see <code className="font-mono text-xs">BLOB_READ_WRITE_TOKEN</code>
           </p>
           <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-ras-gray dark:text-white/70">

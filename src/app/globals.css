@@ -188,6 +188,26 @@
 }
 
 /*
+  An open phone menu closes the header up.
+
+  The header is translucent so the artwork runs behind it, which is right when
+  it is a thin bar at the top of a page. It is wrong the moment the menu drops
+  open underneath: the panel is opaque, so the two stack as a see-through strip
+  sitting on a solid sheet, and the whole thing reads as a rendering fault
+  rather than a menu. While the menu is open the header takes the same solid
+  colour the panel already uses, and the two become one surface.
+
+  `:has()` rather than a class toggled from React, so the panel's own presence
+  is the condition and there is no second piece of state to keep in step. Where
+  it is unsupported the header simply stays as it is now.
+*/
+header:has([data-mobile-nav-open]) {
+  background-color: var(--color-bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/*
   Printed pages get the words and none of the artwork — it would drink a
   cartridge, and the policies in particular are written to be printed out.
 */

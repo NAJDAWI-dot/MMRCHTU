@@ -101,7 +101,7 @@ export function Stat({
     tone === "good"
       ? "text-ras-purple dark:text-white"
       : tone === "bad"
-        ? "text-ras-crimson dark:text-rose-300"
+        ? "text-accent dark:text-rose-300"
         : "text-ras-purple dark:text-white";
 
   return (

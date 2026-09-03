@@ -215,7 +215,7 @@ function Verdict({
   return (
     <p
       className={`flex items-start gap-2 text-sm font-medium transition-colors duration-200 ${
-        ok ? "text-ras-purple dark:text-white" : "text-ras-crimson dark:text-rose-300"
+        ok ? "text-ras-purple dark:text-white" : "text-accent dark:text-rose-300"
       }`}
     >
       {/* Keyed on the verdict itself, so crossing the line replays the pop —

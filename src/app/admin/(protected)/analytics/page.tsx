@@ -184,7 +184,7 @@ export default async function AnalyticsPage() {
             <dd className="text-right font-semibold text-ras-purple dark:text-white">
               {emailsSent}
               {emailsFailed > 0 && (
-                <span className="ml-1 font-normal text-ras-crimson">({emailsFailed} failed)</span>
+                <span className="ml-1 font-normal text-accent">({emailsFailed} failed)</span>
               )}
             </dd>
           </dl>

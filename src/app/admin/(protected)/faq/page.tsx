@@ -115,7 +115,7 @@ export default async function AdminFaqPage() {
               </form>
               <form action={deleteFaqEntry} className="mt-2">
                 <input type="hidden" name="id" value={entry.id} />
-                <Button type="submit" variant="ghost" className="text-ras-crimson">
+                <Button type="submit" variant="ghost" className="text-accent">
                   Delete
                 </Button>
               </form>

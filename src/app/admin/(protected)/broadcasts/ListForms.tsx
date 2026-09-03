@@ -14,7 +14,7 @@ function Result({ state }: { state: ActionState }) {
       className={`mt-3 rounded-md px-3 py-2 text-sm ${
         state.ok
           ? "bg-ras-purple/10 text-ras-purple dark:bg-white/10 dark:text-white"
-          : "bg-ras-crimson/10 text-ras-crimson"
+          : "bg-ras-crimson/10 text-accent"
       }`}
     >
       {state.message}

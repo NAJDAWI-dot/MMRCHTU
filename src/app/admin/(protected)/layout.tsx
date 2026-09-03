@@ -60,7 +60,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <form action="/admin/logout" method="post" className="mt-3 md:mt-4">
           <button
             type="submit"
-            className="w-full rounded-md px-3 py-2 text-left text-sm font-medium text-ras-crimson transition-colors hover:bg-ras-crimson/10"
+            className="w-full rounded-md px-3 py-2 text-left text-sm font-medium text-accent transition-colors hover:bg-ras-crimson/10"
           >
             Log out
           </button>

@@ -32,7 +32,7 @@ export default function Error({
 
   return (
     <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-24 text-center">
-      <p className="font-mono text-xs uppercase tracking-[0.2em] text-ras-crimson dark:text-mood-rose">
+      <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
         Something went wrong
       </p>
       <h1 className="mt-3 font-display text-3xl font-extrabold text-ras-purple dark:text-white">

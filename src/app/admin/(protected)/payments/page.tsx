@@ -235,7 +235,7 @@ export default async function AdminPaymentsPage() {
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-ras-gray dark:text-white/60">Reported</dt>
-                  <dd className={mismatch ? "font-bold text-ras-crimson" : "text-ras-gray dark:text-white/80"}>
+                  <dd className={mismatch ? "font-bold text-accent" : "text-ras-gray dark:text-white/80"}>
                     {reg.paymentAmountFils !== null ? formatFils(reg.paymentAmountFils) : "—"}
                   </dd>
                 </div>
@@ -248,7 +248,7 @@ export default async function AdminPaymentsPage() {
               </dl>
 
               {mismatch ? (
-                <p role="alert" className="mt-2 text-xs font-semibold text-ras-crimson">
+                <p role="alert" className="mt-2 text-xs font-semibold text-accent">
                   Reported amount does not match the quoted fee — check before verifying.
                 </p>
               ) : null}

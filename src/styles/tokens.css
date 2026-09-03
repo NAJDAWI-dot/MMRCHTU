@@ -26,6 +26,11 @@
     --color-bg, because Tailwind can only add an alpha channel to a colour it
     parsed itself, and it never parses the inside of a var().
   */
+  /*
+    The accent used for text. Light theme: the brand crimson unchanged.
+  */
+  --color-accent-rgb: 134 38 51;
+
   --color-bg-translucent: rgb(255 255 255 / 0.72);
   --color-surface-translucent: rgb(247 245 248 / 0.72);
 
@@ -39,6 +44,14 @@
   --color-fg: #f4f2f5;
   --color-surface: #241c28;
   --color-border: #3a2e40;
+
+  /*
+    Dark theme: the same hue as the crimson (352 degrees), lifted until it
+    clears 4.5:1 against every surface it lands on — the dark card at 10.1:1,
+    and the brightest point the background artwork reaches at 4.65:1. The
+    crimson itself manages 1.0:1 there, which is why this exists.
+  */
+  --color-accent-rgb: 255 184 193;
 
   --color-bg-translucent: rgb(23 17 26 / 0.72);
   --color-surface-translucent: rgb(36 28 40 / 0.72);

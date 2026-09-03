@@ -32,7 +32,7 @@ export function Footer() {
           </ul>
         </nav>
 
-        <p className="text-xs text-ras-gray/70 dark:text-white/50">
+        <p className="text-xs text-ras-gray dark:text-white/65">
           © {new Date().getFullYear()} IEEE RAS HTU Student Chapter.
         </p>
       </div>

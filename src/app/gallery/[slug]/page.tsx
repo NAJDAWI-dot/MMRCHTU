@@ -45,7 +45,7 @@ export default async function AlbumPage({ params }: { params: { slug: string } }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
-      <Link href="/gallery" className="-mx-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline">
+      <Link href="/gallery" className="-mx-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-accent hover:underline">
         ← All albums
       </Link>
 

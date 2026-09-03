@@ -63,7 +63,7 @@ export function Countdown({
 
   if (remaining.done) {
     return (
-      <p className="font-display text-xl font-bold uppercase tracking-widest text-ras-crimson dark:text-mood-rose">
+      <p className="font-display text-xl font-bold uppercase tracking-widest text-accent">
         {doneLabel}
       </p>
     );

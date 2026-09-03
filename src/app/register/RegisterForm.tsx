@@ -271,7 +271,7 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
             ))}
           </div>
           {errors?.memberCount ? (
-            <p role="alert" className="mt-1 text-sm text-ras-crimson">
+            <p role="alert" className="mt-1 text-sm text-accent">
               {errors.memberCount}
             </p>
           ) : null}
@@ -335,7 +335,7 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
             </span>
           </label>
           {errors?.consentAccepted ? (
-            <p role="alert" className="mt-1 text-sm text-ras-crimson">
+            <p role="alert" className="mt-1 text-sm text-accent">
               {errors.consentAccepted}
             </p>
           ) : null}
@@ -344,7 +344,7 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
         {formError ? (
           <p
             role="alert"
-            className="rounded-md border border-ras-crimson/30 bg-ras-crimson/5 p-3 text-sm text-ras-crimson"
+            className="rounded-md border border-ras-crimson/30 bg-ras-crimson/5 p-3 text-sm text-accent"
           >
             {formError}
           </p>
@@ -394,13 +394,13 @@ function Steps({ step }: { step: 1 | 2 }) {
             className={`flex h-6 w-6 items-center justify-center rounded-full ${
               step >= n
                 ? "bg-ras-purple text-white"
-                : "bg-ras-gray/15 text-ras-gray dark:bg-white/10 dark:text-white/60"
+                : "bg-ras-gray/15 text-ras-gray dark:bg-white/10 dark:text-white/80"
             }`}
           >
             {n}
           </span>
           <span
-            className={step === n ? "text-ras-purple dark:text-white" : "text-ras-gray dark:text-white/60"}
+            className={step === n ? "text-ras-purple dark:text-white" : "text-ras-gray dark:text-white/75"}
           >
             {label}
           </span>
@@ -484,7 +484,7 @@ function PaymentStep({ fee, cliq, errors, onBack }: PaymentStepProps) {
           </div>
 
           {errors?.form ? (
-            <p role="alert" className="text-sm text-ras-crimson">
+            <p role="alert" className="text-sm text-accent">
               {errors.form}
             </p>
           ) : null}
@@ -522,7 +522,7 @@ function PaymentStep({ fee, cliq, errors, onBack }: PaymentStepProps) {
               className="mt-1 w-full rounded-md border border-ras-gray/30 bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-fg)] file:mr-3 file:rounded file:border-0 file:bg-ras-purple/10 file:px-3 file:py-1 file:text-sm file:font-semibold file:text-ras-purple focus:border-ras-purple focus:outline-none dark:file:bg-white/10 dark:file:text-white"
             />
             {errors?.screenshot ? (
-              <p id="screenshot-error" role="alert" className="mt-1 text-sm text-ras-crimson">
+              <p id="screenshot-error" role="alert" className="mt-1 text-sm text-accent">
                 {errors.screenshot}
               </p>
             ) : (
@@ -588,7 +588,7 @@ function MemberFields({ index, isLeader, errors }: MemberFieldsProps) {
   const prefix = `member${index}`;
 
   return (
-    <fieldset className="rounded-lg border border-ras-gray/20 p-4">
+    <fieldset className="rounded-lg border border-ras-gray/20 bg-[var(--color-surface)] p-4">
       <legend className="px-1 font-display text-sm font-bold text-ras-purple dark:text-white">
         {isLeader ? "Team Leader" : `Member ${index}`}
       </legend>
@@ -626,7 +626,7 @@ function MemberFields({ index, isLeader, errors }: MemberFieldsProps) {
             ))}
           </select>
           {errors?.university ? (
-            <p role="alert" className="mt-1 text-sm text-ras-crimson">
+            <p role="alert" className="mt-1 text-sm text-accent">
               {errors.university}
             </p>
           ) : null}
@@ -655,7 +655,7 @@ function MemberFields({ index, isLeader, errors }: MemberFieldsProps) {
           ))}
         </div>
         {errors?.ieeeStatus ? (
-          <p role="alert" className="mt-1 text-sm text-ras-crimson">
+          <p role="alert" className="mt-1 text-sm text-accent">
             {errors.ieeeStatus}
           </p>
         ) : null}
@@ -736,7 +736,7 @@ function Field({
         />
       )}
       {error ? (
-        <p id={errorId} role="alert" className="mt-1 text-sm text-ras-crimson">
+        <p id={errorId} role="alert" className="mt-1 text-sm text-accent">
           {error}
         </p>
       ) : hint ? (

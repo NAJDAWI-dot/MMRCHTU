@@ -33,7 +33,7 @@ export default async function RulesPage() {
 
       <p className="mt-10 border-t border-ras-gray/15 pt-6 text-sm text-ras-gray dark:text-white/70">
         Read it all?{" "}
-        <Link href="/rules/checklist" className="font-semibold text-ras-crimson hover:underline">
+        <Link href="/rules/checklist" className="font-semibold text-accent hover:underline">
           Check your team against it
         </Link>{" "}
         before competition day.

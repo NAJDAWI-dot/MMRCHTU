@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function ChecklistPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">
-      <p className="text-sm font-semibold text-ras-crimson dark:text-rose-300">
+      <p className="text-sm font-semibold text-accent dark:text-rose-300">
         <Link href="/rules" className="hover:underline">
           ← Rulebook
         </Link>

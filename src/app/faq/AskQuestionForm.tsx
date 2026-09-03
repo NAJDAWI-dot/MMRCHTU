@@ -35,7 +35,7 @@ export function AskQuestionForm() {
           </label>
           <textarea id="question" name="question" required rows={3} className={inputClass} />
           {state.errors?.question ? (
-            <p role="alert" className="mt-1 text-sm text-ras-crimson">
+            <p role="alert" className="mt-1 text-sm text-accent">
               {state.errors.question}
             </p>
           ) : null}
@@ -46,7 +46,7 @@ export function AskQuestionForm() {
           </label>
           <input id="askerEmail" name="askerEmail" type="email" className={inputClass} />
           {state.errors?.askerEmail ? (
-            <p role="alert" className="mt-1 text-sm text-ras-crimson">
+            <p role="alert" className="mt-1 text-sm text-accent">
               {state.errors.askerEmail}
             </p>
           ) : null}

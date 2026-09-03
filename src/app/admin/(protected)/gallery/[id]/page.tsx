@@ -34,7 +34,7 @@ export default async function AlbumPage({ params }: { params: { id: string } }) 
 
   return (
     <div>
-      <Link href="/admin/gallery" className="-mx-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-crimson hover:underline">
+      <Link href="/admin/gallery" className="-mx-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-accent hover:underline">
         ← All albums
       </Link>
       <h1 className="mt-2 font-display text-2xl font-extrabold text-ras-purple dark:text-white">
@@ -44,7 +44,7 @@ export default async function AlbumPage({ params }: { params: { id: string } }) 
         {album.isPublished ? (
           <>
             Live at{" "}
-            <Link href={`/gallery/${album.slug}`} className="font-semibold text-ras-crimson hover:underline">
+            <Link href={`/gallery/${album.slug}`} className="font-semibold text-accent hover:underline">
               /gallery/{album.slug}
             </Link>
           </>
@@ -97,7 +97,7 @@ export default async function AlbumPage({ params }: { params: { id: string } }) 
         </h2>
         {!storageReady && (
           <div className="mt-3 rounded-md border border-ras-crimson/40 bg-ras-crimson/5 p-3">
-            <p className="text-sm font-semibold text-ras-crimson">
+            <p className="text-sm font-semibold text-accent">
               This deployment cannot see a Blob storage token
             </p>
             <p className="mt-1 text-sm text-ras-gray dark:text-white/70">
@@ -194,7 +194,7 @@ export default async function AlbumPage({ params }: { params: { id: string } }) 
                     </a>
                     <form action={deletePhoto}>
                       <input type="hidden" name="id" value={photo.id} />
-                      <button type="submit" className="rounded px-2 py-1 text-xs font-semibold text-ras-crimson hover:bg-ras-crimson/10">
+                      <button type="submit" className="rounded px-2 py-1 text-xs font-semibold text-accent hover:bg-ras-crimson/10">
                         Delete
                       </button>
                     </form>
@@ -207,7 +207,7 @@ export default async function AlbumPage({ params }: { params: { id: string } }) 
       )}
 
       <Card className="mt-8 border-ras-crimson/30">
-        <h2 className="font-display text-base font-bold text-ras-crimson">Delete this album</h2>
+        <h2 className="font-display text-base font-bold text-accent">Delete this album</h2>
         <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
           Removes the album and all {album.photos.length} of its photos, including the stored image
           files. This cannot be undone.
