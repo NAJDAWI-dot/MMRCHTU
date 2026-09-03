@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { EarlyBirdBadge } from "@/components/promo/EarlyBirdBadge";
+
 import { prisma } from "@/lib/prisma";
 import { parseStatus } from "@/lib/competition-day";
 import { hiddenPageHrefs } from "@/lib/page-visibility";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { getEarlyBirdState } from "@/lib/early-bird-server";
 
 const LINKS = [
   { href: "/game", label: "Pac Mouse" },
@@ -52,6 +55,9 @@ async function hiddenHrefs(): Promise<Set<string>> {
 export async function Nav() {
   const hidden = await hiddenHrefs();
   const links = LINKS.filter((link) => !hidden.has(link.href));
+  // One read for both menus, and cached for the rest of the request, so the
+  // hero on the landing page does not ask the same question again.
+  const earlyBird = await getEarlyBirdState();
 
   return (
     <>
@@ -66,10 +72,13 @@ export async function Nav() {
             className="relative text-sm font-medium text-ras-gray transition-colors after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-200 hover:text-ras-purple hover:after:scale-x-100 motion-reduce:after:transition-none dark:text-white/80 dark:hover:text-white"
           >
             {link.label}
+            {earlyBird.active && link.href === "/register" ? (
+              <EarlyBirdBadge />
+            ) : null}
           </Link>
         ))}
       </nav>
-      <MobileNav links={links} />
+      <MobileNav links={links} earlyBird={earlyBird.active} />
     </>
   );
 }

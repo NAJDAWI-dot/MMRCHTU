@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { EarlyBirdBadge } from "@/components/promo/EarlyBirdBadge";
 import { useEffect, useId, useRef, useState } from "react";
 
 /**
@@ -21,7 +22,13 @@ export interface NavLink {
   label: string;
 }
 
-export function MobileNav({ links }: { links: NavLink[] }) {
+/**
+ * `earlyBird` arrives as a plain boolean rather than being read here. This is a
+ * client component, and the module that answers the question reaches the
+ * database — importing it would pull Prisma into the browser bundle. The Nav
+ * above already knows the answer for its own badge, so it passes it down.
+ */
+export function MobileNav({ links, earlyBird = false }: { links: NavLink[]; earlyBird?: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const panelId = useId();
@@ -111,6 +118,12 @@ export function MobileNav({ links }: { links: NavLink[] }) {
                       }`}
                     >
                       {link.label}
+                      {/* Inline, not floating: these rows are full-width, so a
+                          pill centred over one would land in the middle of it
+                          rather than on the label. */}
+                      {earlyBird && link.href === "/register" ? (
+                        <EarlyBirdBadge placement="inline" />
+                      ) : null}
                     </Link>
                   </li>
                 );

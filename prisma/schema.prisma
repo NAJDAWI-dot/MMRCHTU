@@ -35,6 +35,18 @@ model Registration {
   paymentAmountFils  Int?
   paymentSubmittedAt DateTime?
   paymentVerifiedAt  DateTime?
+  /// The username of the admin who marked this payment verified, snapshotted at
+  /// that moment.
+  ///
+  /// A string rather than a relation to AdminUser. Who accepted a team's money
+  /// is a record of a decision already taken, in the same way feeDueFils records
+  /// what a team was quoted rather than what the price list says today. A
+  /// foreign key would either erase that record when the account is deleted, or
+  /// refuse to let an admin who has ever approved anything be deleted at all,
+  /// and neither is wanted. Null on rows verified before this column existed,
+  /// and cleared alongside paymentVerifiedAt whenever a payment stops being
+  /// verified, so a name never outlives the fact it attests to.
+  paymentVerifiedBy  String?
   /// Admin-facing: why a payment was refused, or any reconciliation note.
   paymentNote        String?
 

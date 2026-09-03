@@ -37,6 +37,7 @@
   --font-sans: "Inter", system-ui, sans-serif;
   --font-display: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-arabic: "Cairo", Tahoma, sans-serif;
 }
 
 .dark {

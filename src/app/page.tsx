@@ -2,10 +2,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Countdown } from "@/components/brand/Countdown";
+import { EarlyBirdBadge } from "@/components/promo/EarlyBirdBadge";
 import { parseStatus } from "@/lib/competition-day";
+
 import { shouldShowCountdown } from "@/lib/countdown";
 import { hiddenPageHrefs } from "@/lib/page-visibility";
 import { getCompetitionDayConfig } from "@/lib/site-config";
+import { getEarlyBirdState } from "@/lib/early-bird-server";
 
 // The countdown reads a live config row, so this page cannot be baked at
 // build time and still be right.
@@ -45,7 +48,11 @@ const FEATURE_CARDS = [
 ] as const;
 
 export default async function HomePage() {
-  const [config, hidden] = await Promise.all([getCompetitionDayConfig(), hiddenPageHrefs()]);
+  const [config, hidden, earlyBird] = await Promise.all([
+    getCompetitionDayConfig(),
+    hiddenPageHrefs(),
+    getEarlyBirdState(),
+  ]);
 
   /*
     Whether the Competition Day *page* is reachable. It gates the link below,
@@ -82,9 +89,16 @@ export default async function HomePage() {
             itself, so it is not checked here. */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
           {!hidden.has("/register") ? (
-            <Button asChild>
-              <Link href="/register">Register your team</Link>
-            </Button>
+            // The wrapper is what the badge hangs from. It cannot go on the
+            // Button itself: that renders as its child here, so the class would
+            // land on the <Link> and the pill would be positioned against the
+            // text rather than the button around it.
+            <span className="relative inline-block">
+              <Button asChild>
+                <Link href="/register">Register your team</Link>
+              </Button>
+              {earlyBird.active ? <EarlyBirdBadge /> : null}
+            </span>
           ) : null}
           {!hidden.has("/game") ? (
             <Button variant="ghost" asChild>

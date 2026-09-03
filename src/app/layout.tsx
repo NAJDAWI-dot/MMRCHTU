@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Cairo, Inter, JetBrains_Mono } from "next/font/google";
 import { AmbientMice } from "@/components/brand/AmbientMice";
 import { ThemeProvider } from "@/components/brand/ThemeProvider";
 import { SplashScreen } from "@/components/brand/SplashScreen";
@@ -16,6 +16,11 @@ import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
+// The site is English throughout; this is here for the two Arabic promotional
+// words on the early-bird badge and banner. Without an Arabic subset those fall
+// back to whatever the reader's system happens to ship, which is Tahoma on one
+// machine and something quite different on the next.
+const cairo = Cairo({ subsets: ["arabic"], variable: "--font-arabic", display: "swap" });
 
 const DESCRIPTION =
   "MMRC 26 is the IEEE RAS HTU Student Chapter's Micro Mouse Robot Competition — rules, schedule, registration, and the Pac Mouse game.";
@@ -87,7 +92,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd data={organizationJsonLd()} />
         <JsonLd data={webSiteJsonLd()} />
       </head>
-      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${jetbrainsMono.variable} ${cairo.variable} font-sans antialiased`}>
         {/*
           The sitewide background image, behind every page.
 
