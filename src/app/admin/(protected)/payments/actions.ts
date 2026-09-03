@@ -54,6 +54,13 @@ export async function updatePaymentConfig(formData: FormData) {
 
   revalidatePath("/register");
   revalidatePath("/admin/payments");
+  // The discount badge rides on registration buttons in the site header and on
+  // the homepage hero, and both of those are cached — the header by every page
+  // that holds it, the homepage by its own revalidate window. Revalidating only
+  // /register would switch the offer on at the one place that was already going
+  // to be right, and leave the rest of the site advertising the old answer.
+  // Same call, for the same reason, as the Pages and Gallery tabs make.
+  revalidatePath("/", "layout");
 }
 
 /**
@@ -66,7 +73,9 @@ export async function updatePaymentConfig(formData: FormData) {
  * is it.
  */
 export async function updatePaymentStatus(formData: FormData) {
-  await requireAdmin();
+  // Kept, where this used to discard it. requireAdmin has already redirected an
+  // invalid session by the time it returns, so this is always a real account.
+  const admin = await requireAdmin();
 
   const id = String(formData.get("id") ?? "");
   const paymentStatus = String(formData.get("paymentStatus") ?? "");
@@ -85,6 +94,10 @@ export async function updatePaymentStatus(formData: FormData) {
       // Stamped only when money is actually confirmed received, and cleared if
       // a verification is later withdrawn — so the date never outlives the fact.
       paymentVerifiedAt: paymentStatus === "VERIFIED" ? new Date() : null,
+      // Set and cleared on the same condition as the date above, so the two can
+      // never disagree. A name left standing against a payment that is no
+      // longer verified would be a claim nobody made.
+      paymentVerifiedBy: paymentStatus === "VERIFIED" ? admin.username : null,
     },
   });
 

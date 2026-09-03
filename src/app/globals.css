@@ -1351,3 +1351,43 @@ header:has([data-mobile-nav-open]) {
     opacity: 0;
   }
 }
+
+/*
+  The early-bird ribbon on the register page.
+
+  The track holds two identical copies of the same run of words and slides by
+  half its own width, which is exactly one copy — so the moment the animation
+  restarts, the second copy is sitting where the first one started and the loop
+  has no seam. width: max-content is what makes that half honest: the track has
+  to be as wide as its contents, not as wide as the strip it is peeking through.
+
+  It runs from -50% to 0 rather than 0 to 50% so the words travel rightward.
+  Starting at 0 would move the whole track off the leading edge and leave the
+  strip empty for the first pass.
+*/
+.eb-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: ebMarquee 22s linear infinite;
+}
+
+@keyframes ebMarquee {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/*
+  Frozen rather than hidden. The offer is the point of the strip, and someone
+  who has asked for less motion still wants to know a discount is running —
+  they just do not want it sliding past them.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .eb-marquee-track {
+    animation: none;
+    transform: translateX(0);
+  }
+}

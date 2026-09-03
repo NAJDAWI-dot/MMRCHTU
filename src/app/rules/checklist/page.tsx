@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ReadinessChecklist } from "@/components/rules/ReadinessChecklist";
+import { getEarlyBirdState } from "@/lib/early-bird-server";
 
 export const metadata: Metadata = {
   title: "Readiness checklist",
@@ -8,7 +9,12 @@ export const metadata: Metadata = {
     "Check your team and your micromouse against the MMRC 26 rules before competition day.",
 };
 
-export default function ChecklistPage() {
+export default async function ChecklistPage() {
+  // The checklist is a client component and cannot ask for itself — the answer
+  // is fetched here and handed down. Cached for the request, and the Nav in the
+  // layout has already asked, so this costs nothing.
+  const earlyBird = await getEarlyBirdState();
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">
       <p className="text-sm font-semibold text-accent dark:text-rose-300">
@@ -26,7 +32,7 @@ export default function ChecklistPage() {
       </p>
 
       <div className="mt-8">
-        <ReadinessChecklist />
+        <ReadinessChecklist earlyBird={earlyBird.active} />
       </div>
     </div>
   );

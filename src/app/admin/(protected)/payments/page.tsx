@@ -245,6 +245,28 @@ export default async function AdminPaymentsPage() {
                     {reg.paymentReference ?? "—"}
                   </dd>
                 </div>
+                {/* Only for verified rows, since that is the only status the
+                    column is ever written for. */}
+                {reg.paymentStatus === "VERIFIED" ? (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-ras-gray dark:text-white/60">Verified by</dt>
+                    <dd className="text-ras-gray dark:text-white/80">
+                      {reg.paymentVerifiedBy ? (
+                        <span className="font-semibold">{reg.paymentVerifiedBy}</span>
+                      ) : (
+                        /* Verified before this column existed. Saying so beats an
+                           em dash, which would read as "nobody" rather than as
+                           "nobody wrote it down". */
+                        <span className="italic text-ras-gray/70 dark:text-white/40">
+                          not recorded
+                        </span>
+                      )}
+                      {reg.paymentVerifiedAt
+                        ? ` · ${reg.paymentVerifiedAt.toLocaleDateString()}`
+                        : ""}
+                    </dd>
+                  </div>
+                ) : null}
               </dl>
 
               {mismatch ? (

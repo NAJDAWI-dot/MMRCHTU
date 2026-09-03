@@ -44,6 +44,10 @@ export default {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         display: ["var(--font-display)", "var(--font-sans)", "system-ui"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        // Only the early-bird badge and banner use this. Tahoma is the fallback
+        // because it is the one Arabic-capable face present on effectively every
+        // Windows machine, which is most of the audience.
+        arabic: ["var(--font-arabic)", "Tahoma", "sans-serif"],
       },
       minHeight: {
         "logo-clear": "139px", // ~36.8mm @ 96dpi, IEEE RAS min on-screen size

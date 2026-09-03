@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { EarlyBirdBadge } from "@/components/promo/EarlyBirdBadge";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import {
@@ -27,7 +28,7 @@ import {
 
 const STORAGE_KEY = "mmrc26-readiness";
 
-export function ReadinessChecklist() {
+export function ReadinessChecklist({ earlyBird = false }: { earlyBird?: boolean }) {
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
   const [hydrated, setHydrated] = useState(false);
   const [copied, setCopied] = useState<"idle" | "done" | "failed">("idle");
@@ -101,7 +102,12 @@ export function ReadinessChecklist() {
             <ul className="mt-2 divide-y divide-ras-gray/15 rounded-lg border border-ras-gray/20 bg-[var(--color-surface)]">
               {items.map((item) => (
                 <li key={item.id}>
-                  <Row item={item} checked={Boolean(answers[item.id])} onToggle={toggle} />
+                  <Row
+                    item={item}
+                    checked={Boolean(answers[item.id])}
+                    onToggle={toggle}
+                    earlyBird={earlyBird}
+                  />
                 </li>
               ))}
             </ul>
@@ -216,10 +222,12 @@ function Row({
   item,
   checked,
   onToggle,
+  earlyBird,
 }: {
   item: ChecklistItem;
   checked: boolean;
   onToggle: (id: string) => void;
+  earlyBird: boolean;
 }) {
   return (
     <div className="flex items-start gap-3 p-3 transition-colors hover:bg-ras-purple/5 sm:p-4 dark:hover:bg-white/5">
@@ -264,6 +272,12 @@ function Row({
             className="text-xs font-semibold text-accent hover:underline dark:text-rose-300"
           >
             {item.help.label}
+            {/* Inline. This link sits at the end of a right-aligned stack under
+                a Rule/Advice chip, and a pill floating above it would read as a
+                second status chip rather than a badge on a button. */}
+            {earlyBird && item.help.href === "/register" ? (
+              <EarlyBirdBadge className="static ml-1.5 translate-x-0" />
+            ) : null}
           </Link>
         ) : null}
       </div>

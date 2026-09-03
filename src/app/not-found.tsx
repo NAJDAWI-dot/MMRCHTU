@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { LostMaze } from "@/components/brand/LostMaze";
+import { EarlyBirdBadge } from "@/components/promo/EarlyBirdBadge";
+import { getEarlyBirdState } from "@/lib/early-bird-server";
 
-export default function NotFound() {
+export default async function NotFound() {
+  // Free, despite the await: the Nav in the root layout renders on this page
+  // too and has already asked, and the answer is cached for the request.
+  const earlyBird = await getEarlyBirdState();
+
   return (
     <div className="mx-auto max-w-lg px-4 py-20 text-center">
       <p className="font-mono text-sm text-accent">404</p>
@@ -40,6 +46,12 @@ export default function NotFound() {
                 className="-mx-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-ras-purple transition-colors hover:underline dark:text-white"
               >
                 {link.label}
+                {/* Inline rather than floating. These rows wrap with only 4px
+                    between them, and a pill sitting above one would overlap the
+                    row it wrapped from. */}
+                {earlyBird.active && link.href === "/register" ? (
+                  <EarlyBirdBadge className="static ml-2 translate-x-0" />
+                ) : null}
               </Link>
             </li>
           ))}
