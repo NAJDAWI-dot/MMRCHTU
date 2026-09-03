@@ -50,7 +50,7 @@ export default async function NotFound() {
                     between them, and a pill sitting above one would overlap the
                     row it wrapped from. */}
                 {earlyBird.active && link.href === "/register" ? (
-                  <EarlyBirdBadge className="static ml-2 translate-x-0" />
+                  <EarlyBirdBadge placement="inline" />
                 ) : null}
               </Link>
             </li>

@@ -1,23 +1,46 @@
 import { EARLY_BIRD_LABEL_AR } from "@/lib/early-bird";
 
 /**
- * The discount pill that rides on top of a registration button.
+ * The discount pill that marks a registration call to action.
  *
  * Presentational only, and deliberately free of any data fetching: whether the
- * discount is running is decided once per request by lib/early-bird and handed
- * down, which is what lets the same component sit in the server-rendered nav
- * and in the client-rendered phone menu without two ways of asking.
+ * discount is running is decided once per request and handed down, which is
+ * what lets the same component sit in the server-rendered nav and in the
+ * client-rendered phone menu without two ways of asking.
  *
- * Positioned absolutely, so whatever it is attached to needs `relative` on it
- * or on a wrapper. Pass className to override that — the checklist on the rules
- * page sets it back to `static`, since a pill floating over a line of 12px text
- * reads as a rendering fault rather than a badge.
+ * Two placements, chosen by prop rather than by overriding classes from
+ * outside. That is not a style preference: `absolute` and `static` are both
+ * position utilities, and which one wins is decided by their order in
+ * Tailwind's stylesheet, not by the order they appear in the class attribute.
+ * A caller appending "static" to override "absolute" silently loses, and the
+ * pill goes on floating against whatever ancestor happens to be positioned.
+ * Selecting the whole set here means there is never a conflict to resolve.
  *
  * ras-crimson rather than the accent token because this is a filled background
  * with white on it, not brand ink being read against the page — see the note on
  * the accent colour in tailwind.config.ts.
  */
-export function EarlyBirdBadge({ className = "" }: { className?: string }) {
+export function EarlyBirdBadge({
+  /**
+   * "float" hangs the pill over the top edge of the control it marks, and needs
+   * `relative` on that control or a wrapper. "inline" sets it after the label
+   * on the same line — for stacked or wrapping link lists, where a floating
+   * pill lands on a neighbouring row instead of its own.
+   */
+  placement = "float",
+  className = "",
+}: {
+  placement?: "float" | "inline";
+  className?: string;
+}) {
+  const position =
+    placement === "float"
+      ? "pointer-events-none absolute -top-2 left-1/2 z-10 -translate-x-1/2"
+      // A physical left margin, not the logical ms-2: this span sets dir="rtl"
+      // for the Arabic, which flips "inline-start" to the right and leaves the
+      // pill touching the English label it follows.
+      : "relative ml-2 align-middle";
+
   return (
     <span
       dir="rtl"
@@ -27,7 +50,7 @@ export function EarlyBirdBadge({ className = "" }: { className?: string }) {
       // carry the actual offer. So it is announced as what it is, once, and
       // takes no tab stop.
       aria-label="Early bird discount"
-      className={`pointer-events-none absolute -top-2 left-1/2 z-10 -translate-x-1/2 select-none whitespace-nowrap rounded-full bg-ras-crimson px-2 py-0.5 font-arabic text-[10px] font-bold leading-none text-white shadow-sm ring-1 ring-white/50 dark:ring-black/40 ${className}`}
+      className={`inline-flex select-none items-center whitespace-nowrap rounded-full bg-ras-crimson px-2 py-0.5 font-arabic text-[10px] font-bold leading-none text-white shadow-sm ring-1 ring-white/50 dark:ring-black/40 ${position} ${className}`}
     >
       {EARLY_BIRD_LABEL_AR}
     </span>

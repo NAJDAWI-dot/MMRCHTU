@@ -276,7 +276,7 @@ function Row({
                 a Rule/Advice chip, and a pill floating above it would read as a
                 second status chip rather than a badge on a button. */}
             {earlyBird && item.help.href === "/register" ? (
-              <EarlyBirdBadge className="static ml-1.5 translate-x-0" />
+              <EarlyBirdBadge placement="inline" />
             ) : null}
           </Link>
         ) : null}

@@ -122,7 +122,7 @@ export function MobileNav({ links, earlyBird = false }: { links: NavLink[]; earl
                           pill centred over one would land in the middle of it
                           rather than on the label. */}
                       {earlyBird && link.href === "/register" ? (
-                        <EarlyBirdBadge className="static ml-2 translate-x-0" />
+                        <EarlyBirdBadge placement="inline" />
                       ) : null}
                     </Link>
                   </li>

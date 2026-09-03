@@ -73,7 +73,7 @@ export async function Nav() {
           >
             {link.label}
             {earlyBird.active && link.href === "/register" ? (
-              <EarlyBirdBadge className="-top-3" />
+              <EarlyBirdBadge />
             ) : null}
           </Link>
         ))}
