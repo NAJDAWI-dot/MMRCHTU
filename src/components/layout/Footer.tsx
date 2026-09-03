@@ -4,7 +4,9 @@ import { LEGAL_PAGES, type LegalSlug } from "@/lib/mdx";
 
 export function Footer() {
   return (
-    <footer className="mt-16 border-t border-ras-gray/15 bg-[var(--color-surface)]">
+    // Translucent for the same reason as the header: the background image is
+    // one drawn screen, and a solid bar here would cut off its bottom corners.
+    <footer className="mt-16 border-t border-ras-gray/15 bg-[var(--color-surface-translucent)] backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4 py-8 text-center">
         <Logo variant="lockup" enforceMinSize={false} className="h-16" />
         <p className="max-w-md text-sm text-ras-gray dark:text-white/70">
