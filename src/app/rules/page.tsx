@@ -5,7 +5,7 @@ import { loadRulebook } from "@/lib/mdx";
 export const metadata: Metadata = {
   title: "Rules",
   description:
-    "The official MMRC 26 rulebook, with live diagrams of the maze, the two run types, and a robot footprint checker.",
+    "The official MMRC 26 rulebook, revision 1.1, with live diagrams of the maze, the two run types, the score formula, and a robot footprint checker.",
 };
 
 export default async function RulesPage() {
@@ -17,8 +17,9 @@ export default async function RulesPage() {
         Rulebook
       </h1>
       <p className="mt-3 text-ras-gray dark:text-white/70">
-        The rules in full. The diagrams are live — re-roll the maze, compare the two run types,
-        and check your chassis against the footprint limit.
+        The rules in full, following revision 1.1 of the official rulebook. The diagrams are
+        live — re-roll the maze, compare the two run types, work out what a run is worth, and
+        check your chassis against the footprint limit.
       </p>
       <Link
         href="/rules/checklist"

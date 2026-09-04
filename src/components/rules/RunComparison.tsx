@@ -8,7 +8,7 @@ import { CellTint, GoalBlock, MazeCanvas } from "@/components/rules/MazeCanvas";
 import { Figure, Legend, Stat } from "@/components/rules/Figure";
 
 /**
- * Why a speed run may only use cells found earlier, shown rather than stated.
+ * Why a speed run is bounded by the search before it, shown rather than stated.
  *
  * This is the rule entrants misread most often, and the misreading is always
  * the same: that the fastest route through the maze is the one they will get.
@@ -73,14 +73,16 @@ export function RunComparison() {
       caption={
         view === "search" ? (
           <>
-            The first run explores. It wanders, doubles back, and is not timed against the
-            leaderboard — but every cell it steps on is a cell the next run is allowed to use.
+            The first run explores. It wanders, doubles back, and spends minutes off the same
+            clock as everything else — but every cell it steps on is a cell the next run can
+            plan a route through.
           </>
         ) : (
           <>
             The speed run takes the best route through <strong>what the search found</strong> (in
-            crimson), not the best route through the maze (dashed). Cells the search skipped are
-            simply not available, however obvious the shortcut looks from the outside.
+            crimson), not the best route through the maze (dashed). A cell the search never
+            visited is a cell your mouse does not know exists, however obvious the shortcut
+            looks from outside.
           </>
         )
       }

@@ -149,7 +149,7 @@ describe("rulebookSections", () => {
     const titles = sections.map((s) => s.title);
     expect(titles).toContain("Eligibility");
     expect(titles).toContain("The maze");
-    expect(titles).toContain("Robot rules");
+    expect(titles).toContain("The robot");
   });
 
   it("keeps the prose but strips the embedded diagram components", () => {
@@ -172,6 +172,6 @@ describe("rulebookSections", () => {
   it("makes the real rulebook searchable end to end", () => {
     const hits = search(sections, "footprint");
     expect(hits.length).toBeGreaterThan(0);
-    expect(hits[0]!.title).toBe("Robot rules");
+    expect(hits[0]!.title).toBe("The robot");
   });
 });

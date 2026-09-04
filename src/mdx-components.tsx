@@ -2,6 +2,7 @@ import type { MDXComponents } from "mdx/types";
 import { MazeAnatomy } from "@/components/rules/MazeAnatomy";
 import { RobotFootprint } from "@/components/rules/RobotFootprint";
 import { RunComparison } from "@/components/rules/RunComparison";
+import { ScoreFormula } from "@/components/rules/ScoreFormula";
 
 // Required by @next/mdx for App Router: provides the component overrides
 // used when rendering any imported .mdx file.
@@ -15,6 +16,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     MazeAnatomy,
     RobotFootprint,
     RunComparison,
+    ScoreFormula,
     // Last, so a caller passing its own overrides still wins.
     ...components,
   };
