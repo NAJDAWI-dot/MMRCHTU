@@ -3,14 +3,16 @@
  *
  * The rules page has always been prose. Prose is fine for "the goal is a 2x2
  * block at the maze center" but poor for the parts entrants actually get wrong:
- * what a speed run is allowed to use, and whether their mouse is legal. Both of
- * those are checkable, so they are checked here rather than described.
+ * whether their mouse is legal, what a speed run has to work with, and how the
+ * score trades speed against repetition. All three are checkable, so they are
+ * checked here rather than described.
  *
  * Free of React and the DOM, like `maze.ts`, so the reasoning can be tested
  * directly. The components only render what these functions return.
  *
  * `content/rules/rulebook.mdx` remains the authority on what the rules *are* —
- * these numbers mirror it, and a test asserts the two still agree.
+ * these numbers mirror it, and a test asserts the two still agree. Both track
+ * the MMRC26 Official Rulebook & Competition Guide, revision 1.1.
  */
 
 import { CELL, DIRS, type Cell, type Maze } from "@/lib/maze";
@@ -29,11 +31,27 @@ export const RULES = {
    * walls is less than the 18cm cell pitch by roughly one wall.
    */
   wallThicknessMm: 12,
+  /**
+   * Side of a lattice post, in centimetres — the square where four walls meet.
+   *
+   * The same 12mm as `wallThicknessMm`, stated again in the unit the rulebook
+   * uses for it, because it is what a mouse actually has to clear at a corner.
+   */
+  latticePostCm: 1.2,
   /** Neither side of the mouse may exceed this, in centimetres. */
   maxFootprintCm: 25,
-  maxTeamSize: 4,
-  runsPerTeam: 5,
-  runLimitMinutes: 10,
+  /** An entry may be one person or a team; this is the ceiling. */
+  maxTeamSize: 3,
+  /**
+   * The whole match, in minutes.
+   *
+   * Not a per-run limit. Rulebook 1.1 grants one continuous window per team and
+   * the clock does not stop between runs, so the number of runs is whatever a
+   * team can fit inside it rather than a fixed allowance.
+   */
+  matchMinutes: 8,
+  /** The multiplier in the score formula. */
+  scoreMultiplier: 1000,
 } as const;
 
 /**
@@ -276,6 +294,40 @@ export function pathData(cells: Cell[]): string {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Scoring                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A team's final score, as rulebook 1.1 defines it.
+ *
+ *     (successful runs / official time) * 1000
+ *
+ * The shape of it is the part worth internalising, and it is not obvious: both
+ * terms move, so neither "go fast" nor "go often" wins on its own. A team with
+ * four runs at 25s outranks a team with one run at 18s, even though the second
+ * mouse is quicker on its best lap — which is precisely the example the
+ * rulebook leads with, and precisely the intuition it is correcting.
+ *
+ * Returns null rather than 0 when there is nothing to score. A mouse that never
+ * reached the centre has no official time, and it is not ranked on this scale at
+ * all — it is ranked by shortest traversable path, below every mouse that did.
+ * Zero would put it on the same axis as the others and imply it merely scored
+ * badly.
+ */
+export function finalScore(successfulRuns: number, officialTimeSeconds: number): number | null {
+  const runsValid = Number.isFinite(successfulRuns) && Number.isInteger(successfulRuns) && successfulRuns > 0;
+  const timeValid = Number.isFinite(officialTimeSeconds) && officialTimeSeconds > 0;
+  if (!runsValid || !timeValid) return null;
+
+  return (successfulRuns / officialTimeSeconds) * RULES.scoreMultiplier;
+}
+
+/** The score as the rulebook writes it — one decimal place. */
+export function formatScore(score: number | null): string {
+  return score === null ? "—" : score.toFixed(1);
+}
+
+/* -------------------------------------------------------------------------- */
 /* Readiness checklist                                                         */
 /* -------------------------------------------------------------------------- */
 
@@ -320,7 +372,7 @@ export const CHECKLIST: ChecklistItem[] = [
     id: "team-size",
     group: "Eligibility",
     label: `The team is ${RULES.maxTeamSize} people or fewer`,
-    detail: `Teams may enter individually or with up to ${RULES.maxTeamSize} members.`,
+    detail: `An entry may be one person's work or a team's, up to ${RULES.maxTeamSize} members.`,
     severity: "disqualifying",
   },
   {
@@ -331,25 +383,51 @@ export const CHECKLIST: ChecklistItem[] = [
     severity: "disqualifying",
   },
   {
+    id: "presentation",
+    group: "Eligibility",
+    label: "We can present our design in five minutes",
+    detail:
+      "Teams give a short talk on their mouse before the contest if the day allows time for it. Five minutes is the ceiling, not the target.",
+    severity: "advisory",
+  },
+  {
     id: "footprint",
     group: "The robot",
     label: `It fits within ${RULES.maxFootprintCm}cm × ${RULES.maxFootprintCm}cm at any rotation`,
-    detail: "Measure the widest points, wheels, sensors and bumpers included.",
+    detail:
+      "Measure the widest points, wheels, sensors and bumpers included. A mouse that unfolds or extends has to stay inside the limit expanded, not just parked.",
     severity: "disqualifying",
     help: { href: "/rules#footprint", label: "Check your dimensions" },
   },
   {
-    id: "autonomous",
+    id: "self-contained",
     group: "The robot",
-    label: "It runs fully autonomously once a run starts",
-    detail: "No remote control and no manual intervention mid-run.",
+    label: "It runs entirely on its own power and its own logic",
+    detail:
+      "Onboard battery, onboard processing. No remote control, no external computer, no wireless tether.",
+    severity: "disqualifying",
+  },
+  {
+    id: "no-combustion",
+    group: "The robot",
+    label: "Its power source involves no combustion",
+    detail: "An engine that burns anything is not permitted, whatever it burns.",
+    severity: "disqualifying",
+  },
+  {
+    id: "no-shedding",
+    group: "The robot",
+    label: "It leaves no part of itself behind in the maze",
+    detail:
+      "Anything that falls off mid-run — a wheel, a cover, a screw — is a violation as well as a problem.",
     severity: "disqualifying",
   },
   {
     id: "no-contact",
     group: "The robot",
     label: "It does not jump, climb, or damage the walls",
-    detail: "The maze has to survive every other team's runs as well as yours.",
+    detail:
+      "No jumping or flying over walls, and no scratching, cutting, burning, marking or destroying them. The maze has to survive every other team's runs as well as yours.",
     severity: "disqualifying",
   },
   {
@@ -362,19 +440,48 @@ export const CHECKLIST: ChecklistItem[] = [
     help: { href: "/rules#footprint", label: "Check your turning circle" },
   },
   {
-    id: "search-first",
+    id: "not-a-wall-hugger",
     group: "On the day",
-    label: "We know a speed run may only use cells found on an earlier run",
-    detail: "An unexplored shortcut is not available to you, however obvious it looks.",
+    label: "Our algorithm is not a wall-follower",
+    detail:
+      "The centre is an island — its walls touch nothing else. A mouse that follows one continuous wall never reaches it and will loop until the clock runs out.",
     severity: "advisory",
-    help: { href: "/rules#runs", label: "See the two runs compared" },
+    help: { href: "/rules#runs", label: "See how a run maps the maze" },
   },
   {
-    id: "run-plan",
+    id: "match-plan",
     group: "On the day",
-    label: `We have a plan for our ${RULES.runsPerTeam} runs`,
-    detail: `Each run ends at the goal, at the ${RULES.runLimitMinutes}-minute limit, or when you retire it.`,
+    label: `We have a plan for our ${RULES.matchMinutes} minutes`,
+    detail:
+      "The clock does not stop between runs. Every adjustment, restart and repair comes out of the same window as the runs themselves.",
     severity: "advisory",
+    help: { href: "/rules#scoring", label: "See what the clock is worth" },
+  },
+  {
+    id: "score-shape",
+    group: "On the day",
+    label: "We know the score counts runs as well as speed",
+    detail:
+      "Finishing more often and finishing faster both raise the score, so a single brilliant lap can lose to four steady ones.",
+    severity: "advisory",
+    help: { href: "/rules#scoring", label: "Try the formula" },
+  },
+  {
+    id: "arrive-on-time",
+    group: "Paperwork",
+    label: "We will be at the arena for our assigned slot",
+    detail:
+      "Run order is drawn after check-in closes. A team that is not there when called forfeits its Phase 1 run, and forfeits the competition with it.",
+    severity: "disqualifying",
+    help: { href: "/schedule", label: "Check the running order" },
+  },
+  {
+    id: "code-audit",
+    group: "Paperwork",
+    label: "Our source code is ready to hand to the judges",
+    detail:
+      "Every team's code is collected and reviewed. Nothing about the maze layout may be loaded in after it is revealed — switch positions are the only thing you may change.",
+    severity: "disqualifying",
   },
   {
     id: "registered",

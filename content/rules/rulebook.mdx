@@ -1,44 +1,176 @@
+Everything below follows the *MMRC26 Official Rulebook & Competition Guide*, revision 1.1.
+Where this page and the printed rulebook ever disagree, the rulebook is the authority and the
+judges' reading of it is final.
+
+## The objective
+
+Build an autonomous mouse that drives itself from a corner of a maze to the four cells at its
+centre. You are not only trying to be quick. The score divides your successful runs by your
+fastest one, so finishing often and finishing fast are both being rewarded — and neither wins
+on its own.
+
 ## Eligibility
 
-MMRC 26 is open to all currently enrolled university students, individually or in teams of
-up to four. Each team may enter at most one micromouse.
+MMRC 26 is open to currently enrolled university students. An entry may be one person's work
+or a team's, up to three members. Each team may enter at most one micromouse.
+
+If the day allows time for it, teams give a short talk on their mouse before the contest —
+five minutes at the outside.
 
 ## The maze
 
-The competition maze is a 10×10 grid of 18cm cells with 12mm-thick walls, built with IEEE
-micromouse standard cell and wall dimensions. The start cell is in a corner; the goal is a 2×2
-block at the maze center.
+The competition maze is a 10×10 grid of 18cm cells with 12mm-thick walls, built to IEEE
+micromouse standard dimensions. Measured from the inside faces of the walls, one cell is
+18cm square. Allow 5% tolerance. The four corners of every cell meet at a 1.2cm lattice post,
+and at least one wall is attached to every post in the maze.
+
+The start is one of the four corners, walled on three sides. The start line sits between the
+first cell and the next one clockwise — your clock starts as the mouse leaves the corner, not
+when you release it. The goal is the block of four cells at the centre, and it has exactly one
+entrance.
+
+**The centre is an island.** Its walls touch nothing else in the maze, which means a mouse that
+navigates by following one continuous wall will never arrive. It will circle the outer wall
+until the time runs out. Expect several routes to the centre, and expect none of them to be
+found by wall-hugging.
+
+Do not make assumptions about what your sensors will see. The wall sides are white, the wall
+tops are red and the floor is black, but the maze is painted plywood and the paint fades — it
+will not be uniformly any of those things. The floor is slick, with no promised amount of
+friction. Room lighting, temperature and humidity are whatever the venue happens to be on the
+day: sunlight, fluorescent, incandescent, or some mix you did not plan for.
 
 The layout is not published in advance. Every maze below is a fresh one, generated the moment
 you loaded this page — press **New maze** to see another.
 
 <MazeAnatomy />
 
-## Runs
+## The robot
 
-Each team gets up to five runs. A run ends when the mouse reaches the goal, hits the time
-limit (10 minutes), or the team retires the run. The fastest successful run counts.
+- **Self-contained.** Onboard battery, onboard logic. No remote control, no external
+  processing, no wireless data tether.
+- **No combustion.** The energy source may not burn anything.
+- **A footprint no larger than 25cm × 25cm.** Neither length nor width may exceed 25cm at any
+  point during the entire match. If your mouse unfolds or extends, the expanded shape has to
+  fit too. Height is unrestricted.
+- **Nothing left behind.** No part of the mouse may detach in the maze.
+- **Nothing done to the walls.** No jumping over, flying over or climbing them; no scratching,
+  cutting, burning, marking, damaging or destroying them.
 
-## Scoring
+Any violation of these is immediate disqualification.
 
-- **Search runs** may explore freely and are not timed against the leaderboard.
-- **Speed runs** must use only cells already discovered on a prior run for that team.
-- Final ranking is by best speed-run time; ties are broken by best search-run time.
+<RobotFootprint />
 
-That second point decides more places than any other rule, so it is worth seeing rather than
-reading: a speed run is only ever as good as the search that came before it.
+## The match
+
+Each team gets **8 minutes** of access to the maze, starting the moment the contest
+administrator grants it. That window is continuous. The clock does not stop between runs, and
+every second spent adjusting the mouse, swapping a battery or restarting comes out of the same
+8 minutes as the runs themselves.
+
+Inside that window you may make as many runs as you can fit. Each one starts from the start
+square. A run that reaches the centre is given a run time, and the shortest of them is your
+**official time**.
+
+- You may abort a run at any point.
+- Touching the mouse during a run aborts it, and the mouse must then be taken off the maze.
+- Once the mouse has crossed the finish line you may pick it up whenever you like — that run's
+  time is already recorded, and removing it does not affect the time.
+
+Once the maze has been revealed, you may not feed information about it into the mouse. Changing
+switch positions is allowed; loading a map is not. Every team's source code is collected and
+reviewed by the judges to confirm it.
+
+## Search runs and speed runs
+
+Nothing in the rules requires you to explore before you race. Nothing lets you skip it either: a
+mouse can only compute a route through the cells it has actually mapped, so the first run is
+spent finding out where the walls are and the later ones spend what it learned.
+
+That is the trade the whole event turns on, and it is worth seeing rather than reading — a
+thorough search costs time you cannot get back, and a hasty one leaves you racing through a map
+with holes in it.
 
 <RunComparison />
 
-## Robot rules
+## Scoring
 
-- Maximum footprint: 25cm × 25cm at any rotation.
-- No jumping, climbing, or damaging maze walls.
-- Autonomous operation only — no remote control or manual intervention once a run starts.
+Both phases rank teams by the same formula:
 
-<RobotFootprint />
+> **Final score = (total successful runs ÷ official time) × 1000**
+
+The higher score ranks higher. The rulebook's own worked example is the one to hold on to: a
+team with four runs and a best lap of 25 seconds scores 160.0, while a team with one run and a
+best lap of 18 seconds scores 55.6. The second mouse is quicker. It still places lower.
+
+(The printed rulebook rounds that second figure down to 55.5. It is 1000 ÷ 18 = 55.55…, so the
+site shows 55.6. Nothing about the ranking changes either way.)
+
+<ScoreFormula />
+
+**If nobody reaches the centre.** Every mouse that enters the centre within its 8 minutes ranks
+above every mouse that does not. Those that never made it are ranked against each other by
+their shortest traversable path — the most efficient wall-avoiding route towards the centre —
+and the lowest value ranks highest.
+
+## The tournament
+
+**Check-in closes at 09:00.** The running order is then drawn at random by the organisers'
+software, which also assigns each team its judging slot. Miss the slot you are given and you
+forfeit your Phase 1 run, and with it the competition.
+
+**Phase 1 — the qualifiers.** Every registered team runs in turn on one standard maze, each with
+the full 8-minute window, each scored by the formula above.
+
+**Phase 2 — the knockout league.** The teams that advance are seeded into a single-elimination
+bracket. Two teams run at once on identical side-by-side mazes, sharing one 8-minute clock. The
+higher score in each pairing goes through.
+
+## Awards
+
+- **1st place, MMRC26 Champion** — winner of the Grand Final.
+- **2nd place** — runner-up in the Grand Final.
+- **3rd place** — winner of the semi-final runners-up bracket.
+- **Overall Highest Score** — the single best score posted in any Phase 2 match.
+- **Best Code** — the most elegant logic, algorithmic efficiency or mapping technique, judged
+  during the source code review.
+- **Best Creative Design** — the most exceptional physical build: hardware solutions, custom PCB
+  work, chassis geometry.
+
+## On the day
+
+The **registration desk** is at the main entrance and opens at 08:00 sharp. The **judges' table**
+sits in front of the main arena; approach it only when you are called for a match or are handing
+over code. First-aid kits are at both, and any committee member can escalate.
+
+MMRC 26 is run by the IEEE Robotics and Automation Society Student Branch Chapter at Al-Hussein
+Technical University. Hatem Almuwadea, chapter chair, is the lead organiser and the final judging
+authority alongside the faculty advisors.
 
 ## Conduct
 
 Unsportsmanlike conduct, maze tampering, or rule violations may result in disqualification at
 the judges' discretion. Judges' decisions are final.
+
+## Terminology
+
+The words the judges will use, and what they mean here.
+
+- **Micromouse** — the autonomous robot your team built.
+- **Cell** — one 18cm square of navigable maze.
+- **Lattice point (post)** — the 1.2cm square where four cells meet and walls connect.
+- **Start square** — the corner cell, walled on three sides, that every run begins in.
+- **Destination zone** — the four cells at the centre. One entrance.
+- **Start line / finish line** — the invisible thresholds that start and stop the clock.
+- **Match** — your continuous 8-minute window at the maze.
+- **Run** — one attempt from the start square to the centre.
+- **Official time** — the shortest run time you record during the match.
+- **Touch** — any physical contact with the mouse after a run has started. It ends the run.
+- **Abort** — ending a run deliberately, usually to rescue a stuck mouse.
+- **Island goal** — a centre whose walls are detached from the rest of the maze. Ours is one.
+- **Wall-hugging** — following one continuous wall. Against an island goal, an infinite loop.
+- **Search run** — an exploring run that maps walls.
+- **Speed run** — a later run that races the map the search built.
+- **Shortest traversable path** — the most efficient wall-avoiding route to the centre, used to
+  rank mice that never got there.
+- **Simply connected maze** — a maze with no closed loops and no isolated walls.

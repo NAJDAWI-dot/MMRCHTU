@@ -11,7 +11,9 @@ import {
   checklistSummary,
   checklistVerdict,
   compareRuns,
+  finalScore,
   footprintCheck,
+  formatScore,
   goalCells,
   pathData,
   searchRun,
@@ -253,19 +255,19 @@ describe("checklistSummary", () => {
 
   it("calls a team blocked while a disqualifying item is outstanding", () => {
     const answers = Object.fromEntries(CHECKLIST.map((item) => [item.id, true]));
-    answers["autonomous"] = false;
+    answers["self-contained"] = false;
     const summary = checklistSummary(answers);
     expect(summary.state).toBe("blocked");
-    expect(summary.blockers.map((b) => b.id)).toEqual(["autonomous"]);
+    expect(summary.blockers.map((b) => b.id)).toEqual(["self-contained"]);
   });
 
   it("separates a legal team from a fully prepared one", () => {
     const answers = Object.fromEntries(CHECKLIST.map((item) => [item.id, true]));
-    answers["run-plan"] = false;
+    answers["match-plan"] = false;
     const summary = checklistSummary(answers);
     expect(summary.state).toBe("almost");
     expect(summary.blockers).toHaveLength(0);
-    expect(summary.outstanding.map((o) => o.id)).toEqual(["run-plan"]);
+    expect(summary.outstanding.map((o) => o.id)).toEqual(["match-plan"]);
   });
 
   it("ignores answers for items that are not on the list", () => {
@@ -330,12 +332,63 @@ describe("the checklist against the rulebook", () => {
     expect(rulebook).toContain(`${RULES.mazeGrid}×${RULES.mazeGrid}`);
     expect(rulebook).toContain(`${RULES.cellSizeCm}cm cells`);
     expect(rulebook).toContain(`${RULES.wallThicknessMm}mm-thick walls`);
+    expect(rulebook).toContain(`${RULES.latticePostCm}cm lattice post`);
     expect(rulebook).toContain(`${RULES.maxFootprintCm}cm × ${RULES.maxFootprintCm}cm`);
-    expect(rulebook).toContain(`${RULES.runLimitMinutes} minutes`);
+    expect(rulebook).toContain(`${RULES.matchMinutes} minutes`);
+    expect(rulebook).toContain(`× ${RULES.scoreMultiplier}`);
 
     // Written out as words in the prose, where digits would read badly.
-    const words: Record<number, string> = { 4: "four", 5: "five" };
+    const words: Record<number, string> = { 3: "three", 4: "four" };
     expect(rulebook).toContain(`up to ${words[RULES.maxTeamSize]}`);
-    expect(rulebook).toContain(`${words[RULES.runsPerTeam]} runs`);
+  });
+});
+
+describe("finalScore", () => {
+  /**
+   * Both figures come straight out of rulebook 1.1's worked example. They are
+   * here rather than in a comment because they are the case the formula exists
+   * to settle: the slower mouse wins, and nobody believes that until they see
+   * the two numbers side by side.
+   */
+  it("reproduces the rulebook's own worked example", () => {
+    expect(finalScore(4, 25)).toBeCloseTo(160, 5);
+    // The rulebook prints this one as 55.5. The exact value is 1000/18 =
+    // 55.555..., so 55.5 is a truncation and 55.6 is the rounded figure the
+    // site shows. Asserted against the arithmetic, not against the typo, and
+    // the page says as much so the two cannot look like a contradiction.
+    expect(finalScore(1, 18)).toBeCloseTo(1000 / 18, 10);
+  });
+
+  it("ranks four steady runs above one fast one", () => {
+    expect(finalScore(4, 25)!).toBeGreaterThan(finalScore(1, 18)!);
+  });
+
+  it("rewards both halves of the formula", () => {
+    // One more run at the same pace, and the same runs at a better pace, must
+    // each raise the score — otherwise one of the two terms is dead weight.
+    expect(finalScore(3, 30)!).toBeGreaterThan(finalScore(2, 30)!);
+    expect(finalScore(2, 20)!).toBeGreaterThan(finalScore(2, 30)!);
+  });
+
+  it("has no score for a mouse that never reached the centre", () => {
+    // Null, not zero: such a mouse is ranked by shortest traversable path
+    // instead, below every mouse that finished. Zero would place it on this
+    // scale and imply it merely scored badly.
+    expect(finalScore(0, 30)).toBeNull();
+    expect(finalScore(2, 0)).toBeNull();
+  });
+
+  it("refuses input that cannot describe a real match", () => {
+    expect(finalScore(-1, 30)).toBeNull();
+    expect(finalScore(2, -30)).toBeNull();
+    expect(finalScore(1.5, 30)).toBeNull();
+    expect(finalScore(Number.NaN, 30)).toBeNull();
+    expect(finalScore(2, Number.POSITIVE_INFINITY)).toBeNull();
+  });
+
+  it("formats to the one decimal place the rulebook quotes", () => {
+    expect(formatScore(finalScore(4, 25))).toBe("160.0");
+    expect(formatScore(finalScore(1, 18))).toBe("55.6");
+    expect(formatScore(null)).toBe("—");
   });
 });
