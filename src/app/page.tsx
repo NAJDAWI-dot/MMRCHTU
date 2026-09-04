@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Countdown } from "@/components/brand/Countdown";
+import { FeatureCard } from "@/components/home/FeatureCard";
 import { EarlyBirdBadge } from "@/components/promo/EarlyBirdBadge";
 import { parseStatus } from "@/lib/competition-day";
 
@@ -32,18 +32,26 @@ const FEATURE_CARDS = [
     title: "Rules & scoring",
     blurb: "Read the full MMRC 26 rulebook before you build.",
     cta: "View rules",
+    // Decorative only: the corner wall's colour and the lift's glow. The link
+    // text keeps the accent token, which is the one that has to clear a
+    // contrast threshold. Three different hues from the moodboard rather than
+    // one repeated, so the row reads as three things and not one stamped out
+    // three times.
+    accent: "#5f2167",
   },
   {
     href: "/schedule",
     title: "Schedule",
     blurb: "Key dates from registration to the final run.",
     cta: "View schedule",
+    accent: "#97012d",
   },
   {
     href: "/faq",
     title: "FAQ",
     blurb: "Answers to common questions from past competitors.",
     cta: "View FAQ",
+    accent: "#732e7d",
   },
 ] as const;
 
@@ -154,19 +162,8 @@ export default async function HomePage() {
           hides all three. */}
       {cards.length > 0 ? (
         <section className="stagger mt-20 grid gap-6 sm:grid-cols-3">
-          {cards.map((card) => (
-            <Card key={card.href} interactive>
-              <h2 className="font-display text-lg font-bold text-ras-purple dark:text-white">
-                {card.title}
-              </h2>
-              <p className="mt-2 text-sm text-ras-gray dark:text-white/70">{card.blurb}</p>
-              <Link
-                href={card.href}
-                className="-mx-2 mt-2 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-accent hover:underline"
-              >
-                {card.cta} →
-              </Link>
-            </Card>
+          {cards.map((card, i) => (
+            <FeatureCard key={card.href} card={card} accent={card.accent} seed={i + 1} />
           ))}
         </section>
       ) : null}
