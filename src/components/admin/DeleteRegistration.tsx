@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { deleteRegistration } from "@/app/admin/(protected)/registrations/actions";
+import { Button } from "@/components/ui/Button";
 
 /**
  * Two-step delete for a registration.
@@ -20,13 +21,9 @@ export function DeleteRegistration({ id, teamName }: { id: string; teamName: str
 
   if (!armed) {
     return (
-      <button
-        type="button"
-        onClick={() => setArmed(true)}
-        className="rounded px-2 py-1 text-xs font-semibold text-accent hover:bg-ras-crimson/10"
-      >
+      <Button type="button" variant="destructive" size="sm" onClick={() => setArmed(true)}>
         Delete
-      </button>
+      </Button>
     );
   }
 
@@ -41,13 +38,9 @@ export function DeleteRegistration({ id, teamName }: { id: string; teamName: str
         undone.
       </span>
       <ConfirmButton />
-      <button
-        type="button"
-        onClick={() => setArmed(false)}
-        className="rounded px-2 py-1 text-xs font-semibold text-ras-gray hover:bg-ras-gray/10 dark:text-white/70"
-      >
+      <Button type="button" variant="ghost" size="sm" onClick={() => setArmed(false)}>
         Cancel
-      </button>
+      </Button>
     </form>
   );
 }
@@ -55,12 +48,8 @@ export function DeleteRegistration({ id, teamName }: { id: string; teamName: str
 function ConfirmButton() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded bg-ras-crimson px-2 py-1 text-xs font-semibold text-white disabled:opacity-60"
-    >
+    <Button type="submit" variant="secondary" size="sm" disabled={pending}>
       {pending ? "Deleting…" : "Yes, delete"}
-    </button>
+    </Button>
   );
 }

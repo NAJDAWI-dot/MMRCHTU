@@ -11,6 +11,7 @@ import {
 } from "@/lib/competition-day";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import { updateCompetitionDay } from "./actions";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const metadata: Metadata = {
   title: "Admin — Competition Day",
@@ -26,15 +27,19 @@ export default async function AdminCompetitionDayPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-extrabold text-ras-purple dark:text-white">Competition Day</h1>
-      <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
-        Controls the public{" "}
-        <Link href="/competition-day" className="font-semibold text-accent hover:underline">
-          /competition-day
-        </Link>{" "}
-        page. Write the details whenever you like — nothing is shown to visitors until you set the status to
-        Published.
-      </p>
+      <AdminPageHeader
+        title="Competition Day"
+        subtitle={
+          <>
+            Controls the public{" "}
+            <Link href="/competition-day" className="font-semibold text-accent hover:underline">
+              /competition-day
+            </Link>{" "}
+            page. Write the details whenever you like — nothing is shown to visitors until you
+            set the status to Published.
+          </>
+        }
+      />
 
       <form action={updateCompetitionDay}>
         <Card className="mt-6">

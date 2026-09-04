@@ -1,0 +1,11 @@
+-- Remembers when an admin was last here, as distinct from when they signed in.
+--
+-- lastLoginAt is written at sign-in, so every page that reads it sees the
+-- timestamp of the session doing the reading. That is useless for greeting
+-- someone with how long they have been away. This column holds the value
+-- lastLoginAt had immediately before the current session replaced it.
+--
+-- Nullable, with no backfill: every existing row was signing in long before
+-- anything recorded a previous visit, and inventing one would put a fabricated
+-- date in front of an admin as though it were a fact.
+ALTER TABLE "AdminUser" ADD COLUMN "previousLoginAt" TIMESTAMP(3);

@@ -73,7 +73,13 @@ export async function loginAdmin(
   byAddress.forget(addressKey);
   byUsername.forget(usernameKey);
 
-  await prisma.adminUser.update({ where: { id: admin.id }, data: { lastLoginAt: new Date() } });
+  // previousLoginAt takes the value being overwritten here, because that is the
+  // only one that describes an earlier visit rather than this one. `admin` was
+  // read above, before this write, so the outgoing value is still in hand.
+  await prisma.adminUser.update({
+    where: { id: admin.id },
+    data: { previousLoginAt: admin.lastLoginAt, lastLoginAt: new Date() },
+  });
 
   cookies().set(
     SESSION_COOKIE_NAME,

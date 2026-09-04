@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 
 /**
  * Getting registration data out, both ways.
@@ -28,14 +29,11 @@ export function RegistrationExport({ feedConfigured }: { feedConfigured: boolean
     <div className="mt-4 rounded-lg border border-ras-gray/20 p-4 dark:border-white/15">
       <div className="flex flex-wrap items-center gap-2">
         {SHEETS.map(({ sheet, label, hint }) => (
-          <a
-            key={sheet}
-            href={`/api/registrations/export?sheet=${sheet}`}
-            title={hint}
-            className="inline-flex min-h-[38px] items-center rounded-md border border-ras-purple/40 px-3 py-2 text-sm font-semibold text-ras-purple transition-colors hover:bg-ras-purple/10 dark:border-white/30 dark:text-white dark:hover:bg-white/10"
-          >
-            Download {label}
-          </a>
+          <Button key={sheet} asChild variant="ghost" size="sm">
+            <a href={`/api/registrations/export?sheet=${sheet}`} title={hint}>
+              Download {label}
+            </a>
+          </Button>
         ))}
         <button
           type="button"

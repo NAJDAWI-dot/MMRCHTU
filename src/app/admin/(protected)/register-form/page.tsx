@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { getRegisterFormConfig } from "@/lib/site-config";
 import { updateFormConfig } from "./actions";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const metadata: Metadata = {
   title: "Admin — Register Form",
@@ -23,16 +24,21 @@ export default async function AdminRegisterFormPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-extrabold text-ras-purple dark:text-white">Register Form</h1>
-      <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
-        Controls the deadline/fee copy shown on the public <code>/register</code> page and whether it accepts
-        submissions. The deadline is informational only — closing registration always requires flipping the
-        toggle below. Prices, CliQ details and the early-bird discount live under{" "}
-        <a href="/admin/payments" className="font-semibold text-ras-purple underline dark:text-white">
-          Payments
-        </a>
-        .
-      </p>
+      <AdminPageHeader
+        title="Register Form"
+        subtitle={
+          <>
+            Controls the deadline and fee copy shown on the public <code>/register</code> page, and
+            whether it accepts submissions. The deadline is informational only — closing
+            registration always requires flipping the toggle below. Prices, CliQ details and the
+            early-bird discount live under{" "}
+            <a href="/admin/payments" className="font-semibold text-ras-purple underline dark:text-white">
+              Payments
+            </a>
+            .
+          </>
+        }
+      />
 
       <Card className="mt-6">
         <form action={updateFormConfig} className="grid gap-4">

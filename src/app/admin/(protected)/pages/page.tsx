@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { parseStatus } from "@/lib/competition-day";
 import { MANAGED_PAGES } from "@/lib/pages";
 import { setPageHidden } from "./actions";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const metadata: Metadata = {
   title: "Admin — Pages",
@@ -52,13 +53,17 @@ export default async function AdminPagesPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-extrabold text-ras-purple dark:text-white">Pages</h1>
-      <p className="mt-2 max-w-2xl text-sm text-ras-gray dark:text-white/70">
-        Hiding a page takes it out of the site menu and makes it return &ldquo;not found&rdquo; to
-        visitors, along with everything underneath it. Nothing is deleted — un-hiding puts the page
-        back exactly as it was. While you are signed in here you can still open a hidden page
-        directly by its address, so you can check it before showing it to anyone.
-      </p>
+      <AdminPageHeader
+        title="Pages"
+        subtitle={
+          <span className="block max-w-2xl">
+            Hiding a page takes it out of the site menu and makes it return &ldquo;not found&rdquo;
+            to visitors, along with everything underneath it. Nothing is deleted — un-hiding puts
+            the page back exactly as it was. While you are signed in here you can still open a
+            hidden page directly by its address, so you can check it before showing it to anyone.
+          </span>
+        }
+      />
 
       <div className="mt-6 space-y-4">
         {MANAGED_PAGES.map((page) => {

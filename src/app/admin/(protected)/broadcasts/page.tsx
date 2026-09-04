@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { BROADCAST_LIST_KINDS, BROADCAST_LIST_KIND_LABELS } from "@/lib/broadcast";
 import { createBroadcastList } from "./actions";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const metadata: Metadata = {
   title: "Admin — Email Lists",
@@ -18,11 +19,10 @@ export default async function AdminBroadcastsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-extrabold text-ras-purple dark:text-white">Email Lists</h1>
-      <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
-        Group people into lists and send them a broadcast email. Confirmed and waiting lists can pull their contacts
-        straight from registrations.
-      </p>
+      <AdminPageHeader
+        title="Email Lists"
+        subtitle="Group people into lists and send them a broadcast email. Confirmed and waiting lists can pull their contacts straight from registrations."
+      />
 
       <Card className="mt-6">
         <h2 className="font-display font-bold text-ras-purple dark:text-white">New list</h2>

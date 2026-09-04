@@ -157,7 +157,7 @@ export default async function AlbumPage({ params }: { params: { id: string } }) 
                         className={FIELD}
                       />
                     </label>
-                    <Button type="submit" variant="ghost" className="self-start px-3 py-1 text-xs">
+                    <Button type="submit" variant="ghost" size="sm" className="self-start">
                       Save caption
                     </Button>
                   </form>
@@ -166,37 +166,32 @@ export default async function AlbumPage({ params }: { params: { id: string } }) 
                     <form action={movePhoto}>
                       <input type="hidden" name="id" value={photo.id} />
                       <input type="hidden" name="direction" value="up" />
-                      <button
-                        type="submit"
-                        disabled={index === 0}
-                        className="rounded border border-ras-gray/30 px-2 py-1 text-xs text-ras-gray disabled:opacity-30 dark:text-white/70"
-                      >
+                      <Button type="submit" variant="ghost" size="sm" disabled={index === 0}>
                         ↑ Earlier
-                      </button>
+                      </Button>
                     </form>
                     <form action={movePhoto}>
                       <input type="hidden" name="id" value={photo.id} />
                       <input type="hidden" name="direction" value="down" />
-                      <button
+                      <Button
                         type="submit"
+                        variant="ghost"
+                        size="sm"
                         disabled={index === album.photos.length - 1}
-                        className="rounded border border-ras-gray/30 px-2 py-1 text-xs text-ras-gray disabled:opacity-30 dark:text-white/70"
                       >
                         ↓ Later
-                      </button>
+                      </Button>
                     </form>
-                    <a
-                      href={downloadUrlFor(photo.url)}
-                      download
-                      className="rounded border border-ras-gray/30 px-2 py-1 text-xs text-ras-gray hover:bg-ras-purple/10 dark:text-white/70"
-                    >
-                      ↓ Download
-                    </a>
+                    <Button asChild variant="ghost" size="sm">
+                      <a href={downloadUrlFor(photo.url)} download>
+                        ↓ Download
+                      </a>
+                    </Button>
                     <form action={deletePhoto}>
                       <input type="hidden" name="id" value={photo.id} />
-                      <button type="submit" className="rounded px-2 py-1 text-xs font-semibold text-accent hover:bg-ras-crimson/10">
+                      <Button type="submit" variant="destructive" size="sm">
                         Delete
-                      </button>
+                      </Button>
                     </form>
                   </div>
                 </div>

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { createEvent, updateEvent, deleteEvent } from "./actions";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const metadata: Metadata = {
   title: "Admin — Schedule",
@@ -23,7 +24,7 @@ export default async function AdminSchedulePage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-extrabold text-ras-purple dark:text-white">Schedule</h1>
+      <AdminPageHeader title="Schedule" />
 
       <Card className="mt-6">
         <h2 className="font-display text-sm font-bold uppercase tracking-wide text-ras-gray dark:text-white/70">

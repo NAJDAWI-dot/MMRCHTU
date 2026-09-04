@@ -102,14 +102,14 @@ export default async function HomePage() {
             // land on the <Link> and the pill would be positioned against the
             // text rather than the button around it.
             <span className="relative inline-block">
-              <Button asChild>
+              <Button asChild size="lg">
                 <Link href="/register">Register your team</Link>
               </Button>
               {earlyBird.active ? <EarlyBirdBadge /> : null}
             </span>
           ) : null}
           {!hidden.has("/game") ? (
-            <Button variant="ghost" asChild>
+            <Button variant="ghost" asChild size="lg">
               <Link href="/game">Play Pac Mouse</Link>
             </Button>
           ) : null}

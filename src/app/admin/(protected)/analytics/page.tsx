@@ -14,6 +14,7 @@ import {
   topN,
 } from "@/lib/analytics";
 import { BarList, DayChart, Empty, Panel, StatTile } from "./AnalyticsCharts";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const metadata: Metadata = {
   title: "Analytics",
@@ -84,13 +85,10 @@ export default async function AnalyticsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-extrabold text-ras-purple dark:text-white">
-        Analytics
-      </h1>
-      <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
-        Everything below is counted live from the database. These numbers are admin-only — the
-        public site no longer shows any of them.
-      </p>
+      <AdminPageHeader
+        title="Analytics"
+        subtitle="Everything below is counted live from the database. These numbers are admin-only — the public site no longer shows any of them."
+      />
 
       <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile value={teamCount} label="Teams registered" hint={`${confirmed} confirmed`} />
