@@ -26,8 +26,8 @@ export interface FeatureCardData {
   cta: string;
 }
 
-/** Maximum rotation, in degrees. Past about eight the text starts to distort. */
-const MAX_TILT = 7;
+/** Maximum rotation, in degrees. Past about ten the text starts to distort. */
+const MAX_TILT = 9;
 
 export function FeatureCard({
   card,
@@ -127,6 +127,14 @@ export function FeatureCard({
         */}
         <span aria-hidden="true" className="card3d-plate">
           <span className="card3d-floor" />
+          {/*
+            The same maze grid used as a mask, with a bright stripe travelling
+            underneath it — so the light appears only ON the walls and runs
+            along them. It is the one moment in the card that says what the
+            competition is: a route being found through a maze, rather than a
+            rectangle being lit.
+          */}
+          <span className="card3d-trace" />
           <span className="card3d-glow" />
         </span>
         {/* The light. Follows the pointer, so the slab reads as lit from a

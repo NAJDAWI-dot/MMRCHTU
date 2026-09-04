@@ -1550,7 +1550,7 @@ header:has([data-mobile-nav-open]) {
   /* The plate carries the depth, so the floor and the wall parallax together
      as one surface rather than sliding against each other. Clipping flattens
      whatever is inside it, which is exactly what a floor should be. */
-  transform: translateZ(-16px) scale(1.045);
+  transform: translateZ(-16px) scale(1.016);
   pointer-events: none;
 }
 
@@ -1722,5 +1722,173 @@ header:has([data-mobile-nav-open]) {
 
   .card3d:hover .card3d-arrow {
     transform: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Second pass on the depth cards: the walls light up, and the rim catches the
+   pointer. Everything here still answers to the same idea — a lit maze floor —
+   rather than being effects stacked for their own sake.
+   -------------------------------------------------------------------------- */
+
+/*
+  A bright stripe travelling under the grid, masked by the grid itself, so the
+  light lands only on the walls and runs along them. Two mask images composited
+  together: the vertical walls and the horizontal ones.
+*/
+.card3d-trace {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  /*
+    The brightest point of the streak is a tint of the accent, not white. On the
+    light theme the card is already near-white, so a white core reads as a gap
+    in the middle of the light rather than its peak — the streak appears to
+    break in half exactly where it should be strongest.
+  */
+  background-image: linear-gradient(
+    112deg,
+    transparent 30%,
+    var(--card-accent) 44%,
+    color-mix(in oklab, var(--card-accent), white 55%) 50%,
+    var(--card-accent) 56%,
+    transparent 70%
+  );
+  background-size: 280% 280%;
+  background-position: 130% 0%;
+  -webkit-mask-image:
+    repeating-linear-gradient(to right, #000 0 1px, transparent 1px 18px),
+    repeating-linear-gradient(to bottom, #000 0 1px, transparent 1px 18px);
+  mask-image:
+    repeating-linear-gradient(to right, #000 0 1px, transparent 1px 18px),
+    repeating-linear-gradient(to bottom, #000 0 1px, transparent 1px 18px);
+  -webkit-mask-composite: source-over;
+  mask-composite: add;
+  -webkit-mask-position: var(--seed) var(--seed);
+  mask-position: var(--seed) var(--seed);
+  transition: opacity 300ms ease-out;
+}
+
+.card3d[data-tilts]:hover .card3d-trace,
+.card3d[data-tilts]:focus-within .card3d-trace {
+  opacity: 0.95;
+  /* Runs once per entry rather than looping. A light that keeps sweeping is a
+     loading spinner; one that runs when you arrive is the route being found. */
+  animation: card3dTrace 1500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* On a dark surface white genuinely is the highlight, so the core goes back. */
+.dark .card3d-trace {
+  background-image: linear-gradient(
+    112deg,
+    transparent 30%,
+    var(--card-accent) 44%,
+    rgb(255 255 255 / 0.95) 50%,
+    var(--card-accent) 56%,
+    transparent 70%
+  );
+}
+
+@keyframes card3dTrace {
+  from {
+    background-position: 130% 0%;
+  }
+  to {
+    background-position: -40% 0%;
+  }
+}
+
+/*
+  The rim. A gradient ring that brightens where the pointer is, drawn by
+  masking the element's own padding box out of its border box — one element,
+  no extra nodes, and it follows the same two custom properties as the sheen.
+*/
+.card3d::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(
+    52% 52% at var(--mx) var(--my),
+    var(--card-accent),
+    transparent 62%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.card3d[data-tilts]:hover::after,
+.card3d[data-tilts]:focus-within::after {
+  opacity: 0.9;
+}
+
+/* At rest the slab is already lit from above, so it reads as a surface before
+   anything is hovered. */
+.card3d {
+  background-image: linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0.75),
+    rgb(255 255 255 / 0) 62%
+  );
+}
+
+.dark .card3d {
+  background-image: linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0.07),
+    rgb(255 255 255 / 0) 58%
+  );
+}
+
+/*
+  Deeper. The floor drops further below the surface and the link stands higher,
+  which widens the gap the parallax is showing.
+
+  The scale is not a taste value, it is the arithmetic. An element at z = -30
+  under a 1000px perspective projects at 1000 / (1000 + 30) of its size, so it
+  has to be scaled by 1030 / 1000 to land back on the card's own footprint.
+  Guess high and the plate is genuinely larger than the card, and since the
+  plate is what clips the grid, the grid spills past the rounded corners —
+  which is exactly what the first attempt at this did.
+*/
+.card3d-plate {
+  transform: translateZ(-30px) scale(1.03);
+}
+
+.card3d[data-tilts] .card3d-title {
+  transform: translateZ(38px);
+}
+
+.card3d[data-tilts] .card3d-blurb {
+  transform: translateZ(18px);
+}
+
+.card3d[data-tilts] .card3d-cta {
+  transform: translateZ(52px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card3d-trace,
+  .card3d::after {
+    transition: none;
+  }
+
+  /* The sweep is the one thing here that is purely movement, so it goes. The
+     walls still take the accent, they just take it all at once. */
+  .card3d[data-tilts]:hover .card3d-trace,
+  .card3d[data-tilts]:focus-within .card3d-trace {
+    animation: none;
+    background-position: 45% 0%;
   }
 }
