@@ -5,7 +5,9 @@ import { PaymentBadge } from "@/components/payment/PaymentBadge";
 import { PaymentScreenshot } from "@/components/admin/PaymentScreenshot";
 import { prisma } from "@/lib/prisma";
 import { getPaymentConfig } from "@/lib/site-config";
-import { PAYMENT_STATUSES, PAYMENT_STATUS_LABELS, formatFils } from "@/lib/payment";
+import { PAYMENT_STATUSES, PAYMENT_STATUS_LABELS, formatFils, isPaymentStatus } from "@/lib/payment";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminFilters } from "@/components/admin/AdminFilters";
 import { isEarlyBirdActive } from "@/lib/pricing";
 import { updatePaymentConfig, updatePaymentStatus } from "./actions";
 
@@ -28,24 +30,57 @@ function toJod(fils: number): string {
   return String(fils / 1000);
 }
 
-export default async function AdminPaymentsPage() {
-  const [config, registrations] = await Promise.all([
+export default async function AdminPaymentsPage({
+  searchParams,
+}: {
+  searchParams?: { q?: string; status?: string };
+}) {
+  const q = searchParams?.q?.trim() || undefined;
+  // Anything that is not a real payment status is dropped rather than passed to
+  // the query, so a hand-edited URL narrows nothing instead of erroring.
+  const status = isPaymentStatus(searchParams?.status) ? searchParams.status : undefined;
+
+  const where = {
+    ...(status ? { paymentStatus: status } : {}),
+    ...(q
+      ? {
+          OR: [
+            { teamName: { contains: q, mode: "insensitive" as const } },
+            { submitterEmail: { contains: q, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
+
+  // Counted and summed in the database over the whole table, not derived from
+  // the rows on screen. The money collected is a fact about the competition;
+  // searching for one team must not appear to change it.
+  const [config, registrations, total, verifiedCount, awaitingCount, collected] = await Promise.all([
     getPaymentConfig(),
-    prisma.registration.findMany({ orderBy: { createdAt: "desc" } }),
+    prisma.registration.findMany({ where, orderBy: { createdAt: "desc" } }),
+    prisma.registration.count(),
+    prisma.registration.count({ where: { paymentStatus: "VERIFIED" } }),
+    prisma.registration.count({ where: { paymentStatus: "SUBMITTED" } }),
+    prisma.registration.aggregate({
+      _sum: { paymentAmountFils: true },
+      where: { paymentStatus: "VERIFIED" },
+    }),
   ]);
 
   const earlyBirdRunning = isEarlyBirdActive(config);
-  const awaiting = registrations.filter((r) => r.paymentStatus === "SUBMITTED");
-  const verified = registrations.filter((r) => r.paymentStatus === "VERIFIED");
-  const collectedFils = verified.reduce((sum, r) => sum + (r.paymentAmountFils ?? 0), 0);
+  const collectedFils = collected._sum.paymentAmountFils ?? 0;
+  const filtering = Boolean(q || status);
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-extrabold text-ras-purple dark:text-white">Payments</h1>
-      <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
-        {registrations.length} teams · {verified.length} verified ({formatFils(collectedFils)} collected)
-        {awaiting.length > 0 ? ` · ${awaiting.length} awaiting a check` : ""}
-      </p>
+      <AdminPageHeader
+        title="Payments"
+        subtitle={
+          filtering
+            ? `Showing ${registrations.length} of ${total} team${total === 1 ? "" : "s"}`
+            : `${total} teams · ${verifiedCount} verified (${formatFils(collectedFils)} collected)${awaitingCount > 0 ? ` · ${awaitingCount} awaiting a check` : ""}`
+        }
+      />
 
       <Card className="mt-6">
         <h2 className="font-display text-lg font-bold text-ras-purple dark:text-white">Configuration</h2>
@@ -183,10 +218,20 @@ export default async function AdminPaymentsPage() {
         amount against the bank statement before marking anything verified.
       </p>
 
-      <div className="mt-4 space-y-4">
+      <div className="mt-4">
+        <AdminFilters q={q} status={status} basePath="/admin/payments" />
+      </div>
+
+      <div className="space-y-4">
         {registrations.length === 0 ? (
           <Card>
-            <p className="text-sm text-ras-gray dark:text-white/70">No registrations yet.</p>
+            {/* Two different empty lists, and they mean opposite things: nothing
+                has been registered yet, or a filter is hiding everything. */}
+            <p className="text-sm text-ras-gray dark:text-white/70">
+              {filtering
+                ? `No team here matches that filter. Clear it to see all ${total} teams.`
+                : "No registrations yet."}
+            </p>
           </Card>
         ) : null}
 

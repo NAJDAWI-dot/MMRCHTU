@@ -122,6 +122,19 @@ model AdminUser {
   createdAt    DateTime  @default(now())
   lastLoginAt  DateTime?
 
+  /// What lastLoginAt held before the current session began.
+  ///
+  /// lastLoginAt is overwritten at sign-in, so by the time any page renders it
+  /// describes the very session doing the reading — telling an admin they were
+  /// last here "3 hours ago" when that is their own sign-in is not a fact worth
+  /// showing. This keeps the one before it, which is the only value that can
+  /// honestly be called the last time they were here.
+  ///
+  /// Nullable, and null means two different things: a genuinely first sign-in,
+  /// or a row that predates this column. The greeting tells them apart by the
+  /// account's age rather than guessing.
+  previousLoginAt DateTime?
+
   /// Invalidates every session this admin currently holds when incremented.
   ///
   /// Sessions are stateless HMAC tokens, so without this there is no way to

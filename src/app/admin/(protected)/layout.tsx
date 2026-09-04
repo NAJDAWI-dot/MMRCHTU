@@ -1,5 +1,6 @@
-import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
+import { AdminNav } from "@/components/admin/AdminNav";
+import { Button } from "@/components/ui/Button";
 
 /**
  * Never prerender anything under the admin area.
@@ -12,58 +13,41 @@ import { requireAdmin } from "@/lib/auth";
  */
 export const dynamic = "force-dynamic";
 
-const NAV_LINKS = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/analytics", label: "Analytics" },
-  { href: "/admin/schedule", label: "Schedule" },
-  { href: "/admin/competition-day", label: "Competition Day" },
-  { href: "/admin/faq", label: "FAQ" },
-  { href: "/admin/gallery", label: "Gallery" },
-  { href: "/admin/pages", label: "Pages" },
-  { href: "/admin/register-form", label: "Register Form" },
-  { href: "/admin/registrations", label: "Registrations" },
-  { href: "/admin/payments", label: "Payments" },
-  { href: "/admin/broadcasts", label: "Email Lists" },
-  { href: "/admin/admins", label: "Admins" },
-];
-
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin();
+  const monogram = admin.username.trim().charAt(0).toUpperCase() || "?";
 
   return (
     // Stacked on a phone, side by side from md up. A fixed 192px column on a
     // 375px screen left the actual admin content 136px wide.
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:flex-row md:gap-8 md:py-10">
-      <aside className="w-full shrink-0 md:w-48">
-        <p className="mb-3 text-xs uppercase tracking-widest text-ras-gray dark:text-white/50 md:mb-4">
-          Signed in as {admin.username}
-        </p>
-        {/*
-          A horizontal strip of chips on a phone, the usual column from md up.
-          A dozen stacked links would push every admin page a screen and a half
-          down; scrolling them sideways keeps the page itself reachable.
-        */}
-        <nav
-          aria-label="Admin"
-          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-col md:overflow-visible md:px-0 md:pb-0"
-        >
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="shrink-0 whitespace-nowrap rounded-md border border-ras-gray/20 px-3 py-2 text-sm font-medium text-ras-gray transition-colors hover:bg-ras-purple/10 hover:text-ras-purple dark:text-white/80 dark:hover:bg-white/10 dark:hover:text-white md:border-0"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-        <form action="/admin/logout" method="post" className="mt-3 md:mt-4">
-          <button
-            type="submit"
-            className="w-full rounded-md px-3 py-2 text-left text-sm font-medium text-accent transition-colors hover:bg-ras-crimson/10"
+      {/*
+        A panel from md up, plain stacked content on a phone. Given a border and
+        a surface on a narrow screen it would be a box around a box around the
+        page, which buys nothing at the width where space is worth the most.
+      */}
+      <aside className="w-full shrink-0 md:w-56 md:self-start md:rounded-xl md:border md:border-ras-gray/20 md:bg-[var(--color-surface)] md:p-3 md:shadow-sm md:dark:border-white/10">
+        <div className="mb-4 flex items-center gap-3 px-1 md:px-2">
+          <span
+            aria-hidden="true"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ras-purple font-display text-sm font-extrabold text-white dark:bg-white/15"
           >
+            {monogram}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-ras-purple dark:text-white">
+              {admin.username}
+            </span>
+            <span className="block text-xs text-ras-gray dark:text-white/50">Signed in</span>
+          </span>
+        </div>
+
+        <AdminNav />
+
+        <form action="/admin/logout" method="post" className="mt-3 px-1 md:px-0">
+          <Button type="submit" variant="ghost" size="sm" className="w-full">
             Log out
-          </button>
+          </Button>
         </form>
       </aside>
       {/*

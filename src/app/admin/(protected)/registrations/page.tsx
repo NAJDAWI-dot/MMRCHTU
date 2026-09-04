@@ -6,7 +6,9 @@ import { updateRegistrationStatus } from "./actions";
 import { PaymentBadge } from "@/components/payment/PaymentBadge";
 import { DeleteRegistration } from "@/components/admin/DeleteRegistration";
 import { RegistrationExport } from "@/components/admin/RegistrationExport";
-import { formatFils } from "@/lib/payment";
+import { formatFils, isPaymentStatus } from "@/lib/payment";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminFilters } from "@/components/admin/AdminFilters";
 import { MIN_EXPORT_TOKEN_LENGTH } from "@/lib/export-token";
 import { REGISTRATION_STATUSES } from "@/lib/registration-status";
 
@@ -18,23 +20,54 @@ export const metadata: Metadata = {
 // value the write would then refuse.
 const STATUS_OPTIONS = REGISTRATION_STATUSES;
 
-export default async function AdminRegistrationsPage() {
-  const registrations = await prisma.registration.findMany({
-    include: { members: { orderBy: { order: "asc" } } },
-    orderBy: { createdAt: "desc" },
-  });
+export default async function AdminRegistrationsPage({
+  searchParams,
+}: {
+  searchParams?: { q?: string; status?: string };
+}) {
+  const q = searchParams?.q?.trim() || undefined;
+  // Anything that is not a real payment status is dropped rather than passed to
+  // the query, so a hand-edited URL narrows nothing instead of erroring.
+  const status = isPaymentStatus(searchParams?.status) ? searchParams.status : undefined;
 
-  // Surfaced up front because it is the number the committee chases.
-  const awaiting = registrations.filter((r) => r.paymentStatus === "SUBMITTED").length;
-  const paid = registrations.filter((r) => r.paymentStatus === "VERIFIED").length;
+  const where = {
+    ...(status ? { paymentStatus: status } : {}),
+    ...(q
+      ? {
+          OR: [
+            { teamName: { contains: q, mode: "insensitive" as const } },
+            { submitterEmail: { contains: q, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
+
+  // The three counts are of the whole table, never of the filtered view: they
+  // are the standing picture of the competition, and a search for one team
+  // should not appear to change how many teams have paid.
+  const [registrations, total, paid, awaiting] = await Promise.all([
+    prisma.registration.findMany({
+      where,
+      include: { members: { orderBy: { order: "asc" } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.registration.count(),
+    prisma.registration.count({ where: { paymentStatus: "VERIFIED" } }),
+    prisma.registration.count({ where: { paymentStatus: "SUBMITTED" } }),
+  ]);
+
+  const filtering = Boolean(q || status);
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-extrabold text-ras-purple dark:text-white">Registrations</h1>
-      <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
-        {registrations.length} teams registered · {paid} paid
-        {awaiting > 0 ? ` · ${awaiting} awaiting a payment check` : ""}
-      </p>
+      <AdminPageHeader
+        title="Registrations"
+        subtitle={
+          filtering
+            ? `Showing ${registrations.length} of ${total} team${total === 1 ? "" : "s"}`
+            : `${total} teams registered · ${paid} paid${awaiting > 0 ? ` · ${awaiting} awaiting a payment check` : ""}`
+        }
+      />
 
       {/*
         Only whether a token is configured crosses to the browser, never the
@@ -47,7 +80,26 @@ export default async function AdminRegistrationsPage() {
         }
       />
 
-      <div className="mt-6 space-y-4">
+      <div className="mt-6">
+        <AdminFilters q={q} status={status} basePath="/admin/registrations" />
+      </div>
+
+      {registrations.length === 0 ? (
+        /* Names the query back rather than showing a blank page, so it is clear
+           the list is empty because of the filter and not because the data is. */
+        <p className="rounded-lg border border-dashed border-ras-gray/25 p-6 text-sm text-ras-gray dark:border-white/15 dark:text-white/70">
+          No team matches{" "}
+          {q ? (
+            <>
+              &ldquo;<strong className="text-ras-purple dark:text-white">{q}</strong>&rdquo;
+            </>
+          ) : (
+            "that filter"
+          )}
+          . Try a shorter search, or clear the filter to see all {total} teams.
+        </p>
+      ) : (
+      <div className="space-y-4">
         {registrations.map((reg) => (
           <Card key={reg.id}>
             <div className="flex items-start justify-between gap-4">
@@ -124,6 +176,7 @@ export default async function AdminRegistrationsPage() {
           </Card>
         ))}
       </div>
+      )}
     </div>
   );
 }

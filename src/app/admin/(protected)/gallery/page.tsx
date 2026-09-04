@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { isStorageConfigured } from "@/lib/photo-storage";
 import { sortAlbums } from "@/lib/gallery";
 import { createAlbum } from "./actions";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const metadata: Metadata = {
   title: "Gallery",
@@ -24,13 +25,10 @@ export default async function AdminGalleryPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-extrabold text-ras-purple dark:text-white">
-        Gallery
-      </h1>
-      <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
-        One album per event. Albums stay hidden from the public site until you publish them, so you
-        can upload and reorder in peace.
-      </p>
+      <AdminPageHeader
+        title="Gallery"
+        subtitle="One album per event. Albums stay hidden from the public site until you publish them, so you can upload and reorder in peace."
+      />
 
       {!storageReady && (
         <Card className="mt-6 border-ras-crimson/40">

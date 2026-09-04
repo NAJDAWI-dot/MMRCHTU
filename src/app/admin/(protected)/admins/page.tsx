@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { deleteAdmin, signOutEverywhere } from "./actions";
 import { CreateAdminForm } from "./CreateAdminForm";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const metadata: Metadata = {
   title: "Admin — Admins",
@@ -14,7 +15,7 @@ export default async function AdminAdminsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-extrabold text-ras-purple dark:text-white">Admins</h1>
+      <AdminPageHeader title="Admins" />
 
       <Card className="mt-6">
         <h2 className="font-display text-sm font-bold uppercase tracking-wide text-ras-gray dark:text-white/70">
