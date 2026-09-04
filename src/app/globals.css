@@ -1463,3 +1463,432 @@ header:has([data-mobile-nav-open]) {
     animation: none;
   }
 }
+
+/* ==========================================================================
+   The depth cards under the hero.
+
+   A micromouse solves a maze, and a maze is walls standing on a floor. So each
+   card is a lit slab of that floor: a grid plate sunk below the surface, a wall
+   catching light at the back corner, and the words standing above both. Tilt
+   the slab and the near things travel further than the far ones — that gap is
+   the whole effect, and it is why the layers are separated in Z rather than
+   just shadowed.
+
+   The pointer writes four custom properties and nothing else. Every transform
+   below composites, so this stays on the GPU.
+   ========================================================================== */
+
+.card3d-scene {
+  perspective: 1000px;
+  /* Without this the vanishing point sits at the centre of each card, and three
+     cards in a row each tilt towards their own middle — which reads as three
+     unrelated objects. Anchoring it high and central makes them share one
+     viewpoint, the way three tiles of one floor would. */
+  perspective-origin: 50% 30%;
+}
+
+.card3d {
+  --rx: 0deg;
+  --ry: 0deg;
+  --mx: 50%;
+  --my: 0%;
+
+  position: relative;
+  height: 100%;
+  isolation: isolate;
+  border-radius: 14px;
+  border: 1px solid rgb(87 86 91 / 0.2);
+  background: var(--color-surface);
+  padding: 1.5rem;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  box-shadow:
+    0 1px 2px rgb(33 16 38 / 0.06),
+    0 10px 22px -14px rgb(33 16 38 / 0.4);
+  transition:
+    transform 460ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 460ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 260ms ease-out;
+}
+
+.dark .card3d {
+  border-color: rgb(255 255 255 / 0.12);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.5),
+    0 14px 30px -18px rgb(0 0 0 / 0.9);
+}
+
+/* Only a real pointer gets the lift and the will-change; a touch screen keeps
+   the resting slab, which is the honest thing to show when there is nothing
+   tracking it. */
+.card3d[data-tilts]:hover,
+.card3d[data-tilts]:focus-within {
+  border-color: rgb(95 33 103 / 0.35);
+  box-shadow:
+    0 2px 4px rgb(33 16 38 / 0.08),
+    0 26px 50px -22px rgb(33 16 38 / 0.5),
+    0 0 22px -16px var(--card-accent);
+  will-change: transform;
+}
+
+.dark .card3d[data-tilts]:hover,
+.dark .card3d[data-tilts]:focus-within {
+  border-color: rgb(255 255 255 / 0.24);
+  box-shadow:
+    0 2px 4px rgb(0 0 0 / 0.6),
+    0 30px 56px -24px rgb(0 0 0 / 1),
+    0 0 28px -14px var(--card-accent);
+}
+
+/* ---- the sunken plate that clips the decoration ---- */
+.card3d-plate {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  /* The plate carries the depth, so the floor and the wall parallax together
+     as one surface rather than sliding against each other. Clipping flattens
+     whatever is inside it, which is exactly what a floor should be. */
+  transform: translateZ(-16px) scale(1.016);
+  pointer-events: none;
+}
+
+/* ---- the floor ---- */
+.card3d-floor {
+  position: absolute;
+  inset: 0;
+  /* An 18px cell, which is the size of a real maze cell in the rules, in
+     millimetres, read as pixels. Nobody will measure it; it is the reason the
+     spacing looks like this one competition rather than a generic grid. */
+  background-image:
+    repeating-linear-gradient(to right, rgb(87 86 91 / 0.16) 0 1px, transparent 1px 18px),
+    repeating-linear-gradient(to bottom, rgb(87 86 91 / 0.16) 0 1px, transparent 1px 18px);
+  background-position: var(--seed) var(--seed);
+  /* Faded towards the edges so it is a surface, not a texture swatch with a
+     hard border. */
+  -webkit-mask-image: radial-gradient(120% 90% at 50% 0%, #000 12%, transparent 78%);
+  mask-image: radial-gradient(120% 90% at 50% 0%, #000 12%, transparent 78%);
+  opacity: 0.75;
+  transition: opacity 460ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .card3d-floor {
+  background-image:
+    repeating-linear-gradient(to right, rgb(255 255 255 / 0.13) 0 1px, transparent 1px 18px),
+    repeating-linear-gradient(to bottom, rgb(255 255 255 / 0.13) 0 1px, transparent 1px 18px);
+}
+
+.card3d[data-tilts]:hover .card3d-floor {
+  opacity: 1;
+}
+
+/* ---- the light ---- */
+.card3d-sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  background: radial-gradient(
+    68% 58% at var(--mx) var(--my),
+    rgb(255 255 255 / 0.85),
+    transparent 68%
+  );
+  opacity: 0;
+  transform: translateZ(1px);
+  transition: opacity 460ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.card3d[data-tilts]:hover .card3d-sheen {
+  opacity: 0.3;
+}
+
+/* White on an already near-white surface does nothing; on the dark theme it is
+   the only thing that reads as a highlight, so it goes up rather than down. */
+.dark .card3d-sheen {
+  background: radial-gradient(
+    68% 58% at var(--mx) var(--my),
+    rgb(255 255 255 / 0.16),
+    transparent 66%
+  );
+}
+
+.dark .card3d[data-tilts]:hover .card3d-sheen {
+  opacity: 1;
+}
+
+/* ---- the wall at the back corner ---- */
+.card3d-glow {
+  position: absolute;
+  top: -34%;
+  right: -14%;
+  height: 78%;
+  width: 58%;
+  border-radius: 50%;
+  background: var(--card-accent);
+  opacity: 0.14;
+  filter: blur(30px);
+  transition:
+    opacity 460ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 460ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card3d[data-tilts]:hover .card3d-glow {
+  opacity: 0.26;
+  transform: scale(1.12);
+}
+
+.dark .card3d-glow {
+  opacity: 0.24;
+}
+
+.dark .card3d[data-tilts]:hover .card3d-glow {
+  opacity: 0.42;
+}
+
+/* ---- the things standing on the floor ---- */
+.card3d-content {
+  position: relative;
+  z-index: 2;
+  transform-style: preserve-3d;
+}
+
+/*
+  The three heights that make the parallax.
+
+  They are deliberately unequal. Evenly spaced layers read as a stack of cards;
+  a heading that stands well clear of its own paragraph, with the link higher
+  still, reads as objects at different distances — which is the thing being
+  imitated.
+*/
+.card3d[data-tilts] .card3d-title {
+  transform: translateZ(30px);
+}
+
+.card3d[data-tilts] .card3d-blurb {
+  transform: translateZ(14px);
+}
+
+.card3d[data-tilts] .card3d-cta {
+  transform: translateZ(38px);
+}
+
+.card3d-title,
+.card3d-blurb,
+.card3d-cta {
+  transition: transform 460ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card3d-arrow {
+  display: inline-block;
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card3d:hover .card3d-arrow {
+  transform: translateX(3px);
+}
+
+/* Keyboard users get the same lift, and a ring that is not the browser's. */
+.card3d-cta:focus-visible {
+  outline: 2px solid var(--card-accent);
+  outline-offset: 3px;
+}
+
+/*
+  Reduced motion keeps the depth and drops the movement.
+
+  The slab still sits raised, still catches its accent, still shows its floor —
+  none of that moves. What goes is the tilt, the parallax and the travel, which
+  is the part that would trigger anybody. The card is not flattened as a
+  punishment for asking.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .card3d,
+  .card3d-plate,
+  .card3d-floor,
+  .card3d-sheen,
+  .card3d-glow,
+  .card3d-title,
+  .card3d-blurb,
+  .card3d-cta,
+  .card3d-arrow {
+    transition: none;
+  }
+
+  .card3d {
+    transform: none;
+  }
+
+  .card3d:hover .card3d-arrow {
+    transform: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Second pass on the depth cards: the walls light up, and the rim catches the
+   pointer. Everything here still answers to the same idea — a lit maze floor —
+   rather than being effects stacked for their own sake.
+   -------------------------------------------------------------------------- */
+
+/*
+  A bright stripe travelling under the grid, masked by the grid itself, so the
+  light lands only on the walls and runs along them. Two mask images composited
+  together: the vertical walls and the horizontal ones.
+*/
+.card3d-trace {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  /*
+    The brightest point of the streak is a tint of the accent, not white. On the
+    light theme the card is already near-white, so a white core reads as a gap
+    in the middle of the light rather than its peak — the streak appears to
+    break in half exactly where it should be strongest.
+  */
+  background-image: linear-gradient(
+    112deg,
+    transparent 30%,
+    var(--card-accent) 44%,
+    color-mix(in oklab, var(--card-accent), white 55%) 50%,
+    var(--card-accent) 56%,
+    transparent 70%
+  );
+  background-size: 280% 280%;
+  background-position: 130% 0%;
+  -webkit-mask-image:
+    repeating-linear-gradient(to right, #000 0 1px, transparent 1px 18px),
+    repeating-linear-gradient(to bottom, #000 0 1px, transparent 1px 18px);
+  mask-image:
+    repeating-linear-gradient(to right, #000 0 1px, transparent 1px 18px),
+    repeating-linear-gradient(to bottom, #000 0 1px, transparent 1px 18px);
+  -webkit-mask-composite: source-over;
+  mask-composite: add;
+  -webkit-mask-position: var(--seed) var(--seed);
+  mask-position: var(--seed) var(--seed);
+  transition: opacity 300ms ease-out;
+}
+
+.card3d[data-tilts]:hover .card3d-trace,
+.card3d[data-tilts]:focus-within .card3d-trace {
+  opacity: 0.95;
+  /* Runs once per entry rather than looping. A light that keeps sweeping is a
+     loading spinner; one that runs when you arrive is the route being found. */
+  animation: card3dTrace 1500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* On a dark surface white genuinely is the highlight, so the core goes back. */
+.dark .card3d-trace {
+  background-image: linear-gradient(
+    112deg,
+    transparent 30%,
+    var(--card-accent) 44%,
+    rgb(255 255 255 / 0.95) 50%,
+    var(--card-accent) 56%,
+    transparent 70%
+  );
+}
+
+@keyframes card3dTrace {
+  from {
+    background-position: 130% 0%;
+  }
+  to {
+    background-position: -40% 0%;
+  }
+}
+
+/*
+  The rim. A gradient ring that brightens where the pointer is, drawn by
+  masking the element's own padding box out of its border box — one element,
+  no extra nodes, and it follows the same two custom properties as the sheen.
+*/
+.card3d::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(
+    52% 52% at var(--mx) var(--my),
+    var(--card-accent),
+    transparent 62%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.card3d[data-tilts]:hover::after,
+.card3d[data-tilts]:focus-within::after {
+  opacity: 0.9;
+}
+
+/* At rest the slab is already lit from above, so it reads as a surface before
+   anything is hovered. */
+.card3d {
+  background-image: linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0.75),
+    rgb(255 255 255 / 0) 62%
+  );
+}
+
+.dark .card3d {
+  background-image: linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0.07),
+    rgb(255 255 255 / 0) 58%
+  );
+}
+
+/*
+  Deeper. The floor drops further below the surface and the link stands higher,
+  which widens the gap the parallax is showing.
+
+  The scale is not a taste value, it is the arithmetic. An element at z = -30
+  under a 1000px perspective projects at 1000 / (1000 + 30) of its size, so it
+  has to be scaled by 1030 / 1000 to land back on the card's own footprint.
+  Guess high and the plate is genuinely larger than the card, and since the
+  plate is what clips the grid, the grid spills past the rounded corners —
+  which is exactly what the first attempt at this did.
+*/
+.card3d-plate {
+  transform: translateZ(-30px) scale(1.03);
+}
+
+.card3d[data-tilts] .card3d-title {
+  transform: translateZ(38px);
+}
+
+.card3d[data-tilts] .card3d-blurb {
+  transform: translateZ(18px);
+}
+
+.card3d[data-tilts] .card3d-cta {
+  transform: translateZ(52px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card3d-trace,
+  .card3d::after {
+    transition: none;
+  }
+
+  /* The sweep is the one thing here that is purely movement, so it goes. The
+     walls still take the accent, they just take it all at once. */
+  .card3d[data-tilts]:hover .card3d-trace,
+  .card3d[data-tilts]:focus-within .card3d-trace {
+    animation: none;
+    background-position: 45% 0%;
+  }
+}
