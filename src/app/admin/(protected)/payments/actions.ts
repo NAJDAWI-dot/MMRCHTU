@@ -98,6 +98,12 @@ export async function updatePaymentStatus(formData: FormData) {
       // never disagree. A name left standing against a payment that is no
       // longer verified would be a claim nobody made.
       paymentVerifiedBy: paymentStatus === "VERIFIED" ? admin.username : null,
+      // The other half of the record, and the half that survives: who touched
+      // this payment last, whatever they set it to. Written unconditionally,
+      // so refusing a payment or putting one back to unpaid leaves a trace the
+      // verified-only columns above deliberately do not keep.
+      paymentStatusBy: admin.username,
+      paymentStatusAt: new Date(),
     },
   });
 

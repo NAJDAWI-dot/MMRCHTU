@@ -5,7 +5,13 @@ import { PaymentBadge } from "@/components/payment/PaymentBadge";
 import { PaymentScreenshot } from "@/components/admin/PaymentScreenshot";
 import { prisma } from "@/lib/prisma";
 import { getPaymentConfig } from "@/lib/site-config";
-import { PAYMENT_STATUSES, PAYMENT_STATUS_LABELS, formatFils, isPaymentStatus } from "@/lib/payment";
+import {
+  PAYMENT_STATUSES,
+  PAYMENT_STATUS_LABELS,
+  formatFils,
+  isPaymentStatus,
+  paymentActor,
+} from "@/lib/payment";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminFilters } from "@/components/admin/AdminFilters";
 import { isEarlyBirdActive } from "@/lib/pricing";
@@ -244,6 +250,9 @@ export default async function AdminPaymentsPage({
             reg.paymentAmountFils !== null &&
             reg.feeDueFils !== reg.paymentAmountFils;
 
+          // Who last decided this row's status, whatever that status is.
+          const actor = paymentActor(reg);
+
           return (
             <Card key={reg.id}>
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -290,25 +299,25 @@ export default async function AdminPaymentsPage({
                     {reg.paymentReference ?? "—"}
                   </dd>
                 </div>
-                {/* Only for verified rows, since that is the only status the
-                    column is ever written for. */}
-                {reg.paymentStatus === "VERIFIED" ? (
+                {/* Shown for every status, not only for verified rows. "Who
+                    marked this one Not matched, and when?" is the question
+                    actually asked across the desk, and this line used to
+                    answer it for one status out of four. */}
+                {actor ? (
                   <div className="flex justify-between gap-3">
-                    <dt className="text-ras-gray dark:text-white/60">Verified by</dt>
+                    <dt className="text-ras-gray dark:text-white/60">{actor.label}</dt>
                     <dd className="text-ras-gray dark:text-white/80">
-                      {reg.paymentVerifiedBy ? (
-                        <span className="font-semibold">{reg.paymentVerifiedBy}</span>
+                      {actor.who ? (
+                        <span className="font-semibold">{actor.who}</span>
                       ) : (
-                        /* Verified before this column existed. Saying so beats an
+                        /* Changed before a name was being kept. Saying so beats an
                            em dash, which would read as "nobody" rather than as
                            "nobody wrote it down". */
                         <span className="italic text-ras-gray/70 dark:text-white/40">
                           not recorded
                         </span>
                       )}
-                      {reg.paymentVerifiedAt
-                        ? ` · ${reg.paymentVerifiedAt.toLocaleDateString()}`
-                        : ""}
+                      {actor.at ? ` · ${actor.at.toLocaleDateString()}` : ""}
                     </dd>
                   </div>
                 ) : null}

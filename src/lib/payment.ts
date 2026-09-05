@@ -130,6 +130,58 @@ export function isPaymentStatus(value: unknown): value is PaymentStatus {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Who decided                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/** The columns `paymentActor` reads. Structural, so a Prisma row satisfies it. */
+export interface PaymentActorSource {
+  paymentStatus: string;
+  paymentStatusBy: string | null;
+  paymentStatusAt: Date | null;
+  paymentVerifiedBy: string | null;
+  paymentVerifiedAt: Date | null;
+}
+
+export interface PaymentActor {
+  /** "Marked Paid", "Marked Not matched" — the status in the past tense. */
+  label: string;
+  /** Null where the change was recorded before anyone's name was being kept. */
+  who: string | null;
+  at: Date | null;
+}
+
+/**
+ * Who last decided this payment's status, and when.
+ *
+ * Every status now carries an actor, not only VERIFIED. A payment sitting at
+ * "Not matched" is a decision somebody made — usually the one most worth being
+ * able to ask about — and until these columns existed the row recorded no
+ * trace of who made it.
+ *
+ * Falls back to the older verified-only pair for rows whose last change
+ * predates the new columns, so a payment verified last month still names the
+ * admin who verified it instead of going blank on the day this shipped.
+ *
+ * Returns null when genuinely nothing is recorded, which the caller should
+ * render as absence rather than as "nobody".
+ */
+export function paymentActor(row: PaymentActorSource): PaymentActor | null {
+  const status = isPaymentStatus(row.paymentStatus) ? row.paymentStatus : null;
+  const label = status ? `Marked ${PAYMENT_STATUS_LABELS[status]}` : "Last changed";
+
+  if (row.paymentStatusBy || row.paymentStatusAt) {
+    return { label, who: row.paymentStatusBy, at: row.paymentStatusAt };
+  }
+
+  // Legacy rows: the only actor ever written was on verification.
+  if (status === "VERIFIED" && (row.paymentVerifiedBy || row.paymentVerifiedAt)) {
+    return { label, who: row.paymentVerifiedBy, at: row.paymentVerifiedAt };
+  }
+
+  return null;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Submission                                                                  */
 /* -------------------------------------------------------------------------- */
 

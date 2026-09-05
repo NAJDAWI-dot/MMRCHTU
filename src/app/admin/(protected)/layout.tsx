@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth";
 import { AdminNav } from "@/components/admin/AdminNav";
+import { CommandPalette } from "@/components/admin/CommandPalette";
 import { Button } from "@/components/ui/Button";
 
 /**
@@ -40,6 +41,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </span>
             <span className="block text-xs text-ras-gray dark:text-white/50">Signed in</span>
           </span>
+        </div>
+
+        {/* Above the nav rather than in a corner: it is the fastest way to
+            reach any of the twelve items below it, and putting it there is
+            what tells anyone who never presses shortcuts that it exists. */}
+        <div className="mb-3 px-1 md:px-0">
+          <CommandPalette />
         </div>
 
         <AdminNav />

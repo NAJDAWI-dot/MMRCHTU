@@ -50,6 +50,22 @@ model Registration {
   /// Admin-facing: why a payment was refused, or any reconciliation note.
   paymentNote        String?
 
+  /// Who last set `paymentStatus`, and when — for every status, not only
+  /// VERIFIED.
+  ///
+  /// The pair above records one specific fact: that money was confirmed
+  /// received. They are cleared when a verification is withdrawn, because a
+  /// name left standing against a payment that is no longer verified would be
+  /// a claim nobody made. That is right for what they mean, and it is exactly
+  /// why they cannot answer the question an admin asks far more often —
+  /// "who marked this one Not matched, and when?"
+  ///
+  /// These two answer that. Written on every transition and never cleared, so
+  /// the row always says who touched it last. Null on rows whose status was
+  /// last changed before this column existed.
+  paymentStatusBy    String?
+  paymentStatusAt    DateTime?
+
   /// Proof of payment: a screenshot of the team's CliQ confirmation. Same
   /// url/key pair as GalleryPhoto — the key is kept so deleting a registration
   /// can delete the file rather than orphaning it in the blob store.

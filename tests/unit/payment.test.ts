@@ -6,6 +6,8 @@ import {
   PAYMENT_STATUS_BLURB,
   PAYMENT_STATUS_LABELS,
   aliasTypeLabel,
+  paymentActor,
+  type PaymentActorSource,
   formatFils,
   hasPaymentErrors,
   isPaymentConfigured,
@@ -232,5 +234,75 @@ describe("aliasTypeLabel", () => {
 
   it("falls back to alias for anything unexpected", () => {
     expect(aliasTypeLabel("")).toBe("CliQ alias");
+  });
+});
+
+/**
+ * Who last touched a payment.
+ *
+ * The verified-only columns are deliberately cleared when a verification is
+ * withdrawn, which is correct for what they mean and useless for the question
+ * an admin asks most: who decided this one was not a match. These assertions
+ * pin down that every status now carries an actor, and that rows changed
+ * before the columns existed degrade to something honest rather than to a
+ * blank that reads as "nobody did it".
+ */
+describe("paymentActor", () => {
+  const row = (overrides: Partial<PaymentActorSource> = {}): PaymentActorSource => ({
+    paymentStatus: "VERIFIED",
+    paymentStatusBy: null,
+    paymentStatusAt: null,
+    paymentVerifiedBy: null,
+    paymentVerifiedAt: null,
+    ...overrides,
+  });
+
+  const changedOn = new Date(Date.UTC(2026, 8, 5, 12, 0, 0));
+
+  it("names the admin who set the current status, whatever it is", () => {
+    const actor = paymentActor(
+      row({ paymentStatus: "REJECTED", paymentStatusBy: "hatem", paymentStatusAt: changedOn }),
+    );
+    expect(actor).toEqual({ label: "Marked Not matched", who: "hatem", at: changedOn });
+  });
+
+  it("labels each status in its own words", () => {
+    const labelFor = (paymentStatus: string) =>
+      paymentActor(row({ paymentStatus, paymentStatusBy: "sara", paymentStatusAt: changedOn }))?.label;
+
+    expect(labelFor("UNPAID")).toBe("Marked Not paid");
+    expect(labelFor("SUBMITTED")).toBe("Marked Awaiting check");
+    expect(labelFor("VERIFIED")).toBe("Marked Paid");
+    expect(labelFor("REJECTED")).toBe("Marked Not matched");
+  });
+
+  it("falls back to the older verified-only columns for rows that predate this", () => {
+    const actor = paymentActor(
+      row({ paymentStatus: "VERIFIED", paymentVerifiedBy: "hatem", paymentVerifiedAt: changedOn }),
+    );
+    expect(actor).toEqual({ label: "Marked Paid", who: "hatem", at: changedOn });
+  });
+
+  it("does not use the verified columns for a status that is no longer verified", () => {
+    // A row rejected after having been verified: the old columns were cleared
+    // on the way through, so there is nothing to fall back to and nothing to
+    // claim. Reporting the previous verifier here would be actively wrong.
+    expect(paymentActor(row({ paymentStatus: "REJECTED" }))).toBeNull();
+  });
+
+  it("returns null when nothing at all was recorded", () => {
+    expect(paymentActor(row({ paymentStatus: "UNPAID" }))).toBeNull();
+  });
+
+  it("reports a recorded time with no name rather than hiding the change", () => {
+    const actor = paymentActor(row({ paymentStatus: "SUBMITTED", paymentStatusAt: changedOn }));
+    expect(actor).toEqual({ label: "Marked Awaiting check", who: null, at: changedOn });
+  });
+
+  it("does not fall over on a status the schema does not know", () => {
+    const actor = paymentActor(
+      row({ paymentStatus: "WHAT", paymentStatusBy: "hatem", paymentStatusAt: changedOn }),
+    );
+    expect(actor?.label).toBe("Last changed");
   });
 });
