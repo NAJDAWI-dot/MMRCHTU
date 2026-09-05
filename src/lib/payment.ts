@@ -130,6 +130,125 @@ export function isPaymentStatus(value: unknown): value is PaymentStatus {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Reconciling                                                                 */
+/* -------------------------------------------------------------------------- */
+
+export interface PaymentDelta {
+  /** How far off, in fils. Never zero — an exact match returns null instead. */
+  fils: number;
+  /** Short of the quoted fee, or over it. */
+  direction: "short" | "over";
+}
+
+/**
+ * The gap between what a team was quoted and what they say they sent.
+ *
+ * The page used to compute a bare `mismatch` boolean, which flags that
+ * something is wrong and then makes the admin work out what. "Sent 5 JD short"
+ * and "sent 5 JD over" are different conversations with different endings —
+ * one is a team that still owes money, the other is a refund — and the row is
+ * the place to say which.
+ *
+ * Null when the two agree, and null when either figure is missing: a team that
+ * has reported nothing yet is not in disagreement with anybody.
+ */
+export function paymentDelta(
+  feeDueFils: number | null,
+  paymentAmountFils: number | null,
+): PaymentDelta | null {
+  if (feeDueFils === null || paymentAmountFils === null) return null;
+
+  const difference = paymentAmountFils - feeDueFils;
+  if (difference === 0) return null;
+
+  return { fils: Math.abs(difference), direction: difference < 0 ? "short" : "over" };
+}
+
+export interface PaymentPrioritySource {
+  paymentStatus: string;
+  feeDueFils: number | null;
+  paymentAmountFils: number | null;
+}
+
+export interface PaymentSortSource extends PaymentPrioritySource {
+  paymentSubmittedAt: Date | null;
+  createdAt: Date;
+}
+
+/**
+ * How urgently a row needs a human. Lower sorts first.
+ *
+ * The list used to be in registration order, which scatters the four payments
+ * waiting on a decision among the ninety-six that are not. The ordering that
+ * actually matches the job is: things awaiting a decision, then things a team
+ * may be stuck behind, then things with nothing to do.
+ *
+ * A submitted payment whose amount disagrees with the quote outranks a clean
+ * one, because it is the one that will take thought.
+ */
+export function paymentPriority(row: PaymentPrioritySource): number {
+  switch (row.paymentStatus) {
+    case "SUBMITTED":
+      return paymentDelta(row.feeDueFils, row.paymentAmountFils) ? 0 : 1;
+    // A refused payment is a team sitting on a dead end, waiting for someone.
+    case "REJECTED":
+      return 2;
+    case "UNPAID":
+      return 3;
+    case "VERIFIED":
+      return 4;
+    // An unrecognised status sorts last rather than first: it is a data
+    // problem, not a queue of work, and it must not push real work down.
+    default:
+      return 5;
+  }
+}
+
+/** Bands at or above this are settled — nothing is waiting on anyone. */
+const SETTLED_BAND = 3;
+
+/** When the clock started running on this team, for the bands where that matters. */
+function waitingSince(row: PaymentSortSource): Date {
+  return row.paymentSubmittedAt ?? row.createdAt;
+}
+
+/**
+ * The order the payments list is read in.
+ *
+ * Urgency first, and then the tie-break flips depending on which half of the
+ * list you are in. Among rows that need a decision, the team that has been
+ * waiting longest goes first — that is simply the fair order to work a queue
+ * in. Among settled rows, nobody is waiting, so the useful order is the most
+ * recent activity first.
+ */
+export function comparePayments(a: PaymentSortSource, b: PaymentSortSource): number {
+  const priorityA = paymentPriority(a);
+  const priorityB = paymentPriority(b);
+  if (priorityA !== priorityB) return priorityA - priorityB;
+
+  if (priorityA >= SETTLED_BAND) {
+    return b.createdAt.getTime() - a.createdAt.getTime();
+  }
+
+  return waitingSince(a).getTime() - waitingSince(b).getTime();
+}
+
+/**
+ * Why a status change cannot be saved, or null if it can.
+ *
+ * Refusing a payment without saying why is not merely untidy: the team is
+ * shown this note on their own registration page when their payment is
+ * rejected (src/app/register/page.tsx), so a blank one leaves them looking at
+ * a refusal with no explanation and no idea what to fix.
+ */
+export function validatePaymentDecision(status: PaymentStatus, note: string): string | null {
+  if (status === "REJECTED" && !note.trim()) {
+    return "Say why it could not be matched — the team is shown this on their registration page.";
+  }
+  return null;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Who decided                                                                 */
 /* -------------------------------------------------------------------------- */
 

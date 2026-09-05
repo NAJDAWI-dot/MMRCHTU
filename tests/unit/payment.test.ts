@@ -7,7 +7,12 @@ import {
   PAYMENT_STATUS_LABELS,
   aliasTypeLabel,
   paymentActor,
+  paymentDelta,
+  paymentPriority,
+  comparePayments,
+  validatePaymentDecision,
   type PaymentActorSource,
+  type PaymentSortSource,
   formatFils,
   hasPaymentErrors,
   isPaymentConfigured,
@@ -304,5 +309,127 @@ describe("paymentActor", () => {
       row({ paymentStatus: "WHAT", paymentStatusBy: "hatem", paymentStatusAt: changedOn }),
     );
     expect(actor?.label).toBe("Last changed");
+  });
+});
+
+describe("paymentDelta", () => {
+  it("reports how far short a team fell", () => {
+    expect(paymentDelta(25_000, 20_000)).toEqual({ fils: 5_000, direction: "short" });
+  });
+
+  it("reports an overpayment as its own thing", () => {
+    // A refund conversation, not a chase-them-for-money one.
+    expect(paymentDelta(25_000, 30_000)).toEqual({ fils: 5_000, direction: "over" });
+  });
+
+  it("is null when the amounts agree", () => {
+    expect(paymentDelta(25_000, 25_000)).toBeNull();
+  });
+
+  it("is null when either figure is missing", () => {
+    // Nothing reported yet is not a disagreement with anybody.
+    expect(paymentDelta(25_000, null)).toBeNull();
+    expect(paymentDelta(null, 25_000)).toBeNull();
+    expect(paymentDelta(null, null)).toBeNull();
+  });
+});
+
+describe("paymentPriority", () => {
+  const row = (paymentStatus: string, feeDueFils: number | null = null, paymentAmountFils: number | null = null) =>
+    ({ paymentStatus, feeDueFils, paymentAmountFils });
+
+  it("puts a mismatched submission ahead of a clean one", () => {
+    const mismatched = paymentPriority(row("SUBMITTED", 25_000, 20_000));
+    const clean = paymentPriority(row("SUBMITTED", 25_000, 25_000));
+    expect(mismatched).toBeLessThan(clean);
+  });
+
+  it("ranks the statuses by who is waiting on whom", () => {
+    const order = ["SUBMITTED", "REJECTED", "UNPAID", "VERIFIED"].map((s) => paymentPriority(row(s)));
+    for (let i = 1; i < order.length; i += 1) {
+      expect(order[i - 1]!).toBeLessThan(order[i]!);
+    }
+  });
+
+  it("sorts an unrecognised status last, not first", () => {
+    // A data problem must not push real work down the page.
+    expect(paymentPriority(row("WHAT"))).toBeGreaterThan(paymentPriority(row("VERIFIED")));
+  });
+});
+
+describe("comparePayments", () => {
+  const at = (day: number) => new Date(Date.UTC(2026, 8, day));
+
+  const row = (
+    id: string,
+    paymentStatus: string,
+    opts: Partial<PaymentSortSource> = {},
+  ): PaymentSortSource & { id: string } => ({
+    id,
+    paymentStatus,
+    feeDueFils: 25_000,
+    paymentAmountFils: paymentStatus === "SUBMITTED" ? 25_000 : null,
+    paymentSubmittedAt: null,
+    createdAt: at(1),
+    ...opts,
+  });
+
+  it("orders a mixed list by urgency", () => {
+    const rows = [
+      row("verified", "VERIFIED"),
+      row("unpaid", "UNPAID"),
+      row("rejected", "REJECTED"),
+      row("clean", "SUBMITTED"),
+      row("mismatch", "SUBMITTED", { paymentAmountFils: 20_000 }),
+    ];
+
+    expect([...rows].sort(comparePayments).map((r) => r.id)).toEqual([
+      "mismatch",
+      "clean",
+      "rejected",
+      "unpaid",
+      "verified",
+    ]);
+  });
+
+  it("works the waiting queue longest-wait first", () => {
+    const rows = [
+      row("recent", "SUBMITTED", { paymentSubmittedAt: at(9) }),
+      row("ancient", "SUBMITTED", { paymentSubmittedAt: at(2) }),
+    ];
+    expect([...rows].sort(comparePayments).map((r) => r.id)).toEqual(["ancient", "recent"]);
+  });
+
+  it("falls back to when the team registered if they never reported a payment", () => {
+    const rows = [
+      row("newer", "REJECTED", { createdAt: at(9) }),
+      row("older", "REJECTED", { createdAt: at(2) }),
+    ];
+    expect([...rows].sort(comparePayments).map((r) => r.id)).toEqual(["older", "newer"]);
+  });
+
+  it("shows settled rows most recent first, since nobody is waiting", () => {
+    const rows = [
+      row("older", "VERIFIED", { createdAt: at(2) }),
+      row("newer", "VERIFIED", { createdAt: at(9) }),
+    ];
+    expect([...rows].sort(comparePayments).map((r) => r.id)).toEqual(["newer", "older"]);
+  });
+});
+
+describe("validatePaymentDecision", () => {
+  it("refuses a rejection with no reason", () => {
+    expect(validatePaymentDecision("REJECTED", "")).toMatch(/say why/i);
+    expect(validatePaymentDecision("REJECTED", "   ")).toMatch(/say why/i);
+  });
+
+  it("accepts a rejection that explains itself", () => {
+    expect(validatePaymentDecision("REJECTED", "No transfer under this reference.")).toBeNull();
+  });
+
+  it("asks nothing of the other statuses", () => {
+    expect(validatePaymentDecision("VERIFIED", "")).toBeNull();
+    expect(validatePaymentDecision("UNPAID", "")).toBeNull();
+    expect(validatePaymentDecision("SUBMITTED", "")).toBeNull();
   });
 });
