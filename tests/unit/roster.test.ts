@@ -158,7 +158,10 @@ describe("portraitStorageKey", () => {
   });
 
   it("cannot be steered out of its folder", () => {
-    const key = portraitStorageKey("../../etc/passwd", "image/png", "abc");
+    // The traversal fixture avoids a well-known system path on purpose: secret
+    // scanners flag strings like that on sight, and a test input is a poor
+    // reason to make somebody triage a false positive every time they push.
+    const key = portraitStorageKey("../../some/other/folder", "image/png", "abc");
     expect(key.startsWith("team/")).toBe(true);
     expect(key).not.toContain("..");
   });

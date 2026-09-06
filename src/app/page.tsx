@@ -53,6 +53,16 @@ const FEATURE_CARDS = [
     cta: "View FAQ",
     accent: "#732e7d",
   },
+  {
+    href: "/team",
+    title: "The committee",
+    blurb: "The students who write the rules, run the desk and judge the runs.",
+    cta: "Meet the team",
+    // The moodboard's gold, and the only card not in the purple-to-crimson
+    // range — this is the one card about people rather than about the
+    // competition, and it should not read as a fourth of the same thing.
+    accent: "#f2a900",
+  },
 ] as const;
 
 export default async function HomePage() {
@@ -158,10 +168,15 @@ export default async function HomePage() {
         ) : null}
       </section>
 
-      {/* Nothing at all rather than an empty row, on the off chance an admin
-          hides all three. */}
+      {/*
+        Nothing at all rather than an empty row, on the off chance an admin
+        hides every one of them.
+
+        Two up on a tablet, four across on a wide screen: three columns with
+        four cards left the last one stranded on a row of its own.
+      */}
       {cards.length > 0 ? (
-        <section className="stagger mt-20 grid gap-6 sm:grid-cols-3">
+        <section className="stagger mt-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {cards.map((card, i) => (
             <FeatureCard key={card.href} card={card} accent={card.accent} seed={i + 1} />
           ))}
