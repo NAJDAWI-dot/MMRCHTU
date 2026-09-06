@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 
 /**
- * The twelve admin nav glyphs, drawn here rather than installed.
+ * The admin nav glyphs, drawn here rather than installed.
  *
  * The project's only UI dependency is `@radix-ui/react-slot`; pulling an icon
- * package in for twelve 16px shapes would add a dependency, a bundle and a
+ * package in for a handful of 16px shapes would add a dependency, a bundle and a
  * version to keep current for something a few path strings cover. Everything
  * is stroked in `currentColor`, so an icon takes the colour of the nav item it
  * sits in — including the active one — with no per-state wiring.
@@ -24,9 +24,19 @@ export type AdminIconName =
   | "registrations"
   | "payments"
   | "email"
-  | "admins";
+  | "admins"
+  | "team";
 
 const PATHS: Record<AdminIconName, ReactNode> = {
+  team: (
+    <>
+      {/* Two people, the taller one in front: a committee rather than a crowd. */}
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3.5 20c0-3 2.5-5.2 5.5-5.2S14.5 17 14.5 20" />
+      <circle cx="17" cy="9.5" r="2.4" />
+      <path d="M16 14.9c2.4.2 4.5 2.2 4.5 5.1" />
+    </>
+  ),
   dashboard: (
     <>
       <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />

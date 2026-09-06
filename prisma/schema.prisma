@@ -414,3 +414,56 @@ model PaymentConfig {
 
   updatedAt DateTime @updatedAt
 }
+
+// The organising committee, as shown on the public Team page.
+//
+// Named CommitteeMember rather than TeamMember because TeamMember is already
+// taken, and by something entirely different: the people on a *competing*
+// team's registration. Two models called "team member" meaning "an entrant"
+// and "an organiser" would be a permanent source of the wrong query.
+model CommitteeDepartment {
+  id   String @id @default(cuid())
+  name String
+  /// Short line under the department heading. Optional.
+  description String @default("")
+  sortOrder   Int    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members CommitteeMember[]
+}
+
+model CommitteeMember {
+  id   String @id @default(cuid())
+  name String
+  /// The job as written on the page — "Chair", "Head of Logistics", "Designer".
+  ///
+  /// Free text, and deliberately separate from `rank`. Rank is the structure
+  /// the page is built from and has four values; role is what this person is
+  /// actually called, which no fixed list would ever cover.
+  role String @default("")
+
+  /// Where this person sits in the hierarchy. Values live in src/lib/roster.ts,
+  /// the same pattern as PaymentStatus and BroadcastList.kind.
+  rank String @default("MEMBER")
+
+  /// Null for the chair and co-chair, who sit above the departments.
+  departmentId String?
+  department   CommitteeDepartment? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  /// Public URL of the portrait, and the storage key kept so deleting the row
+  /// can delete the file too — the same pair, for the same reason, as
+  /// GalleryPhoto.
+  photoUrl String?
+  photoKey String?
+
+  /// Hidden members stay in the admin list but leave the public page, so
+  /// somebody can be added before an announcement without being visible.
+  isPublished Boolean @default(true)
+  sortOrder   Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([departmentId])
+  @@index([isPublished])
+}

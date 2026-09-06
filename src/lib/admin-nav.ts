@@ -38,6 +38,12 @@ export const ADMIN_LINKS: AdminLink[] = [
   },
   { href: "/admin/faq", label: "FAQ", icon: "faq", keywords: "questions answers" },
   { href: "/admin/gallery", label: "Gallery", icon: "gallery", keywords: "photos albums pictures" },
+  {
+    href: "/admin/team",
+    label: "Team",
+    icon: "team",
+    keywords: "committee roster chair members departments",
+  },
   { href: "/admin/pages", label: "Pages", icon: "pages", keywords: "visibility hide show" },
   {
     href: "/admin/register-form",

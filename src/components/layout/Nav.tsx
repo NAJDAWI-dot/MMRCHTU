@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/schedule", label: "Schedule" },
   { href: "/competition-day", label: "Competition Day" },
   { href: "/gallery", label: "Gallery" },
+  { href: "/team", label: "Team" },
   { href: "/faq", label: "FAQ" },
   { href: "/register", label: "Register" },
 ];
@@ -22,8 +23,9 @@ const LINKS = [
  *
  * Three separate reasons, unioned. A page an admin switched off on the Pages
  * tab goes, and so does anything hiding itself: Competition Day while that
- * page's status is HIDDEN, and Gallery until at least one album is published
- * with a photo in it, since an empty gallery is a wasted click. Admin saves
+ * page's status is HIDDEN, Gallery until at least one album is published with a
+ * photo in it, and Team until somebody on the committee is published — an
+ * empty gallery and a committee of nobody are both a wasted click. Admin saves
  * call revalidatePath("/", "layout") to pick any of them up.
  *
  * The menu is filtered for admins too. A link the admin has just hidden should
@@ -31,9 +33,10 @@ const LINKS = [
  * stays reachable by URL for them, which is where previewing it belongs.
  */
 async function hiddenHrefs(): Promise<Set<string>> {
-  const [config, publishedAlbums, adminHidden] = await Promise.all([
+  const [config, publishedAlbums, publishedCommittee, adminHidden] = await Promise.all([
     prisma.competitionDayConfig.findUnique({ where: { id: "singleton" } }),
     prisma.galleryAlbum.count({ where: { isPublished: true, photos: { some: {} } } }),
+    prisma.committeeMember.count({ where: { isPublished: true } }),
     hiddenPageHrefs(),
   ]);
 
@@ -41,6 +44,7 @@ async function hiddenHrefs(): Promise<Set<string>> {
   // No row yet means the schema defaults apply, and the default is not HIDDEN.
   if (parseStatus(config?.status) === "HIDDEN") hidden.add("/competition-day");
   if (publishedAlbums === 0) hidden.add("/gallery");
+  if (publishedCommittee === 0) hidden.add("/team");
   return hidden;
 }
 
