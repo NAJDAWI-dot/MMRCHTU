@@ -1,4 +1,4 @@
-import { generateMaze } from "@/lib/maze";
+import { MAZE_GOLD, generateMaze, seededRandom } from "@/lib/maze";
 import { DIAGRAM_BRAID, RULES } from "@/lib/rules";
 
 /**
@@ -26,24 +26,12 @@ import { DIAGRAM_BRAID, RULES } from "@/lib/rules";
 export const OG_SIZE = { width: 1200, height: 630 };
 export const OG_CONTENT_TYPE = "image/png";
 
-/**
- * Seeded rather than random.
- *
- * Each card is generated once and cached at the edge, so randomness would not
- * produce variety — it would make the one card that does get built
- * unreproducible, and a bad draw would be stuck there until the next deploy.
- * A different seed per page is what makes the mazes differ.
- */
-function seededRandom(seed: number): () => number {
-  let t = seed >>> 0;
-  return () => {
-    t += 0x6d2b79f5;
-    let r = t;
-    r = Math.imul(r ^ (r >>> 15), r | 1);
-    r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
-    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
-  };
-}
+/*
+  The maze is seeded rather than random: each card is generated once and cached
+  at the edge, so randomness would not produce variety — it would make the one
+  card that does get built unreproducible, and a bad draw would be stuck there
+  until the next deploy. A different seed per page is what makes them differ.
+*/
 
 export interface OgCardProps {
   /** The small gold line above the title. */
@@ -93,7 +81,7 @@ export function OgCard({ eyebrow, title, subtitle, footnote, seed }: OgCardProps
             fontSize: 26,
             letterSpacing: 6,
             textTransform: "uppercase",
-            color: "#F2A900",
+            color: MAZE_GOLD,
           }}
         >
           {eyebrow}
@@ -137,7 +125,7 @@ export function OgCard({ eyebrow, title, subtitle, footnote, seed }: OgCardProps
           y={maze.goal.y}
           width={maze.goal.size}
           height={maze.goal.size}
-          fill="#F2A900"
+          fill={MAZE_GOLD}
           opacity={0.85}
         />
         {maze.walls.map((d, i) => (
@@ -145,7 +133,7 @@ export function OgCard({ eyebrow, title, subtitle, footnote, seed }: OgCardProps
         ))}
         <path
           d={maze.routes[0]!.solution}
-          stroke="#F2A900"
+          stroke={MAZE_GOLD}
           strokeWidth={5}
           fill="none"
           strokeLinecap="round"

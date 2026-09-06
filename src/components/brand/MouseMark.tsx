@@ -20,8 +20,8 @@ export function MouseMark({ className = "" }: { className?: string }) {
       fill="currentColor"
     >
       {/* Ears first, so the head sits over where they join. */}
-      <circle cx="6.6" cy="7.4" r="4" />
-      <circle cx="17.4" cy="7.4" r="4" />
+      <circle className="mouse-mark-ear" cx="6.6" cy="7.4" r="4" />
+      <circle className="mouse-mark-ear" cx="17.4" cy="7.4" r="4" />
       <ellipse cx="12" cy="14.6" rx="7.2" ry="6.4" />
       {/* The tail, drawn rather than filled, so it reads as a line at any size. */}
       <path

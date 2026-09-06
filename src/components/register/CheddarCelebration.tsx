@@ -5,7 +5,13 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Cheddar } from "@/components/brand/Cheddar";
 import { VERIFICATION_WINDOW_TEXT } from "@/lib/payment-proof";
-import { CELEBRATION_FADE_MS, pickCelebration, type Celebration } from "@/lib/celebration";
+import {
+  CELEBRATION_FADE_MS,
+  pickCelebration,
+  pickCrumbs,
+  type Celebration,
+  type Crumb,
+} from "@/lib/celebration";
 
 interface CheddarCelebrationProps {
   /**
@@ -30,6 +36,14 @@ interface CheddarCelebrationProps {
  */
 export function CheddarCelebration({ random = Math.random }: CheddarCelebrationProps) {
   const [celebration, setCelebration] = useState<Celebration | null>(null);
+  /**
+   * Held in state rather than generated during render.
+   *
+   * Each crumb has a random position and delay, so drawing them in the body
+   * of the component would give them new ones on every re-render — the
+   * shower would restart each time anything else on the overlay changed.
+   */
+  const [crumbs, setCrumbs] = useState<Crumb[]>([]);
   const [leaving, setLeaving] = useState(false);
   /**
    * Falls back to the drawn Cheddar when a portrait will not load.
@@ -63,6 +77,7 @@ export function CheddarCelebration({ random = Math.random }: CheddarCelebrationP
    */
   useEffect(() => {
     setCelebration(pickCelebration(random));
+    setCrumbs(pickCrumbs(random));
   }, [random]);
 
   const dismiss = useCallback(() => {
@@ -116,6 +131,35 @@ export function CheddarCelebration({ random = Math.random }: CheddarCelebrationP
       // to a button should not take it away mid-sentence.
     >
       <div className="cheddar-celebration-stage">
+        {/*
+          Cheese, not confetti. It falls behind the mouse and the panel — it
+          is the flourish, and the six-character reference on the card below
+          is the thing that must not be competed with.
+        */}
+        <div className="cheddar-crumbs" aria-hidden="true">
+          {crumbs.map((crumb, i) => (
+            <span
+              key={i}
+              className="cheddar-crumb"
+              style={{
+                left: `${crumb.left}%`,
+                width: crumb.size,
+                height: crumb.size,
+                animationDelay: `${crumb.delay}s`,
+                animationDuration: `${crumb.duration}s`,
+                ['--crumb-spin' as string]: `${crumb.spin}deg`,
+              }}
+            >
+              <svg viewBox="0 0 24 20" width="100%" height="100%" focusable="false">
+                <path d="M2 7 L15 1 L23 6 L22 8 L3 9 Z" fill="#f2c14e" />
+                <path d="M2 7 L22 8 L22 15 Q12 19 2 15 Z" fill="#e0a92e" />
+                <circle cx="8" cy="12" r="1.7" fill="#c8901f" />
+                <circle cx="16" cy="13" r="1.2" fill="#c8901f" />
+              </svg>
+            </span>
+          ))}
+        </div>
+
         <p className="cheddar-bubble">{celebration.quip}</p>
 
         <div className={`cheddar-actor cheddar-move-${celebration.move}`}>

@@ -53,6 +53,16 @@ export interface Maze {
   goal: { x: number; y: number; size: number };
 }
 
+/**
+ * The colour a goal is painted, everywhere a maze is drawn.
+ *
+ * The splash, the route loader, the share cards and the team crests all mark
+ * the centre the same way, and they were each carrying their own copy of the
+ * hex. Living here means a maze drawn anywhere on the site agrees with every
+ * other one about where the centre is and what it looks like.
+ */
+export const MAZE_GOLD = "#f2a900";
+
 /** Side of one cell in viewBox units. Walls land on multiples, paths on centres. */
 export const CELL = 20;
 
@@ -70,6 +80,25 @@ export const DIRS = [
 
 /** Injectable so tests can pin a sequence; production always uses Math.random. */
 export type Rand = () => number;
+
+/**
+ * A deterministic Rand from an integer seed (mulberry32).
+ *
+ * Anywhere the same maze has to come back — a share card that is generated
+ * once and cached, a team crest that must be the same crest tomorrow —
+ * Math.random is the wrong source. Seeding turns "a maze" into "this name's
+ * maze", which is the whole point of a crest.
+ */
+export function seededRandom(seed: number): Rand {
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6d2b79f5;
+    let r = t;
+    r = Math.imul(r ^ (r >>> 15), r | 1);
+    r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 /**
  * Generates one maze, solves it from all four corners, and emits SVG-ready

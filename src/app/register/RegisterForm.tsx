@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { MazeProgress } from "@/components/register/MazeProgress";
+import { TeamCrest } from "@/components/register/TeamCrest";
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
 import {
@@ -30,6 +32,12 @@ const initialSubmit: CompleteRegistrationState = { status: "idle" };
  * privacy policy mentions it, and why it is cleared the moment the
  * registration is actually recorded.
  */
+/** The run the form is: one cell each, plus the goal they are heading for. */
+const REGISTER_STEPS = [
+  { n: 1, label: "Your team" },
+  { n: 2, label: "Payment" },
+] as const;
+
 const CACHE_KEY = "mmrc26.registration.draft";
 
 /**
@@ -60,6 +68,16 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
   const [cliq, setCliq] = useState<CliqDetails | null>(null);
   const [checking, setChecking] = useState(false);
   const [draft, setDraft] = useState<Record<string, string> | null>(null);
+  /**
+   * The team name, mirrored out of the DOM so the crest can be drawn from it.
+   *
+   * The form is deliberately uncontrolled — that is what lets the draft be
+   * restored by writing straight into the elements — so this is a copy kept in
+   * step rather than the source of truth. It is refreshed from the form's own
+   * input handler and again after a draft is restored, which between them
+   * cover every way the field's value can change.
+   */
+  const [teamName, setTeamName] = useState("");
   const [draftSaved, setDraftSaved] = useState(false);
   const debounceRef = useRef<number | undefined>(undefined);
 
@@ -89,6 +107,11 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
       // Private browsing, or storage full. Losing the draft is a nuisance, not
       // a reason to stop someone filling the form in.
     }
+  }, []);
+
+  const syncTeamName = useCallback(() => {
+    const field = formRef.current?.elements.namedItem("teamName");
+    if (field instanceof HTMLInputElement) setTeamName(field.value);
   }, []);
 
   const queueSave = useCallback(() => {
@@ -158,7 +181,11 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
       }
     }
     setDraft(null);
-  }, [draft, memberCount]);
+    // Values were written straight into the elements above, which fires no
+    // input event, so the crest would otherwise stay blank for a returning
+    // team looking at their own name.
+    syncTeamName();
+  }, [draft, memberCount, syncTeamName]);
 
   useEffect(() => {
     if (submitState.status !== "success") return;
@@ -227,11 +254,14 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
       // One handler on the form rather than on every field: input bubbles, and
       // `change` catches the radios and selects that do not fire `input` in
       // every browser.
-      onInput={queueSave}
+      onInput={() => {
+        queueSave();
+        syncTeamName();
+      }}
       onChange={queueSave}
       className="space-y-6"
     >
-      <Steps step={step} />
+      <MazeProgress step={step} steps={REGISTER_STEPS} />
 
       {/* Kept mounted through stage two rather than unmounted: hidden fields
           still submit, so the final POST carries the team details without
@@ -241,13 +271,16 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
           {feeInfoText}
         </p>
 
-        <Field
-          id="teamName"
-          name="teamName"
-          label="Team name"
-          error={errors?.teamName}
-          autoComplete="organization"
-        />
+        <div className="space-y-3">
+          <Field
+            id="teamName"
+            name="teamName"
+            label="Team name"
+            error={errors?.teamName}
+            autoComplete="organization"
+          />
+          <TeamCrest name={teamName} />
+        </div>
 
         <fieldset>
           <legend className="block text-sm font-medium text-ras-gray dark:text-white/80">
@@ -376,42 +409,6 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
         />
       ) : null}
     </form>
-  );
-}
-
-function Steps({ step }: { step: 1 | 2 }) {
-  const steps = [
-    { n: 1 as const, label: "Your team" },
-    { n: 2 as const, label: "Payment" },
-  ];
-
-  return (
-    <ol className="flex items-center gap-3 text-xs font-semibold" aria-label="Registration progress">
-      {steps.map(({ n, label }) => (
-        <li key={n} className="flex items-center gap-2">
-          <span
-            aria-current={step === n ? "step" : undefined}
-            className={`flex h-6 w-6 items-center justify-center rounded-full ${
-              step >= n
-                ? "bg-ras-purple text-white"
-                : "bg-ras-gray/15 text-ras-gray dark:bg-white/10 dark:text-white/80"
-            }`}
-          >
-            {n}
-          </span>
-          <span
-            className={step === n ? "text-ras-purple dark:text-white" : "text-ras-gray dark:text-white/75"}
-          >
-            {label}
-          </span>
-          {n === 1 ? (
-            <span aria-hidden className="text-ras-gray/40">
-              —
-            </span>
-          ) : null}
-        </li>
-      ))}
-    </ol>
   );
 }
 

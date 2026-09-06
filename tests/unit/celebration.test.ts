@@ -5,6 +5,8 @@ import {
   CHEDDAR_QUIPS,
   CELEBRATION_FADE_MS,
   pickCelebration,
+  pickCrumbs,
+  CRUMB_COUNT,
 } from "@/lib/celebration";
 
 /** Feeds pickCelebration a scripted sequence instead of real randomness. */
@@ -126,5 +128,47 @@ describe("timings", () => {
   it("fades quickly enough not to be sat through", () => {
     expect(CELEBRATION_FADE_MS).toBeGreaterThan(0);
     expect(CELEBRATION_FADE_MS).toBeLessThanOrEqual(600);
+  });
+});
+
+/**
+ * Cheese, not confetti.
+ *
+ * The shower is decoration, so the only things worth pinning are the ones that
+ * would make it read as a machine: every crumb starting at the same moment, or
+ * every crumb tumbling the same way.
+ */
+describe("pickCrumbs", () => {
+  const sequence = () => {
+    let i = 0;
+    // Walks the unit interval rather than returning a constant, so "they all
+    // differ" is actually being tested.
+    return () => ((i++ % 97) + 0.5) / 97;
+  };
+
+  it("makes a shower of the expected size", () => {
+    expect(pickCrumbs(sequence())).toHaveLength(CRUMB_COUNT);
+    expect(pickCrumbs(sequence(), 4)).toHaveLength(4);
+  });
+
+  it("staggers them, so they do not fall as a curtain", () => {
+    const delays = pickCrumbs(sequence()).map((c) => c.delay);
+    expect(new Set(delays).size).toBeGreaterThan(1);
+  });
+
+  it("tumbles them both ways", () => {
+    const spins = pickCrumbs(sequence(), 40).map((c) => c.spin);
+    expect(spins.some((s) => s > 0)).toBe(true);
+    expect(spins.some((s) => s < 0)).toBe(true);
+  });
+
+  it("keeps every crumb on the stage and visible", () => {
+    for (const crumb of pickCrumbs(sequence(), 40)) {
+      expect(crumb.left).toBeGreaterThanOrEqual(0);
+      expect(crumb.left).toBeLessThanOrEqual(100);
+      expect(crumb.size).toBeGreaterThan(0);
+      expect(crumb.duration).toBeGreaterThan(0);
+      expect(crumb.delay).toBeGreaterThanOrEqual(0);
+    }
   });
 });

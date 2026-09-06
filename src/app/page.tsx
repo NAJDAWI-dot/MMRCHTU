@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Countdown } from "@/components/brand/Countdown";
 import { FeatureCard } from "@/components/home/FeatureCard";
+import { MazeDescent } from "@/components/home/MazeDescent";
 import { EarlyBirdBadge } from "@/components/promo/EarlyBirdBadge";
 import { parseStatus } from "@/lib/competition-day";
 
@@ -90,7 +91,10 @@ export default async function HomePage() {
   const cards = FEATURE_CARDS.filter((card) => !hidden.has(card.href));
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-16">
+    // `relative` is what the corridor in the margin is positioned against.
+    <div className="relative mx-auto max-w-6xl px-4 py-16">
+      <MazeDescent />
+
       <section className="text-center">
         <p className="font-mono text-sm uppercase tracking-widest text-accent">
           IEEE RAS HTU Student Chapter presents
