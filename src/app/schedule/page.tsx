@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui/Badge";
+import { CalendarSubscribe } from "@/components/schedule/CalendarSubscribe";
+import { absoluteUrl } from "@/lib/site-url";
 import {
   STATE_LABELS,
   buildTimeline,
@@ -84,6 +86,11 @@ export default async function SchedulePage() {
           </p>
         </div>
       )}
+
+      {/* Outside the branch above on purpose. An empty schedule is the moment
+          subscribing is worth the most: the reader finds out when the first
+          date lands without having to come back and check. */}
+      <CalendarSubscribe url={absoluteUrl("/api/schedule.ics")} />
     </div>
   );
 }

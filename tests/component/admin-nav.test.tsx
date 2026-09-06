@@ -15,7 +15,8 @@ vi.mock("next/navigation", () => ({
   usePathname: () => pathname,
 }));
 
-const { AdminNav, isActiveLink } = await import("@/components/admin/AdminNav");
+const { AdminNav } = await import("@/components/admin/AdminNav");
+const { isActiveLink } = await import("@/lib/admin-nav");
 
 afterEach(() => {
   cleanup();

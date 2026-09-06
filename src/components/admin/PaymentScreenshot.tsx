@@ -23,14 +23,24 @@ interface PaymentScreenshotProps {
   teamName: string;
   /** Rendered beside the control, e.g. when the team said they paid. */
   reportedOn?: string;
+  /**
+   * Show the picture immediately instead of behind the toggle.
+   *
+   * False on the list, where mounting fifty proxied fetches on page load would
+   * be fifty private-document requests for images nobody is looking at. True in
+   * the review queue, where there is exactly one and it is the reason you are
+   * on the page.
+   */
+  defaultOpen?: boolean;
 }
 
 export function PaymentScreenshot({
   registrationId,
   teamName,
   reportedOn,
+  defaultOpen = false,
 }: PaymentScreenshotProps) {
-  const [shown, setShown] = useState(false);
+  const [shown, setShown] = useState(defaultOpen);
   const [failed, setFailed] = useState(false);
 
   const src = `/admin/payments/screenshot/${registrationId}`;

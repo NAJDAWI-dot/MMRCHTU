@@ -19,11 +19,20 @@ import { PAYMENT_STATUSES, PAYMENT_STATUS_LABELS } from "@/lib/payment";
 export function AdminFilters({
   q,
   status,
+  /**
+   * Carried through as a hidden field rather than dropped.
+   *
+   * A GET form submits only its own controls, so without this, filtering a
+   * list you had deliberately re-sorted would silently throw the sort away and
+   * hand back the default order.
+   */
+  sort,
   /** Where "Clear" goes — the same page with no query at all. */
   basePath,
 }: {
   q?: string;
   status?: string;
+  sort?: string;
   basePath: string;
 }) {
   const filtered = Boolean(q || status);
@@ -33,6 +42,8 @@ export function AdminFilters({
       method="get"
       className="mb-6 flex flex-wrap items-end gap-3 rounded-lg border border-ras-gray/20 bg-[var(--color-surface)] p-3 dark:border-white/10"
     >
+      {sort ? <input type="hidden" name="sort" value={sort} /> : null}
+
       <div className="min-w-0 flex-1 basis-48">
         <label
           htmlFor="admin-filter-q"
