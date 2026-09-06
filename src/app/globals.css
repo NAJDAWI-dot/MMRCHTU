@@ -1892,3 +1892,53 @@ header:has([data-mobile-nav-open]) {
     background-position: 45% 0%;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   The Team page's mice.
+
+   Six copies of Cheddar drift in the outer margins of the committee page. The
+   motion is deliberately small and slow — a few pixels over several seconds —
+   because this sits beside a list of people's names and faces, and anything
+   faster would pull the eye away from the thing the page is actually for.
+
+   Each mouse carries its own animation-delay inline, so they bob out of step.
+   --------------------------------------------------------------------------- */
+
+@keyframes teamMouseDrift {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1.5deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(1.5deg);
+  }
+}
+
+.team-mouse {
+  /* Behind anything the page puts in the margin, and never in front of text. */
+  z-index: 0;
+  opacity: 0.9;
+  animation: teamMouseDrift 7s ease-in-out infinite;
+}
+
+/*
+  A flipped mouse composes its own scaleX with the drift, and the two cannot
+  both live on `transform` — the inline one would simply win. The flip goes on
+  the wrapper, the drift on the drawing inside it.
+*/
+.team-mouse > svg {
+  animation: teamMouseDrift 7s ease-in-out infinite;
+  animation-delay: inherit;
+}
+
+/*
+  Reduced motion keeps the mice and drops the drifting. They are the character
+  of the page, not the animation — removing them entirely would be answering a
+  request about movement by deleting the artwork.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .team-mouse,
+  .team-mouse > svg {
+    animation: none;
+  }
+}

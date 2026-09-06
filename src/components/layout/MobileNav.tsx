@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { EarlyBirdBadge } from "@/components/promo/EarlyBirdBadge";
+import { MouseMark } from "@/components/brand/MouseMark";
 import { useEffect, useId, useRef, useState } from "react";
 
 /**
@@ -19,6 +20,8 @@ import { useEffect, useId, useRef, useState } from "react";
 
 export interface NavLink {
   href: string;
+  /** Rendered as a pill rather than a plain row. See Nav. */
+  special?: boolean;
   label: string;
 }
 
@@ -111,12 +114,19 @@ export function MobileNav({ links, earlyBird = false }: { links: NavLink[]; earl
                       aria-current={active ? "page" : undefined}
                       // py-3 gives each row a 44px-plus hit area without
                       // needing a fixed height that would clip long labels.
-                      className={`block rounded-md px-3 py-3 text-base font-medium transition-colors ${
-                        active
-                          ? "bg-ras-purple/10 text-ras-purple dark:bg-white/10 dark:text-white"
-                          : "text-ras-gray hover:bg-ras-purple/5 hover:text-ras-purple dark:text-white/80 dark:hover:bg-white/5 dark:hover:text-white"
+                      className={`flex items-center gap-2 rounded-md px-3 py-3 text-base font-medium transition-colors ${
+                        link.special
+                          ? // The same distinction the desktop pill makes,
+                            // expressed as a full-width row: a border and the
+                            // brand wash, because a floating pill in a stacked
+                            // menu would just look misaligned.
+                            "my-1 border border-ras-purple/30 bg-gradient-to-r from-ras-purple/15 via-ras-crimson/10 to-ras-purple/15 font-semibold text-ras-purple dark:border-white/25 dark:from-white/12 dark:via-white/5 dark:to-white/12 dark:text-white"
+                          : active
+                            ? "bg-ras-purple/10 text-ras-purple dark:bg-white/10 dark:text-white"
+                            : "text-ras-gray hover:bg-ras-purple/5 hover:text-ras-purple dark:text-white/80 dark:hover:bg-white/5 dark:hover:text-white"
                       }`}
                     >
+                      {link.special ? <MouseMark className="h-4 w-4 opacity-80" /> : null}
                       {link.label}
                       {/* Inline, not floating: these rows are full-width, so a
                           pill centred over one would land in the middle of it

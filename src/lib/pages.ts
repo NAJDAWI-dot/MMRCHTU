@@ -43,6 +43,11 @@ export const MANAGED_PAGES: readonly ManagedPage[] = [
     label: "Gallery",
     covers: "The album index and every album page. Hidden on its own while no album is published.",
   },
+  {
+    href: "/team",
+    label: "Team",
+    covers: "The committee page. Hidden on its own until somebody on it is published.",
+  },
   { href: "/faq", label: "FAQ", covers: "Published answers and the ask-a-question form." },
   {
     href: "/register",
