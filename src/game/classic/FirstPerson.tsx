@@ -33,10 +33,82 @@ interface Bot {
 }
 
 const HI_KEY = "mmrcFpHi";
+/**
+ * The logical drawing space.
+ *
+ * Everything in this file — the projection, the HUD, the minimap, the banners
+ * — is drawn in these coordinates, and the canvas is scaled to whatever the
+ * display actually wants. Keeping one fixed coordinate system is what lets the
+ * resolution change without a single other number in here moving.
+ */
 const W = 640;
 const H = 400;
-const NUM = 320;
-const COLW = 2;
+
+/**
+ * How many real pixels to render per logical pixel, over and above the
+ * display's own density.
+ *
+ * The view used to be a 640x400 backing store showing 320 columns — one ray
+ * for every two pixels, then upscaled again by the browser on any HiDPI
+ * screen, which is roughly a quarter of the horizontal detail the display can
+ * show. Rendering above the display's density and letting the browser
+ * downsample is what removes the last of the stair-stepping on wall edges;
+ * this is a cheap supersample, not a resolution the player ever sees directly.
+ */
+const SUPERSAMPLE = 1.5;
+
+/** Past this the cost is real and the difference is not visible. */
+const MAX_RENDER_SCALE = 3;
+
+/**
+ * Never below this. One rendered pixel per logical pixel is what the view used
+ * to do at its best, so this floor guarantees the adaptive scaling can only
+ * ever land somewhere at least as good as the old fixed renderer.
+ */
+const MIN_RENDER_SCALE = 1;
+
+/**
+ * How long a frame may take before the view gives up some resolution.
+ *
+ * Resolution is chosen by measurement rather than by a number picked in
+ * advance, because the right one is not a property of the game: the same scene
+ * costs wildly different amounts on a machine compositing with a GPU and one
+ * falling back to software. Measured, the full supersample held 60fps in one
+ * and managed 15 in the other — so any fixed choice is either needlessly
+ * blurry for most people or unplayable for some.
+ *
+ * The measurement is the interval between frames, not the time spent inside
+ * the draw call. Canvas work is queued: the first attempt at this timed
+ * render() and saw a handful of milliseconds while frames were actually
+ * arriving 60ms apart, so it never once noticed it was drowning.
+ *
+ * 20ms is 50fps — the point where movement stops being smooth.
+ */
+const FRAME_BUDGET_MS = 20;
+
+/**
+ * At or near the display's own refresh, which is as fast as frames can arrive.
+ *
+ * Being here does not prove there is spare capacity, only that there is no
+ * shortage — so quality is raised from it slowly, and a raise that turns out
+ * to be too much is simply undone at the next check.
+ */
+const FRAME_COMFORTABLE_MS = 17.4;
+
+/** Long enough that a single slow frame cannot start a wobble. */
+const QUALITY_SETTLE_MS = 900;
+
+/** Consecutive comfortable windows required before asking for more. */
+const RAISE_AFTER_WINDOWS = 2;
+
+/**
+ * How much larger the sprite sheets are drawn than their nominal size.
+ *
+ * Robots are pre-rendered once and then scaled to whatever the distance calls
+ * for. At the old size a robot right in front of the player was being scaled
+ * up several times over and went soft exactly when it mattered most.
+ */
+const SPRITE_SCALE = 3;
 const FOV = Math.PI / 3;
 /**
  * How wide the view opens while a cheese is burning.
@@ -195,7 +267,85 @@ export function FirstPerson() {
     let pingT = 0;
     const P = { x: 9.5, y: 11.5, a: -Math.PI / 2 };
     let bots: Bot[] = [];
-    const zbuf = new Float32Array(NUM);
+    /*
+      Resolution state. `num` is one ray per rendered pixel column, so the wall
+      edges land exactly where the display can put them; `colw` is that column
+      measured back in logical units, which is what everything drawing into the
+      scaled space needs.
+    */
+    let renderScale = 1;
+    /**
+     * A multiplier on the resolution the display asks for, moved by how long
+     * drawing is actually taking. 1 is "give me everything".
+     */
+    let quality = 1;
+    /** Rolling average of the interval between frames. */
+    let frameMs = 16.7;
+    let comfortableWindows = 0;
+    let lastQualityChange = 0;
+    let num = W;
+    let colw = 1;
+    let zbuf = new Float32Array(num);
+    /*
+      Per-column results from the cast, kept so the drawing can be done in a
+      second pass that groups columns into whole wall faces.
+
+      `face` identifies the exact tile and side a column hit, which is what
+      makes the grouping possible: every column sharing one is looking at the
+      same flat surface, and a flat surface projects to a straight-edged shape
+      that can be drawn once instead of a thousand times.
+    */
+    let colDist = new Float32Array(num);
+    let colTop = new Float32Array(num);
+    let colHeight = new Float32Array(num);
+    let colFace = new Int32Array(num);
+    let colSide = new Uint8Array(num);
+    let colDoor = new Uint8Array(num);
+
+    /**
+     * Matches the backing store to the element and the display.
+     *
+     * Called on mount and on resize. Changing `canvas.width` resets the whole
+     * 2D context state, which is why the smoothing hints are re-applied here
+     * rather than once at start-up — and why every frame sets its own
+     * transform instead of relying on one set outside the loop.
+     */
+    function syncResolution() {
+      const rect = canvas.getBoundingClientRect();
+      const cssW = rect.width || W;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const ideal = (cssW / W) * dpr * SUPERSAMPLE;
+      renderScale = Math.max(
+        MIN_RENDER_SCALE,
+        Math.min(MAX_RENDER_SCALE, ideal * quality),
+      );
+
+      const bw = Math.max(1, Math.round(W * renderScale));
+      const bh = Math.max(1, Math.round(H * renderScale));
+      if (canvas.width !== bw || canvas.height !== bh) {
+        canvas.width = bw;
+        canvas.height = bh;
+      }
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+
+      num = bw;
+      colw = W / num;
+      if (zbuf.length !== num) {
+        zbuf = new Float32Array(num);
+        colDist = new Float32Array(num);
+        colTop = new Float32Array(num);
+        colHeight = new Float32Array(num);
+        colFace = new Int32Array(num);
+        colSide = new Uint8Array(num);
+        colDoor = new Uint8Array(num);
+      }
+    }
+
+    // A first guess before layout; fit() calls this again with the real size
+    // as soon as it has one, and after every change to it.
+    syncResolution();
 
     function baseSp() {
       return 1.9 + Math.min(level - 1, 5) * 0.12;
@@ -446,7 +596,32 @@ export function FirstPerson() {
       }
       const cx = cc + 0.5;
       const cy = cr + 0.5;
-      if (Math.abs(b.x - cx) < 0.07 && Math.abs(b.y - cy) < 0.07) {
+      const heading = DIRS[b.dir];
+      const step = sp * dt;
+
+      /*
+        Turns are decided at the instant the robot crosses a tile centre, not
+        whenever it happens to be near one.
+
+        The old test — "am I within 0.07 of a centre?" — silently tied that
+        tolerance to the speed. A robot moves baseSp() * 0.82 tiles a second,
+        which at 60fps is about 0.026 of a tile per frame: comfortably inside
+        the tolerance, so every frame it was dragged back onto the centre it
+        had just left and set off again. It vibrated on the spot and never
+        travelled a single tile. The faster the machine, the more stuck it was
+        — below roughly 20fps the step finally exceeded the tolerance and the
+        robots moved, which is why this could look like it worked.
+
+        Crossing detection holds at any speed and carries the leftover distance
+        through the turn, so nothing is lost to the snap. This is the same fix,
+        for the same bug, that `advance()` in ./shared.ts documents having made
+        for the Classic maze; first-person kept its own copy of the movement
+        and so kept the bug.
+      */
+      const toCentre =
+        heading.x !== 0 ? (cx - b.x) * heading.x : (cy - b.y) * heading.y;
+
+      if (toCentre >= 0 && toCentre <= step) {
         b.x = cx;
         b.y = cy;
         const choices: Dir[] = [];
@@ -471,10 +646,19 @@ export function FirstPerson() {
           }
           b.dir = best;
         }
+
+        // The rest of this frame's travel, spent in the direction just chosen.
+        const chosen = DIRS[b.dir];
+        if (!solid(cr + chosen.y, cc + chosen.x, b.mode === "eyes")) {
+          const remain = step - toCentre;
+          b.x += chosen.x * remain;
+          b.y += chosen.y * remain;
+        }
+        return;
       }
-      const d = DIRS[b.dir];
-      b.x += d.x * sp * dt;
-      b.y += d.y * sp * dt;
+
+      b.x += heading.x * step;
+      b.y += heading.y * step;
     }
 
     /* ---- game update ---- */
@@ -626,9 +810,9 @@ export function FirstPerson() {
       }
     }
     function robotSpr(color: string | null, fr: boolean, flash: boolean, eyesOnly = false) {
-      return mk(64, 84, (g) => {
-        g.translate(32, 52);
-        g.scale(2.6, 2.6);
+      return mk(64 * SPRITE_SCALE, 84 * SPRITE_SCALE, (g) => {
+        g.translate(32 * SPRITE_SCALE, 52 * SPRITE_SCALE);
+        g.scale(2.6 * SPRITE_SCALE, 2.6 * SPRITE_SCALE);
         robotShape(g, eyesOnly ? null : flash ? "#dfeeff" : fr ? "#2438b8" : color, fr, flash);
       });
     }
@@ -641,9 +825,9 @@ export function FirstPerson() {
      * frightening.
      */
     function glowSpr(color: string) {
-      return mk(64, 84, (g) => {
-        g.translate(32, 52);
-        g.scale(2.6, 2.6);
+      return mk(64 * SPRITE_SCALE, 84 * SPRITE_SCALE, (g) => {
+        g.translate(32 * SPRITE_SCALE, 52 * SPRITE_SCALE);
+        g.scale(2.6 * SPRITE_SCALE, 2.6 * SPRITE_SCALE);
         g.shadowColor = color;
         g.shadowBlur = 12;
         for (const side of [-3.5, 3.5]) {
@@ -669,7 +853,8 @@ export function FirstPerson() {
     const sprFlash = robotSpr(null, true, true);
     const sprEyes = robotSpr(null, false, false, true);
     for (const d of ROBOT_DEFS) sprBody[d.name] = robotSpr(d.color, false, false);
-    const dotImg = mk(16, 16, (g) => {
+    const dotImg = mk(16 * SPRITE_SCALE, 16 * SPRITE_SCALE, (g) => {
+      g.scale(SPRITE_SCALE, SPRITE_SCALE);
       const rg = g.createRadialGradient(8, 8, 1, 8, 8, 8);
       rg.addColorStop(0, "#fff2c4");
       rg.addColorStop(0.4, "#ffd76e");
@@ -677,7 +862,8 @@ export function FirstPerson() {
       g.fillStyle = rg;
       g.fillRect(0, 0, 16, 16);
     });
-    const cheeseImg = mk(48, 48, (g) => {
+    const cheeseImg = mk(48 * SPRITE_SCALE, 48 * SPRITE_SCALE, (g) => {
+      g.scale(SPRITE_SCALE, SPRITE_SCALE);
       g.translate(24, 24);
       g.shadowColor = GOLD;
       g.shadowBlur = 8;
@@ -717,6 +903,21 @@ export function FirstPerson() {
     floorGrad.addColorStop(1, "#000000");
 
     function render() {
+      /*
+        Set every frame, not once: resizing the canvas resets the context, and
+        the hit kick rides on the same transform rather than a save/restore
+        pair around the whole render.
+      */
+      ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+      if (hurt > 0) {
+        // Painted first, because the frame is about to be shifted and the edge
+        // it leaves behind would otherwise smear the previous frame down the
+        // side of the screen.
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, W, H);
+        const k = hurt * hurt * 9;
+        ctx.translate((Math.random() * 2 - 1) * k, (Math.random() * 2 - 1) * k);
+      }
       ctx.fillStyle = ceilGrad;
       ctx.fillRect(0, 0, W, H / 2);
       ctx.fillStyle = floorGrad;
@@ -729,8 +930,8 @@ export function FirstPerson() {
       const plX = -dirY * tHalf;
       const plY = dirX * tHalf;
 
-      for (let i = 0; i < NUM; i++) {
-        const camX = (2 * i) / NUM - 1;
+      for (let i = 0; i < num; i++) {
+        const camX = (2 * i) / num - 1;
         const rX = dirX + plX * camX;
         const rY = dirY + plY * camX;
         let mapX = Math.floor(P.x);
@@ -776,32 +977,26 @@ export function FirstPerson() {
         }
         const dist = Math.max(0.05, side === 0 ? sideX - dX : sideY - dY);
         zbuf[i] = dist;
-        const hh = Math.min(H * 2.2, H / dist);
-        const y0 = H / 2 - hh / 2;
         /*
-          Where along the panel this ray landed, and a darker seam at the join.
+          Clamped far outside the frame rather than at just over one screen.
 
-          Without it a white wall is a single flat field: standing close to one
-          filled the screen with featureless glare and gave the eye nothing to
-          judge distance or movement by. The seams are what make a corridor of
-          identical white walls read as a corridor.
+          The clamp used to bite at 2.2 screens, which is well within what a
+          wall reaches when you stand against it — and a clamp that catches
+          some columns of a face and not others bends the straight edge the
+          face is drawn from below.
         */
-        let wallX = side === 0 ? P.y + dist * rY : P.x + dist * rX;
-        wallX -= Math.floor(wallX);
-        const seam = wallX < 0.035 || wallX > 0.965 ? 0.58 : 1;
-        const br = Math.max(0.1, 1 - dist / 11) * (side ? 0.72 : 1) * seam;
-        // The house door keeps its gold; every other wall is the competition's
-        // own: a white side face, capped in red where its top edge would be.
-        if (tile === "-") ctx.fillStyle = `rgb(${(242 * br) | 0},${(169 * br) | 0},${(10 * br) | 0})`;
-        else
-          ctx.fillStyle = `rgb(${(WALL_SIDE.r * br) | 0},${(WALL_SIDE.g * br) | 0},${(WALL_SIDE.b * br) | 0})`;
-        ctx.fillRect(i * COLW, y0, COLW, hh);
-        ctx.fillStyle = `rgb(${(WALL_TOP.r * br) | 0},${(WALL_TOP.g * br) | 0},${(WALL_TOP.b * br) | 0})`;
-        ctx.fillRect(i * COLW, y0, COLW, 3);
-        // Where the wall meets the black floor, rather than a second red cap.
-        ctx.fillStyle = `rgba(0,0,0,${(0.5 * br).toFixed(3)})`;
-        ctx.fillRect(i * COLW, y0 + hh - 2, COLW, 2);
+        const hh = Math.min(H * 40, H / dist);
+        colDist[i] = dist;
+        colHeight[i] = hh;
+        colTop[i] = H / 2 - hh / 2;
+        colSide[i] = side;
+        colDoor[i] = tile === "-" ? 1 : 0;
+        // The exact surface this column landed on. Columns sharing it are
+        // looking at one flat face and are drawn as one shape.
+        colFace[i] = (mapY * COLS + mapX) * 2 + side;
       }
+
+      drawWalls();
       drawSprites(dirX, dirY, plX, plY);
       drawRear();
       drawMini();
@@ -812,6 +1007,98 @@ export function FirstPerson() {
       if (phase === "levelup") fpBanner("SECTOR CLEARED!", "#4dff88");
       if (phase === "dying") fpBanner("SQUEAK...!", "#ffb3c1");
     }
+    function shadeAt(dist: number, side: number) {
+      return Math.max(0.1, 1 - dist / 11) * (side ? 0.72 : 1);
+    }
+
+    function faceColour(door: boolean, br: number) {
+      return door
+        ? `rgb(${(242 * br) | 0},${(169 * br) | 0},${(10 * br) | 0})`
+        : `rgb(${(WALL_SIDE.r * br) | 0},${(WALL_SIDE.g * br) | 0},${(WALL_SIDE.b * br) | 0})`;
+    }
+
+    /**
+     * Draws the walls one flat face at a time rather than one column at a time.
+     *
+     * The per-column version issued three fills for every column on screen.
+     * That was tolerable at 320 columns and catastrophic at two thousand:
+     * measured against the previous build, the same scene went from 60fps to
+     * 12 purely on the cost of the calls, not the arithmetic.
+     *
+     * A flat wall projects to a straight-edged quad, so every run of columns
+     * that hit the same tile and side is one shape — a few dozen fills a frame
+     * instead of thousands. The shading across a run is a horizontal gradient
+     * between its two ends, which is an approximation of the true 1/distance
+     * falloff and indistinguishable from it across a single face.
+     *
+     * The seams that make a white corridor readable now fall exactly on the
+     * joins between faces, which is where the real panels meet — closer to the
+     * truth than the old test on the hit position within a tile.
+     */
+    function drawWalls() {
+      let start = 0;
+      while (start < num) {
+        let end = start;
+        const face = colFace[start]!;
+        while (end + 1 < num && colFace[end + 1] === face) end++;
+
+        const xa = start * colw;
+        // Half a column of overlap: neighbouring faces drawn exactly edge to
+        // edge leave a hairline of background between them once downsampled.
+        const xb = (end + 1) * colw + 0.5;
+        const ya = colTop[start]!;
+        const yb = colTop[end]!;
+        const ha = colHeight[start]!;
+        const hb = colHeight[end]!;
+        const bra = shadeAt(colDist[start]!, colSide[start]!);
+        const brb = shadeAt(colDist[end]!, colSide[end]!);
+        const door = colDoor[start] === 1;
+
+        const body = ctx.createLinearGradient(xa, 0, xb, 0);
+        body.addColorStop(0, faceColour(door, bra));
+        body.addColorStop(1, faceColour(door, brb));
+        ctx.fillStyle = body;
+        ctx.beginPath();
+        ctx.moveTo(xa, ya);
+        ctx.lineTo(xb, yb);
+        ctx.lineTo(xb, yb + hb);
+        ctx.lineTo(xa, ya + ha);
+        ctx.closePath();
+        ctx.fill();
+
+        // The red top edge, following the same slope as the face.
+        const cap = ctx.createLinearGradient(xa, 0, xb, 0);
+        cap.addColorStop(0, `rgb(${(WALL_TOP.r * bra) | 0},${(WALL_TOP.g * bra) | 0},${(WALL_TOP.b * bra) | 0})`);
+        cap.addColorStop(1, `rgb(${(WALL_TOP.r * brb) | 0},${(WALL_TOP.g * brb) | 0},${(WALL_TOP.b * brb) | 0})`);
+        ctx.fillStyle = cap;
+        ctx.beginPath();
+        ctx.moveTo(xa, ya);
+        ctx.lineTo(xb, yb);
+        ctx.lineTo(xb, yb + 3);
+        ctx.lineTo(xa, ya + 3);
+        ctx.closePath();
+        ctx.fill();
+
+        // Where the wall meets the black floor.
+        ctx.fillStyle = `rgba(0,0,0,${(0.5 * ((bra + brb) / 2)).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.moveTo(xa, ya + ha - 2);
+        ctx.lineTo(xb, yb + hb - 2);
+        ctx.lineTo(xb, yb + hb);
+        ctx.lineTo(xa, ya + ha);
+        ctx.closePath();
+        ctx.fill();
+
+        // The join with the previous face: a real panel seam, not a guess.
+        if (start > 0) {
+          ctx.fillStyle = `rgba(0,0,0,${(0.42 * bra).toFixed(3)})`;
+          ctx.fillRect(xa, ya, Math.max(1, colw * 1.5), ha);
+        }
+
+        start = end + 1;
+      }
+    }
+
     interface Sprite {
       x: number;
       y: number;
@@ -857,11 +1144,43 @@ export function FirstPerson() {
         const x0 = sx - pw / 2;
         if (x0 > W || x0 + pw < 0) continue;
         ctx.globalAlpha = Math.max(0.12, Math.min(1, 1.35 - s.ty! / 8));
-        const srcStep = (s.img.width * COLW) / pw;
-        for (let x = Math.max(0, Math.floor(x0 / COLW) * COLW); x < Math.min(W, x0 + pw); x += COLW) {
-          const col = (x / COLW) | 0;
-          if (zbuf[col]! <= s.ty!) continue;
-          ctx.drawImage(s.img, ((x - x0) / pw) * s.img.width, 0, Math.max(srcStep, 0.5), s.img.height, x, floorY - ph, COLW, ph);
+
+        /*
+          Drawn in unbroken runs rather than one slice per column.
+
+          The old loop issued a drawImage for every single column the sprite
+          covered, which was tolerable at 320 columns and is not at several
+          thousand — and each slice was independently filtered, so the seams
+          between them showed as vertical banding across the robot. This walks
+          the columns to find spans the wall does not hide, and draws each span
+          once.
+        */
+        const firstCol = Math.max(0, Math.floor(x0 / colw));
+        const lastCol = Math.min(num - 1, Math.ceil((x0 + pw) / colw));
+        let runStart = -1;
+        for (let col = firstCol; col <= lastCol + 1; col++) {
+          const visible = col <= lastCol && zbuf[col]! > s.ty!;
+          if (visible && runStart < 0) runStart = col;
+          if (!visible && runStart >= 0) {
+            const px0 = runStart * colw;
+            const px1 = col * colw;
+            const sx0 = ((px0 - x0) / pw) * s.img.width;
+            const sx1 = ((px1 - x0) / pw) * s.img.width;
+            if (sx1 > sx0) {
+              ctx.drawImage(
+                s.img,
+                sx0,
+                0,
+                sx1 - sx0,
+                s.img.height,
+                px0,
+                floorY - ph,
+                px1 - px0,
+                ph,
+              );
+            }
+            runStart = -1;
+          }
         }
         ctx.globalAlpha = 1;
       }
@@ -1017,7 +1336,13 @@ export function FirstPerson() {
       const rh = 46;
       const ox = (W - rw) / 2;
       const oy = 6;
-      const cols = 72;
+      /*
+        Held at a fixed, modest count on purpose. The mirror is 46 logical
+        pixels tall and still draws per column, so scaling its rays with the
+        main view bought detail nobody can see at that size and cost more fills
+        per frame than the whole corridor.
+      */
+      const cols = 144;
       const cw = rw / cols;
 
       const a = P.a + Math.PI;
@@ -1144,8 +1469,17 @@ export function FirstPerson() {
     function floop(now: number) {
       if (disposed) return;
       rafId = requestAnimationFrame(floop);
-      const dt = Math.min((now - lastF) / 1000, 0.05);
+      // The raw interval, before the clamp the simulation needs: a frame that
+      // took 60ms has to be seen as 60ms by the thing deciding the resolution,
+      // even though the physics must not be stepped that far at once.
+      const rawFrameMs = now - lastF;
+      const dt = Math.min(rawFrameMs / 1000, 0.05);
       lastF = now;
+      // Ignores the first frame and anything after a tab has been in the
+      // background, either of which would otherwise read as a stall.
+      if (rawFrameMs > 0 && rawFrameMs < 500) {
+        frameMs = frameMs * 0.88 + rawFrameMs * 0.12;
+      }
       phaseT += dt;
       if (phase === "play") upd(dt);
       if (phase === "ready" && phaseT > 1.6) {
@@ -1169,21 +1503,34 @@ export function FirstPerson() {
         phaseT = 0;
       }
 
+      // The kick now rides on the frame's own transform, inside render().
+      render();
+
       /*
-        The camera kick. Painted black underneath first: the frame is shifted
-        by a few pixels and without it the edge it leaves behind would smear
-        the previous frame down the side of the screen.
+        Trim or restore resolution to fit the frame budget.
+
+        Only while playing: the menu and the pause screen draw a different and
+        much cheaper frame, and letting those readings raise the quality would
+        mean every round began by dropping it again.
       */
-      if (hurt > 0) {
-        const k = hurt * hurt * 9;
-        ctx.fillStyle = "#000";
-        ctx.fillRect(0, 0, W, H);
-        ctx.save();
-        ctx.translate((Math.random() * 2 - 1) * k, (Math.random() * 2 - 1) * k);
-        render();
-        ctx.restore();
-      } else {
-        render();
+      if (phase === "play" && now - lastQualityChange > QUALITY_SETTLE_MS) {
+        if (frameMs > FRAME_BUDGET_MS && quality > 0.34) {
+          quality = Math.max(0.34, quality * 0.78);
+          comfortableWindows = 0;
+          syncResolution();
+          lastQualityChange = now;
+        } else if (frameMs < FRAME_COMFORTABLE_MS) {
+          comfortableWindows++;
+          if (comfortableWindows >= RAISE_AFTER_WINDOWS && quality < 1) {
+            quality = Math.min(1, quality * 1.15);
+            comfortableWindows = 0;
+            syncResolution();
+          }
+          lastQualityChange = now;
+        } else {
+          comfortableWindows = 0;
+          lastQualityChange = now;
+        }
       }
     }
 
@@ -1316,6 +1663,15 @@ export function FirstPerson() {
         : Math.min(availW / W, availH / H, cap);
       canvas.style.width = W * s + "px";
       canvas.style.height = H * s + "px";
+      /*
+        The backing store follows the CSS size, always.
+
+        These were independent before: fit() scaled the element up to 1.4x
+        normally and 3x in fullscreen while the buffer stayed 640x400, so the
+        larger the view got the softer it became — worst exactly where someone
+        had asked for it to be bigger.
+      */
+      syncResolution();
     }
     window.addEventListener("resize", fit);
     /*
