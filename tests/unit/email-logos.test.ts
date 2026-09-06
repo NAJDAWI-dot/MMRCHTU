@@ -10,6 +10,13 @@ import { registrationConfirmationEmail } from "@/lib/email-templates";
  * one rendering as half a logo on the white band — would go unnoticed for the
  * whole season.
  */
+/*
+  A complete payload rather than a cast. The earlier version asserted its way
+  past the type with `as`, which compiled only because nothing checked it —
+  vitest does not typecheck, so the suite passed while `npm run typecheck`
+  failed. Building the real shape means a field added to this email breaks here
+  loudly instead of silently.
+*/
 const email = () =>
   registrationConfirmationEmail({
     teamName: "Maze Runners",
@@ -17,15 +24,18 @@ const email = () =>
     siteUrl: "https://www.mmrchtu.tech",
     members: [
       {
+        order: 1,
         firstName: "Ada",
         lastName: "Lovelace",
-        email: "ada@example.com",
         university: "HTU",
         major: "Computer Engineering",
       },
     ],
+    feeBaseFils: 25_000,
+    feeDiscountFils: 0,
     feeDueFils: 25_000,
-  } as Parameters<typeof registrationConfirmationEmail>[0]).html;
+    earlyBirdApplied: false,
+  }).html;
 
 describe("email header logos", () => {
   it("carries all three marks", () => {
