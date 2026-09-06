@@ -596,7 +596,32 @@ export function FirstPerson() {
       }
       const cx = cc + 0.5;
       const cy = cr + 0.5;
-      if (Math.abs(b.x - cx) < 0.07 && Math.abs(b.y - cy) < 0.07) {
+      const heading = DIRS[b.dir];
+      const step = sp * dt;
+
+      /*
+        Turns are decided at the instant the robot crosses a tile centre, not
+        whenever it happens to be near one.
+
+        The old test — "am I within 0.07 of a centre?" — silently tied that
+        tolerance to the speed. A robot moves baseSp() * 0.82 tiles a second,
+        which at 60fps is about 0.026 of a tile per frame: comfortably inside
+        the tolerance, so every frame it was dragged back onto the centre it
+        had just left and set off again. It vibrated on the spot and never
+        travelled a single tile. The faster the machine, the more stuck it was
+        — below roughly 20fps the step finally exceeded the tolerance and the
+        robots moved, which is why this could look like it worked.
+
+        Crossing detection holds at any speed and carries the leftover distance
+        through the turn, so nothing is lost to the snap. This is the same fix,
+        for the same bug, that `advance()` in ./shared.ts documents having made
+        for the Classic maze; first-person kept its own copy of the movement
+        and so kept the bug.
+      */
+      const toCentre =
+        heading.x !== 0 ? (cx - b.x) * heading.x : (cy - b.y) * heading.y;
+
+      if (toCentre >= 0 && toCentre <= step) {
         b.x = cx;
         b.y = cy;
         const choices: Dir[] = [];
@@ -621,10 +646,19 @@ export function FirstPerson() {
           }
           b.dir = best;
         }
+
+        // The rest of this frame's travel, spent in the direction just chosen.
+        const chosen = DIRS[b.dir];
+        if (!solid(cr + chosen.y, cc + chosen.x, b.mode === "eyes")) {
+          const remain = step - toCentre;
+          b.x += chosen.x * remain;
+          b.y += chosen.y * remain;
+        }
+        return;
       }
-      const d = DIRS[b.dir];
-      b.x += d.x * sp * dt;
-      b.y += d.y * sp * dt;
+
+      b.x += heading.x * step;
+      b.y += heading.y * step;
     }
 
     /* ---- game update ---- */
