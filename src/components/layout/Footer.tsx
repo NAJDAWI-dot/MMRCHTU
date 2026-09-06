@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
+import { MmrcLogo } from "@/components/brand/MmrcLogo";
 import { LEGAL_PAGES, type LegalSlug } from "@/lib/mdx";
 
 export function Footer() {
@@ -8,7 +9,15 @@ export function Footer() {
     // one drawn screen, and a solid bar here would cut off its bottom corners.
     <footer className="mt-16 border-t border-ras-gray/15 bg-[var(--color-surface-translucent)] backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4 py-8 text-center">
-        <Logo variant="lockup" enforceMinSize={false} className="h-16" />
+        {/* The two marks, as in the header: who runs this, and what it is. */}
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          <Logo variant="lockup" enforceMinSize={false} className="h-16" />
+          <span
+            aria-hidden="true"
+            className="h-10 w-px shrink-0 bg-ras-gray/25 dark:bg-white/20"
+          />
+          <MmrcLogo size="h-12" />
+        </div>
         <p className="max-w-md text-sm text-ras-gray dark:text-white/70">
           MMRC 26 is organized by the IEEE Robotics &amp; Automation Society, HTU Student
           Chapter.

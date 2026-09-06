@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { MazeTrail } from "@/components/brand/MazeTrail";
+import { MmrcLogo } from "@/components/brand/MmrcLogo";
 import type { MazeTiming } from "@/lib/maze";
 import {
   SPLASH_DONE_CLASS,
@@ -120,15 +121,24 @@ export function SplashScreen() {
       <MazeTrail size={280} className="splash-maze text-white" motion="run" onReady={handleReady} />
 
       <div className="splash-lockup flex flex-col items-center gap-3 px-6 text-center">
-        {/* eslint-disable-next-line @next/next/no-img-element -- brand asset, must paint immediately */}
-        <img
-          src="/brand/logo/lockup-htu-chapter-white.png"
-          alt=""
-          width={200}
-          height={197}
-          className="h-auto w-[132px]"
-        />
-        <p className="font-display text-2xl font-bold uppercase tracking-[0.2em] text-white">
+        {/*
+          Both marks, side by side, the way the header carries them. The MMRC
+          mark keeps its plate here too — the splash is deep purple, and the
+          white half of the glyph would be the only half that survived on it.
+        */}
+        <div className="flex items-center gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element -- brand asset, must paint immediately */}
+          <img
+            src="/brand/logo/lockup-htu-chapter-white.png"
+            alt=""
+            width={200}
+            height={197}
+            className="h-auto w-[104px]"
+          />
+          <span aria-hidden="true" className="h-12 w-px shrink-0 bg-white/30" />
+          <MmrcLogo markOnly size="h-16" />
+        </div>
+        <p className="font-brand text-2xl uppercase tracking-[0.14em] text-white">
           MMRC 26
         </p>
         <p className="text-xs uppercase tracking-[0.28em] text-[#f2a900]">

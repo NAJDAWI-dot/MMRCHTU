@@ -18,8 +18,7 @@
  * selectable and searchable like the text it is.
  */
 
-/** The ground the mark is drawn on. See the note above before changing it. */
-const PLATE = "#cdb2d1";
+import { MMRC_PLATE } from "@/lib/brand";
 
 interface MmrcLogoProps {
   className?: string;
@@ -37,7 +36,7 @@ export function MmrcLogo({
   return (
     <span className={`flex min-w-0 items-center gap-2.5 ${className}`}>
       <span
-        style={{ backgroundColor: PLATE }}
+        style={{ backgroundColor: MMRC_PLATE }}
         /*
           inline-flex, not grid. A grid row is content-sized, so a percentage
           height on the child resolves against a track the child itself
