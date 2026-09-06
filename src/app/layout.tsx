@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Bevan, Cairo, Inter, JetBrains_Mono } from "next/font/google";
 import { AmbientMice } from "@/components/brand/AmbientMice";
+import { MazeDescent } from "@/components/layout/MazeDescent";
 import { ThemeProvider } from "@/components/brand/ThemeProvider";
 import { SplashScreen } from "@/components/brand/SplashScreen";
 import { Header } from "@/components/layout/Header";
@@ -122,6 +123,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             visitor rather than restarting on every page.
           */}
           <AmbientMice />
+          {/* Sitewide for the same reason, and outside PageTransition for a
+              second one — see the note in MazeDescent about fixed positioning
+              inside an animating transform. */}
+          <MazeDescent />
           <a href="#main-content" className="skip-link">
             Skip to content
           </a>
