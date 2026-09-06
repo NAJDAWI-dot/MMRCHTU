@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cairo, Inter, JetBrains_Mono } from "next/font/google";
+import { Bevan, Cairo, Inter, JetBrains_Mono } from "next/font/google";
 import { AmbientMice } from "@/components/brand/AmbientMice";
 import { ThemeProvider } from "@/components/brand/ThemeProvider";
 import { SplashScreen } from "@/components/brand/SplashScreen";
@@ -21,6 +21,10 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mon
 // back to whatever the reader's system happens to ship, which is Tahoma on one
 // machine and something quite different on the next.
 const cairo = Cairo({ subsets: ["arabic"], variable: "--font-arabic", display: "swap" });
+// The MMRC 26 wordmark's own face, taken from the supplied logo file. Only the
+// logo uses it, so it is loaded at the one weight Bevan ships and left out of
+// the body stack entirely.
+const bevan = Bevan({ subsets: ["latin"], weight: "400", variable: "--font-brand", display: "swap" });
 
 const DESCRIPTION =
   "MMRC 26 is the IEEE RAS HTU Student Chapter's Micro Mouse Robot Competition — rules, schedule, registration, and the Pac Mouse game.";
@@ -92,7 +96,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd data={organizationJsonLd()} />
         <JsonLd data={webSiteJsonLd()} />
       </head>
-      <body className={`${inter.variable} ${jetbrainsMono.variable} ${cairo.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${jetbrainsMono.variable} ${cairo.variable} ${bevan.variable} font-sans antialiased`}>
         {/*
           The sitewide background image, behind every page.
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
+import { MmrcLogo } from "@/components/brand/MmrcLogo";
 import { ThemeToggle } from "@/components/brand/ThemeToggle";
 import { Nav } from "@/components/layout/Nav";
 
@@ -20,11 +21,19 @@ export function Header() {
     // the image happens to be under it.
     <header className="relative bg-[var(--color-bg-translucent)] shadow-[0_4px_16px_-10px_rgba(95,33,103,0.45)] backdrop-blur-md dark:shadow-none">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4">
+        {/*
+          Two marks, and they are not the same kind of thing: the chapter's
+          IEEE RAS logo says who runs this, the MMRC 26 logo says what it is.
+          A hairline between them keeps them from reading as one lockup, which
+          is what two logos flush against each other always look like.
+        */}
         <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3" aria-label="MMRC 26 home">
           <Logo enforceMinSize={false} className="h-9 shrink-0 sm:h-10" />
-          <span className="truncate font-display text-base font-bold text-ras-purple dark:text-white sm:text-lg">
-            MMRC&nbsp;26
-          </span>
+          <span
+            aria-hidden="true"
+            className="hidden h-7 w-px shrink-0 bg-ras-purple/20 sm:block dark:bg-white/20"
+          />
+          <MmrcLogo />
         </Link>
         {/* Nav renders both the desktop row and the phone menu, each revealing
             itself at the right width, so nothing here needs to hide either. */}
