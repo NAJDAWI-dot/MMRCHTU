@@ -1,20 +1,35 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { MAZE_GOLD } from "@/lib/maze";
 import { descentPath, descentProgress } from "@/lib/descent";
 
 /**
- * A corridor down the side of the homepage, drawn as you scroll.
+ * A corridor down the side of every public page, drawn as you scroll.
  *
- * Scrolling the page is the visitor's first act on the site, and it was doing
- * nothing except moving content. Here it maps a corridor: the line draws in
- * behind a mouse working its way down, so the act of reading the homepage is
- * the same act the competition is about. By the footer, the run is complete.
+ * Scrolling is the visitor's first act on the site, and it was doing nothing
+ * except moving content. Here it maps a corridor: the line draws in behind a
+ * marker working its way down, so reading a page is the same act the
+ * competition is about. At the footer, the run is complete.
  *
- * Lives in the outer margin and only from `xl` up, where that margin exists —
- * below it the content is the full width of the screen and there is nowhere to
- * put a corridor that is not on top of something.
+ * Fixed to the viewport rather than positioned inside a page's container. It
+ * began life on the landing page, hugging that page's own margin — but every
+ * page has a different container width, so hugging any one of them could not
+ * generalise. A rail at a fixed offset from the window edge sits in the margin
+ * on all of them and couples to none.
+ *
+ * Which is also why it is mounted in the root layout beside AmbientMice rather
+ * than inside a page: that is outside PageTransition, and PageTransition
+ * animates `transform`. An element with a transform applied is a containing
+ * block for fixed-position descendants, so mounted any deeper this would
+ * resolve against the animating wrapper instead of the viewport — the same
+ * trap AmbientMice and CheddarCelebration both document.
+ *
+ * Only from `xl` up, where a margin exists at all: below that the content is
+ * the full width of the screen and there is nowhere to put a corridor that is
+ * not on top of something. And never over the admin, which is a tool rather
+ * than a page anyone reads down.
  *
  * The geometry is a pure function (`@/lib/descent`) so it can be tested; this
  * file owns only the scroll plumbing.
@@ -29,8 +44,13 @@ export function MazeDescent() {
   const pathRef = useRef<SVGPathElement>(null);
   const drawnRef = useRef<SVGPathElement>(null);
   const mouseRef = useRef<HTMLSpanElement>(null);
+  // Read on every render rather than once: this component is mounted in the
+  // layout and is never remounted, so a navigation has to be noticed here.
+  const pathname = usePathname() ?? "";
+  const offAdmin = pathname.startsWith("/admin");
 
   useEffect(() => {
+    if (offAdmin) return;
     const path = pathRef.current;
     const drawn = drawnRef.current;
     const mouse = mouseRef.current;
@@ -80,14 +100,22 @@ export function MazeDescent() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
-  }, []);
+    // Re-measured on navigation: the next page is a different length, and the
+    // corridor would otherwise keep the progress of the page just left.
+  }, [offAdmin, pathname]);
 
   const d = descentPath(SEGMENTS, WIDTH, HEIGHT);
+
+  if (offAdmin) return null;
 
   return (
     <div
       aria-hidden="true"
-      className="maze-descent pointer-events-none absolute inset-y-0 left-[-5rem] hidden w-16 select-none xl:block"
+      /*
+        Left of the widest content column the site uses (72rem, centred), so it
+        sits in the margin on every page rather than over any of them.
+      */
+      className="maze-descent pointer-events-none fixed left-3 top-0 z-0 hidden h-screen w-10 select-none xl:block"
     >
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
