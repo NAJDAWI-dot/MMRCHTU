@@ -132,4 +132,43 @@ export function pickCelebration(random: () => number = Math.random): Celebration
  */
 
 /** The fade, which must match the CSS or the overlay is torn out mid-transition. */
+/* -------------------------------------------------------------------------- */
+/* Crumbs                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One piece of cheese, thrown when a team finishes registering.
+ *
+ * Confetti is what every form on the internet does at this moment, and it says
+ * nothing about this one. Cheese is the thing the mouse has been chasing since
+ * the visitor first landed on the site, so the reward for finishing is the
+ * reward the mouse has been after all along.
+ */
+export interface Crumb {
+  /** Across the stage, as a percentage. */
+  left: number;
+  /** Seconds before it starts to fall, so they do not arrive as a curtain. */
+  delay: number;
+  duration: number;
+  /** Degrees it tumbles through on the way down. */
+  spin: number;
+  /** Pixels. A range, so it reads as crumbs rather than as a repeated sprite. */
+  size: number;
+}
+
+/** Enough to read as a shower, few enough that each one is a distinct wedge. */
+export const CRUMB_COUNT = 18;
+
+export function pickCrumbs(random: () => number = Math.random, count = CRUMB_COUNT): Crumb[] {
+  return Array.from({ length: count }, () => ({
+    left: random() * 100,
+    delay: random() * 0.9,
+    duration: 1.5 + random() * 1.1,
+    // Both directions, or every crumb tumbles the same way and the shower
+    // reads as a machine rather than as falling.
+    spin: (random() * 2 - 1) * 420,
+    size: 10 + random() * 12,
+  }));
+}
+
 export const CELEBRATION_FADE_MS = 320;

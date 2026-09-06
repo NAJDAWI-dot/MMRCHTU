@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CheddarCelebration } from "@/components/register/CheddarCelebration";
-import { CELEBRATION_FADE_MS, CHEDDAR_QUIPS } from "@/lib/celebration";
+import { CELEBRATION_FADE_MS, CHEDDAR_QUIPS, CRUMB_COUNT } from "@/lib/celebration";
 import { VERIFICATION_WINDOW_TEXT } from "@/lib/payment-proof";
 
 /**
@@ -142,5 +142,28 @@ describe("CheddarCelebration", () => {
     settle(30_000);
 
     expect(screen.queryByRole("dialog")).toBeTruthy();
+  });
+
+  it("throws cheese rather than confetti", () => {
+    vi.useFakeTimers();
+    // Queried off the document, not the render container: the overlay is
+    // portalled to document.body, as every other test here relies on too.
+    render(<CheddarCelebration random={firstQuip} />);
+    settle();
+
+    // Confetti is what every form does at this moment and says nothing about
+    // this one; the mouse has been chasing cheese since the landing page.
+    expect(document.querySelectorAll(".cheddar-crumb").length).toBe(CRUMB_COUNT);
+  });
+
+  it("keeps the crumbs out of the way of the reference", () => {
+    vi.useFakeTimers();
+    render(<CheddarCelebration random={firstQuip} />);
+    settle();
+
+    // Decoration, and hidden as such: the panel underneath carries the six
+    // characters a team must not miss.
+    const crumbs = document.querySelector(".cheddar-crumbs");
+    expect(crumbs?.getAttribute("aria-hidden")).toBe("true");
   });
 });

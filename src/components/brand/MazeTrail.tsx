@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   LOADER_GRID,
+  MAZE_GOLD,
   SPLASH_GRID,
   mazeTiming,
   newLoaderMaze,
@@ -47,7 +48,7 @@ const LOOP_MICE = 1;
 /** Units per second for the loader's endless lap. Slower than the splash run. */
 const LOOP_SPEED = 96;
 
-const GOLD = "#f2a900";
+const GOLD = MAZE_GOLD;
 const GOLD_LIGHT = "#ffd97a";
 const CYAN = "#9fd8f2";
 const CYAN_LIGHT = "#cdeeff";

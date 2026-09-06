@@ -1942,3 +1942,169 @@ header:has([data-mobile-nav-open]) {
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Ears twitch on hover.
+
+   The one gesture every mouse on the site shares. It fires on the drawn
+   Cheddar, on the small MouseMark in the Team pill, and on the mouse walking
+   the registration corridor — so hovering any of them gets the same flick,
+   and the site behaves like it is paying attention.
+
+   `transform-box: fill-box` is what makes it a twitch rather than a swing: an
+   SVG shape rotates about the origin of its viewBox by default, which would
+   throw each ear across the drawing instead of turning it on the spot.
+   --------------------------------------------------------------------------- */
+
+@keyframes earTwitch {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(-11deg) scale(1.09);
+  }
+  55% {
+    transform: rotate(7deg) scale(1.04);
+  }
+  80% {
+    transform: rotate(-3deg) scale(1.01);
+  }
+}
+
+.cheddar-ear,
+.mouse-mark-ear,
+.maze-progress-ear {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.cheddar:hover .cheddar-ear,
+.group:hover .cheddar-ear,
+a:hover .mouse-mark-ear,
+button:hover .mouse-mark-ear,
+.group:hover .mouse-mark-ear,
+svg:hover .maze-progress-ear {
+  animation: earTwitch 620ms ease-in-out;
+}
+
+/* The right ear a beat behind the left, because two ears moving in perfect
+   unison reads as a mechanism rather than as an animal. */
+.cheddar:hover .cheddar-ear-r,
+.group:hover .cheddar-ear-r,
+a:hover .mouse-mark-ear:last-of-type,
+button:hover .mouse-mark-ear:last-of-type,
+.group:hover .mouse-mark-ear:last-of-type,
+svg:hover .maze-progress-ear:nth-of-type(2) {
+  animation-delay: 70ms;
+}
+
+/* ---------------------------------------------------------------------------
+   The registration corridor, and the crest beside it.
+   --------------------------------------------------------------------------- */
+
+/* One cell per step. Eased so it arrives rather than snaps. */
+.maze-progress-mouse {
+  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/*
+  The crest's one entrance.
+
+  It plays when the element mounts — which is the moment the name first becomes
+  long enough to hash — and not again as the name is edited, because React
+  reuses the same node from then on. A flourish on every keystroke would be
+  unbearable.
+*/
+@keyframes crestIn {
+  from {
+    opacity: 0;
+    transform: scale(0.86) rotate(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.crest-in {
+  animation: crestIn 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------------------------------------------------------------------------
+   Cheese, not confetti.
+
+   Falls behind the mouse and the reference card, both of which sit later in
+   the stacking order — the flourish must never be what the eye lands on when
+   the thing that matters is a six-character code.
+   --------------------------------------------------------------------------- */
+
+.cheddar-crumbs {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cheddar-crumb {
+  position: absolute;
+  top: -10%;
+  display: block;
+  animation-name: crumbFall;
+  animation-timing-function: cubic-bezier(0.4, 0.1, 0.7, 1);
+  animation-fill-mode: both;
+  will-change: transform, opacity;
+}
+
+@keyframes crumbFall {
+  from {
+    opacity: 0;
+    transform: translateY(0) rotate(0deg);
+  }
+  12% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(115vh) rotate(var(--crumb-spin, 360deg));
+  }
+}
+
+/*
+  Reduced motion takes the falling away and leaves the reward.
+
+  The crumbs do not simply vanish — they settle in place at low opacity, so the
+  screen still says "something good happened here" without anything moving.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .cheddar-ear,
+  .mouse-mark-ear,
+  .maze-progress-ear,
+  .cheddar:hover .cheddar-ear,
+  .group:hover .cheddar-ear,
+  a:hover .mouse-mark-ear,
+  button:hover .mouse-mark-ear,
+  .group:hover .mouse-mark-ear,
+  svg:hover .maze-progress-ear {
+    animation: none;
+  }
+
+  .maze-progress-mouse {
+    transition: none;
+  }
+
+  .crest-in {
+    animation: none;
+  }
+
+  .cheddar-crumb {
+    animation: none;
+    top: auto;
+    bottom: 8%;
+    opacity: 0.5;
+  }
+}
