@@ -43,6 +43,9 @@ export default {
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         display: ["var(--font-display)", "var(--font-sans)", "system-ui"],
+        // The MMRC 26 wordmark only. Bevan is a heavy slab, so the fallback is a
+        // serif rather than the sans the rest of the site falls back to.
+        brand: ["var(--font-brand)", "Rockwell", "Georgia", "serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
         // Only the early-bird badge and banner use this. Tahoma is the fallback
         // because it is the one Arabic-capable face present on effectively every

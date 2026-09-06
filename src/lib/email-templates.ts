@@ -3,6 +3,7 @@
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { MMRC_PLATE } from "@/lib/brand";
 import { formatFils } from "@/lib/payment";
 import { VERIFICATION_WINDOW_TEXT } from "@/lib/payment-proof";
 
@@ -15,9 +16,9 @@ const BORDER = "#e3dde5";
 const SURFACE = "#f7f5f8";
 
 /**
- * The two marks in the email header: the HTU logo and the IEEE RAS HTU Student
- * Chapter lockup. The plain IEEE RAS mark is deliberately not here — the chapter
- * lockup already carries it.
+ * The marks in the email header: the HTU logo, the IEEE RAS HTU Student Chapter
+ * lockup, and the MMRC 26 mark. The plain IEEE RAS mark is deliberately not
+ * here — the chapter lockup already carries it.
  *
  * Logos are referenced as absolute URLs on the site rather than inlined: mail
  * clients block `data:` image URIs (Gmail strips them outright), so a hosted URL
@@ -37,6 +38,12 @@ const HEADER_LOGOS = [
   // 96px box -> ~37px of visible wordmark (the rest is transparent margin).
   { file: "htu.png", alt: "Al-Hussein Technical University", size: 96 },
   { file: "lockup-htu-chapter.png", alt: "IEEE RAS HTU Student Chapter", size: 46 },
+  /*
+    The MMRC mark carries a plate, and needs one here more than anywhere: the
+    band behind these logos is white, and the left half of the glyph is white
+    too. Without it, half the logo would simply not be in the email.
+  */
+  { file: "mmrc-mark.png", alt: "MMRC 26", size: 40, plate: MMRC_PLATE },
 ] as const;
 
 /**
@@ -54,18 +61,32 @@ const AVAILABLE_LOGOS = HEADER_LOGOS.filter((logo) => {
 });
 
 function logoBar(siteUrl: string): string {
-  const logo = (file: string, alt: string, size: number) =>
-    `<td align="center" valign="middle" style="padding:0 10px;">
-       <img src="${siteUrl}/brand/logo/${file}" alt="${escapeHtml(alt)}"
-            width="${size}" height="${size}"
-            style="display:block; width:${size}px; height:${size}px; border:0; outline:none; text-decoration:none;" />
+  /*
+    A plated logo gets its ground from the cell's background-color rather than
+    from a second baked image — background-color on a <td> is one of the few
+    things every mail client agrees on, where border-radius is not. Outlook
+    will render the plate square; that is the whole cost.
+  */
+  const logo = (file: string, alt: string, size: number, plate?: string) => {
+    const ground = plate
+      ? `background-color:${plate}; border-radius:8px; padding:5px;`
+      : "";
+    return `<td align="center" valign="middle" style="padding:0 10px;">
+       <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+         <tr><td align="center" valign="middle" style="${ground}">
+           <img src="${siteUrl}/brand/logo/${file}" alt="${escapeHtml(alt)}"
+                width="${size}" height="${size}"
+                style="display:block; width:${size}px; height:${size}px; border:0; outline:none; text-decoration:none;" />
+         </td></tr>
+       </table>
      </td>`;
+  };
 
   const divider = `<td valign="middle" style="padding:0 4px;">
       <div style="width:1px; height:36px; background-color:${BORDER};"></div>
     </td>`;
 
-  const cells = AVAILABLE_LOGOS.map((l) => logo(l.file, l.alt, l.size));
+  const cells = AVAILABLE_LOGOS.map((l) => logo(l.file, l.alt, l.size, "plate" in l ? l.plate : undefined));
 
   return `
     <tr>
