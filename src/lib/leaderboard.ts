@@ -37,6 +37,30 @@ export function sanitisePlayerName(raw: string): string {
   return printable.replace(/\s+/g, " ").trim().slice(0, MAX_NAME_LENGTH);
 }
 
+/**
+ * The two things a run can be ranked by.
+ *
+ * Score rewards grinding pellets; sector rewards surviving. They are genuinely
+ * different achievements — a careful player who reaches sector 7 and a greedy
+ * one who cleared three sectors slowly are not doing the same thing — and one
+ * board could only ever recognise the first of them.
+ */
+export const LEADERBOARD_SORTS = ["score", "sector"] as const;
+export type LeaderboardSort = (typeof LEADERBOARD_SORTS)[number];
+
+export const LEADERBOARD_SORT_LABELS: Record<LeaderboardSort, string> = {
+  score: "By score",
+  sector: "By sector",
+};
+
+export function isLeaderboardSort(value: unknown): value is LeaderboardSort {
+  return typeof value === "string" && (LEADERBOARD_SORTS as readonly string[]).includes(value);
+}
+
+export function parseLeaderboardSort(value: unknown): LeaderboardSort {
+  return isLeaderboardSort(value) ? value : "score";
+}
+
 export interface LeaderboardEntry {
   id: string;
   playerName: string;

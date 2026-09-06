@@ -4,11 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import {
   GAME_MODE_LABELS,
   GAME_OVER_EVENT,
+  LEADERBOARD_SORTS,
+  LEADERBOARD_SORT_LABELS,
   MAX_NAME_LENGTH,
   sanitisePlayerName,
   type GameMode,
   type GameOverDetail,
   type LeaderboardEntry,
+  type LeaderboardSort,
 } from "@/lib/leaderboard";
 
 const NAME_MEMORY_KEY = "pacMousePlayerName";
@@ -28,10 +31,11 @@ export function Leaderboard({ mode }: { mode: GameMode }) {
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [sort, setSort] = useState<LeaderboardSort>("score");
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/game/scores?mode=${mode}`, { cache: "no-store" });
+      const res = await fetch(`/api/game/scores?mode=${mode}&sort=${sort}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to load scores.");
       const data = (await res.json()) as { scores: LeaderboardEntry[] };
       setScores(data.scores);
@@ -42,7 +46,7 @@ export function Leaderboard({ mode }: { mode: GameMode }) {
     } finally {
       setLoading(false);
     }
-  }, [mode]);
+  }, [mode, sort]);
 
   useEffect(() => {
     void load();
@@ -152,6 +156,24 @@ export function Leaderboard({ mode }: { mode: GameMode }) {
         </p>
       )}
 
+      <div className="mt-3 flex gap-2" role="group" aria-label="Rank by">
+        {LEADERBOARD_SORTS.map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => setSort(option)}
+            aria-pressed={sort === option}
+            className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-widest transition-colors ${
+              sort === option
+                ? "border-[#F2A900] bg-ras-purple text-white"
+                : "border-ras-purple/40 text-ras-gray hover:text-ras-purple dark:text-white/70 dark:hover:text-white"
+            }`}
+          >
+            {LEADERBOARD_SORT_LABELS[option]}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <p className="mt-4 text-sm text-ras-gray dark:text-white/60">Loading scores…</p>
       ) : scores.length === 0 ? (
@@ -167,8 +189,25 @@ export function Leaderboard({ mode }: { mode: GameMode }) {
             >
               <span className="w-8 shrink-0 text-ras-gray dark:text-white/50">#{index + 1}</span>
               <span className="min-w-0 flex-1 truncate text-ras-gray dark:text-white/85">{entry.playerName}</span>
-              <span className="shrink-0 text-xs text-ras-gray/70 dark:text-white/45">lvl {entry.level}</span>
-              <span className="w-16 shrink-0 text-right font-bold text-[#F2A900]">{entry.score}</span>
+              {/* Whichever the board is ranked by is the one shown in gold. */}
+              <span
+                className={
+                  sort === "sector"
+                    ? "w-16 shrink-0 text-right font-bold text-[#F2A900]"
+                    : "shrink-0 text-xs text-ras-gray/70 dark:text-white/45"
+                }
+              >
+                {sort === "sector" ? `sector ${entry.level}` : `lvl ${entry.level}`}
+              </span>
+              <span
+                className={
+                  sort === "sector"
+                    ? "w-16 shrink-0 text-right text-xs text-ras-gray/70 dark:text-white/45"
+                    : "w-16 shrink-0 text-right font-bold text-[#F2A900]"
+                }
+              >
+                {entry.score}
+              </span>
             </li>
           ))}
         </ol>

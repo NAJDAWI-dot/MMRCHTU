@@ -16,7 +16,7 @@ import {
   type Dir,
   type MazeGrid,
 } from "./shared";
-import { audioInit, sndMunch, sndCheese, sndEatRobot, sndDeath, sndLevel, sndStart, isMuted, toggleMute } from "./audio";
+import { audioInit, sndMunch, sndCheese, sndEatRobot, sndDeath, sndLevel, sndPing, sndStart, isMuted, toggleMute } from "./audio";
 import { GAME_OVER_EVENT, type GameOverDetail } from "@/lib/leaderboard";
 
 type Phase = "idle" | "ready" | "play" | "paused" | "dying" | "levelup" | "over";
@@ -38,8 +38,30 @@ const H = 400;
 const NUM = 320;
 const COLW = 2;
 const FOV = Math.PI / 3;
+/**
+ * How wide the view opens while a cheese is burning.
+ *
+ * The power-up had no visual language of its own — the robots turned blue and
+ * that was all. Widening the field is the mouse's own point of view changing:
+ * for a few seconds it can see more of the corridor than it normally can,
+ * which is exactly what being the hunter rather than the hunted feels like.
+ */
+const FOV_FRIGHT = FOV * 1.22;
 const THALF = Math.tan(FOV / 2);
 const MS = 5; // minimap tile size
+
+/**
+ * The competition's own surfaces, from the rulebook: wall sides white, wall
+ * tops red, floor black. The maze rendered here is the maze that gets built.
+ */
+const WALL_SIDE = { r: 220, g: 218, b: 224 };
+const WALL_TOP = { r: 179, g: 37, b: 47 };
+
+/** Beyond this many tiles a robot is only a pair of eyes in the dark. */
+const EYES_ONLY_FROM = 4.6;
+
+/** How close a robot has to be before the mouse starts hearing it. */
+const PING_RANGE = 7;
 
 // Distances are plain differences: the maze is fully enclosed, so there is no
 // side tunnel that would make the short way round the grid the real distance.
@@ -122,9 +144,26 @@ export function FirstPerson() {
     /* ---- world ---- */
     let grid: MazeGrid = buildMaze();
     let dotsLeft = countPellets(grid);
+    /*
+      What the mouse has actually seen.
+
+      A real micromouse knows only the cells it has driven past and sensed, and
+      the minimap used to hand the player the whole maze for free. This is
+      filled in by the raycaster itself — every tile a ray passes through is a
+      tile in view — so the map builds up exactly as far as the mouse can see,
+      with no separate visibility pass to disagree with what is on screen.
+    */
+    let seen: boolean[][] = buildSeen();
+
+    function buildSeen(): boolean[][] {
+      return Array.from({ length: ROWS }, () => new Array<boolean>(COLS).fill(false));
+    }
     function resetGrid() {
       grid = buildMaze();
       dotsLeft = countPellets(grid);
+      // A new sector is a maze the mouse has never driven, so the map starts
+      // blank again.
+      seen = buildSeen();
     }
     function cellAt(r: number, c: number): string {
       // Solid outside the grid on both axes — the maze is enclosed, so nothing
@@ -148,6 +187,12 @@ export function FirstPerson() {
     let frT = 0;
     let frMax = 1;
     let chain = 0;
+    /** Eased rather than snapped, so the widening reads as the view opening. */
+    let fov = FOV;
+    /** Decaying 0..1, driving the camera kick and the red wash after a hit. */
+    let hurt = 0;
+    /** Seconds until the next proximity tick. */
+    let pingT = 0;
     const P = { x: 9.5, y: 11.5, a: -Math.PI / 2 };
     let bots: Bot[] = [];
     const zbuf = new Float32Array(NUM);
@@ -435,6 +480,10 @@ export function FirstPerson() {
     /* ---- game update ---- */
     function upd(dt: number) {
       gT += dt;
+      // The view opens while a cheese burns and closes again after it.
+      const fovWant = frT > 0 ? FOV_FRIGHT : FOV;
+      fov += (fovWant - fov) * Math.min(1, dt * 4.5);
+      if (hurt > 0) hurt = Math.max(0, hurt - dt / 0.9);
       movePlayer(dt);
       const r = Math.floor(P.y);
       const c = Math.floor(P.x);
@@ -465,6 +514,30 @@ export function FirstPerson() {
         if (frT <= 0) for (const b of bots) if (b.mode === "fright") b.mode = "active";
       }
       for (const b of bots) updBot(b, dt);
+
+      /*
+        Listening for what is behind you. Only robots actually hunting tick —
+        one you have frightened is running away, and a warning about it would
+        be telling the player the opposite of what is happening.
+      */
+      let nearest = Infinity;
+      for (const b of bots) {
+        if (b.mode !== "active") continue;
+        nearest = Math.min(nearest, Math.hypot(b.y - P.y, b.x - P.x));
+      }
+      if (nearest < PING_RANGE) {
+        const closeness = 1 - nearest / PING_RANGE;
+        pingT -= dt;
+        if (pingT <= 0) {
+          sndPing(closeness);
+          // From a lazy tick at the edge of hearing to a hard stutter when one
+          // is on top of you.
+          pingT = 0.78 - closeness * 0.66;
+        }
+      } else {
+        pingT = 0;
+      }
+
       for (const b of bots) {
         const d = Math.hypot(b.y - P.y, b.x - P.x);
         if (d < 0.55) {
@@ -475,6 +548,7 @@ export function FirstPerson() {
             b.mode = "eyes";
           } else if (b.mode === "active") {
             lives--;
+            hurt = 1;
             hud();
             sndDeath();
             phase = "dying";
@@ -558,6 +632,38 @@ export function FirstPerson() {
         robotShape(g, eyesOnly ? null : flash ? "#dfeeff" : fr ? "#2438b8" : color, fr, flash);
       });
     }
+    /**
+     * A robot too far off to make out: two lit eyes and nothing else.
+     *
+     * Corridors are long and the far end of one is dark, so a robot used to
+     * appear as a fully drawn machine at a distance no real eye could resolve.
+     * Eyes first, body as it closes, is both truer and considerably more
+     * frightening.
+     */
+    function glowSpr(color: string) {
+      return mk(64, 84, (g) => {
+        g.translate(32, 52);
+        g.scale(2.6, 2.6);
+        g.shadowColor = color;
+        g.shadowBlur = 12;
+        for (const side of [-3.5, 3.5]) {
+          g.fillStyle = color;
+          g.beginPath();
+          g.ellipse(side, -4, 2.6, 3, 0, 0, 7);
+          g.fill();
+        }
+        g.shadowBlur = 0;
+        g.fillStyle = "#fff";
+        for (const side of [-3.5, 3.5]) {
+          g.beginPath();
+          g.arc(side, -3.6, 1.1, 0, 7);
+          g.fill();
+        }
+      });
+    }
+    const sprGlow: Record<string, HTMLCanvasElement> = {};
+    for (const d of ROBOT_DEFS) sprGlow[d.name] = glowSpr(d.color);
+
     const sprBody: Record<string, HTMLCanvasElement> = {};
     const sprFright = robotSpr(null, true, false);
     const sprFlash = robotSpr(null, true, true);
@@ -591,9 +697,12 @@ export function FirstPerson() {
       g.arc(6.3, 4.5, 2.3, 0, 7);
       g.fill();
     });
-    function botImg(b: Bot) {
+    function botImg(b: Bot, dist = 0) {
       if (b.mode === "eyes") return sprEyes;
       if (b.mode === "fright") return frT < 2 && Math.floor(frT * 6) % 2 === 0 ? sprFlash : sprFright;
+      // Only an unfrightened robot hides in the dark; one you are hunting
+      // should be findable.
+      if (dist > EYES_ONLY_FROM) return sprGlow[b.name]!;
       return sprBody[b.name]!;
     }
 
@@ -601,9 +710,11 @@ export function FirstPerson() {
     const ceilGrad = ctx.createLinearGradient(0, 0, 0, H / 2);
     ceilGrad.addColorStop(0, "#020609");
     ceilGrad.addColorStop(1, "#180b22");
+    // Black, per the rulebook. Not flat black: a floor with no gradient at all
+    // gives the eye nothing to judge distance by in a corridor.
     const floorGrad = ctx.createLinearGradient(0, H / 2, 0, H);
-    floorGrad.addColorStop(0, "#140b1e");
-    floorGrad.addColorStop(1, "#04090f");
+    floorGrad.addColorStop(0, "#0b0b0d");
+    floorGrad.addColorStop(1, "#000000");
 
     function render() {
       ctx.fillStyle = ceilGrad;
@@ -612,8 +723,11 @@ export function FirstPerson() {
       ctx.fillRect(0, H / 2, W, H / 2);
       const dirX = Math.cos(P.a);
       const dirY = Math.sin(P.a);
-      const plX = -dirY * THALF;
-      const plY = dirX * THALF;
+      // Derived per frame rather than from the THALF constant: the field of
+      // view is no longer fixed.
+      const tHalf = Math.tan(fov / 2);
+      const plX = -dirY * tHalf;
+      const plY = dirX * tHalf;
 
       for (let i = 0; i < NUM; i++) {
         const camX = (2 * i) / NUM - 1;
@@ -654,6 +768,9 @@ export function FirstPerson() {
             mapY += stepY;
             side = 1;
           }
+          // Every tile a ray passes through is a tile the mouse can see, and
+          // the wall it stops on is the wall it has just sensed.
+          if (mapY >= 0 && mapY < ROWS && mapX >= 0 && mapX < COLS) seen[mapY]![mapX] = true;
           tile = cellAt(mapY, mapX);
           if (tile === "#" || tile === "-") break;
         }
@@ -661,24 +778,39 @@ export function FirstPerson() {
         zbuf[i] = dist;
         const hh = Math.min(H * 2.2, H / dist);
         const y0 = H / 2 - hh / 2;
-        const br = Math.max(0.1, 1 - dist / 11) * (side ? 0.72 : 1);
+        /*
+          Where along the panel this ray landed, and a darker seam at the join.
+
+          Without it a white wall is a single flat field: standing close to one
+          filled the screen with featureless glare and gave the eye nothing to
+          judge distance or movement by. The seams are what make a corridor of
+          identical white walls read as a corridor.
+        */
+        let wallX = side === 0 ? P.y + dist * rY : P.x + dist * rX;
+        wallX -= Math.floor(wallX);
+        const seam = wallX < 0.035 || wallX > 0.965 ? 0.58 : 1;
+        const br = Math.max(0.1, 1 - dist / 11) * (side ? 0.72 : 1) * seam;
+        // The house door keeps its gold; every other wall is the competition's
+        // own: a white side face, capped in red where its top edge would be.
         if (tile === "-") ctx.fillStyle = `rgb(${(242 * br) | 0},${(169 * br) | 0},${(10 * br) | 0})`;
-        else ctx.fillStyle = `rgb(${(95 * br) | 0},${(33 * br) | 0},${(103 * br) | 0})`;
+        else
+          ctx.fillStyle = `rgb(${(WALL_SIDE.r * br) | 0},${(WALL_SIDE.g * br) | 0},${(WALL_SIDE.b * br) | 0})`;
         ctx.fillRect(i * COLW, y0, COLW, hh);
-        ctx.fillStyle = `rgba(200,110,230,${(0.85 * br).toFixed(3)})`;
-        ctx.fillRect(i * COLW, y0, COLW, 2);
+        ctx.fillStyle = `rgb(${(WALL_TOP.r * br) | 0},${(WALL_TOP.g * br) | 0},${(WALL_TOP.b * br) | 0})`;
+        ctx.fillRect(i * COLW, y0, COLW, 3);
+        // Where the wall meets the black floor, rather than a second red cap.
+        ctx.fillStyle = `rgba(0,0,0,${(0.5 * br).toFixed(3)})`;
         ctx.fillRect(i * COLW, y0 + hh - 2, COLW, 2);
       }
       drawSprites(dirX, dirY, plX, plY);
+      drawRear();
       drawMini();
+      drawSensors();
       if (frT > 0) frightBar();
+      if (hurt > 0) drawHurt();
       if (phase === "ready") fpBanner("GET READY!", GOLD);
       if (phase === "levelup") fpBanner("SECTOR CLEARED!", "#4dff88");
-      if (phase === "dying") {
-        ctx.fillStyle = `rgba(228,0,43,${Math.min(0.55, phaseT * 0.6)})`;
-        ctx.fillRect(0, 0, W, H);
-        fpBanner("SQUEAK...!", "#ffb3c1");
-      }
+      if (phase === "dying") fpBanner("SQUEAK...!", "#ffb3c1");
     }
     interface Sprite {
       x: number;
@@ -690,7 +822,14 @@ export function FirstPerson() {
     }
     function drawSprites(dirX: number, dirY: number, plX: number, plY: number) {
       const list: Sprite[] = [];
-      for (const b of bots) list.push({ x: b.x, y: b.y, img: botImg(b), h: 0.62 });
+      for (const b of bots) {
+        list.push({
+          x: b.x,
+          y: b.y,
+          img: botImg(b, Math.hypot(b.x - P.x, b.y - P.y)),
+          h: 0.62,
+        });
+      }
       for (let r = 0; r < ROWS; r++)
         for (let c = 0; c < COLS; c++) {
           const t = grid[r]![c];
@@ -739,6 +878,8 @@ export function FirstPerson() {
       ctx.strokeRect(ox - 4, oy - 4, mw + 8, mh + 8);
       for (let r = 0; r < ROWS; r++)
         for (let c = 0; c < COLS; c++) {
+          // Nothing is drawn for a cell the mouse has not been able to see.
+          if (!seen[r]![c]) continue;
           const t = grid[r]![c];
           if (t === "#") {
             ctx.fillStyle = "#3a1f4a";
@@ -755,6 +896,17 @@ export function FirstPerson() {
           }
         }
       for (const b of bots) {
+        /*
+          A robot appears on the map only where the mouse can currently see it
+          — or always, while a cheese is burning and the mouse is the one doing
+          the hunting. The rest of the time you are meant to be listening for
+          them, which is what the proximity tick is for.
+        */
+        const br = Math.floor(b.y);
+        const bc = Math.floor(b.x);
+        const visible =
+          b.mode === "fright" || (br >= 0 && br < ROWS && bc >= 0 && bc < COLS && seen[br]![bc]);
+        if (!visible) continue;
         ctx.fillStyle = b.mode === "eyes" ? "#8fa2ff" : b.mode === "fright" ? "#2438b8" : b.color;
         ctx.beginPath();
         ctx.arc(ox + b.x * MS, oy + b.y * MS, 2.3, 0, 7);
@@ -775,6 +927,196 @@ export function FirstPerson() {
       ctx.stroke();
       ctx.restore();
     }
+    /**
+     * The wall the mouse's own sensors would be reading, left, front and right.
+     *
+     * A micromouse navigates on three numbers, and this is those three numbers.
+     * Read straight off the same grid the walls are drawn from rather than off
+     * the rendered image, so it stays honest at any resolution.
+     */
+    function castRange(angle: number, limit = 8): number {
+      const cx = Math.cos(angle);
+      const cy = Math.sin(angle);
+      // Stepped rather than a DDA: this is three rays a frame against a 19x21
+      // grid, and the exactness a DDA buys is not worth the code beside it.
+      for (let d = 0.08; d < limit; d += 0.06) {
+        if (solid(Math.floor(P.y + cy * d), Math.floor(P.x + cx * d), false)) return d;
+      }
+      return limit;
+    }
+
+    function drawSensors() {
+      const readings: Array<[string, number]> = [
+        ["L", castRange(P.a - Math.PI / 2)],
+        ["F", castRange(P.a)],
+        ["R", castRange(P.a + Math.PI / 2)],
+      ];
+      const pw = 74;
+      const ph = 58;
+      const ox = 10;
+      // Bottom-left, clear of the mute, fullscreen and pause buttons that sit
+      // over the top-left of the canvas.
+      const oy = H - ph - 10;
+
+      ctx.fillStyle = "rgba(3,8,16,.74)";
+      ctx.fillRect(ox, oy, pw, ph);
+      ctx.strokeStyle = "#5F2167";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(ox, oy, pw, ph);
+
+      ctx.font = "9px ui-monospace,Menlo,Consolas,monospace";
+      ctx.textAlign = "left";
+      ctx.fillStyle = "rgba(255,255,255,.55)";
+      ctx.fillText("SENSORS", ox + 7, oy + 12);
+
+      readings.forEach(([label, dist], i) => {
+        const y = oy + 22 + i * 12;
+        ctx.fillStyle = "rgba(255,255,255,.7)";
+        ctx.fillText(label, ox + 7, y + 4);
+        const barX = ox + 18;
+        const barW = pw - 26;
+        ctx.fillStyle = "rgba(255,255,255,.12)";
+        ctx.fillRect(barX, y - 3, barW, 5);
+        // Full bar means a wall right against the mouse, which is the reading
+        // worth noticing at a glance.
+        const near = Math.max(0, Math.min(1, 1 - dist / 5));
+        ctx.fillStyle = near > 0.72 ? "#ff6b6b" : GOLD;
+        ctx.fillRect(barX, y - 3, barW * near, 5);
+      });
+      ctx.textAlign = "start";
+    }
+
+    /**
+     * The kick and the red wash after being caught.
+     *
+     * A vignette rather than the flat red rectangle this replaces: filling the
+     * whole frame hid the maze at the one moment the player is trying to work
+     * out what went wrong.
+     */
+    function drawHurt() {
+      const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.18, W / 2, H / 2, H * 0.78);
+      g.addColorStop(0, "rgba(228,0,43,0)");
+      g.addColorStop(1, `rgba(228,0,43,${(0.72 * hurt).toFixed(3)})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    /**
+     * The strip across the top: what is behind the mouse.
+     *
+     * Casts its own short set of columns backwards and draws robots into them.
+     * Deliberately does not mark anything as seen — the minimap is a record of
+     * where the mouse has driven and looked, and a mirror is neither.
+     *
+     * Walls only, plus robots as lit blobs. Pellets are left out: at this size
+     * they would be single dim pixels, and knowing where the food is behind you
+     * is not what a mirror is for.
+     */
+    function drawRear() {
+      const rw = 216;
+      const rh = 46;
+      const ox = (W - rw) / 2;
+      const oy = 6;
+      const cols = 72;
+      const cw = rw / cols;
+
+      const a = P.a + Math.PI;
+      const dirX = Math.cos(a);
+      const dirY = Math.sin(a);
+      const tHalf = Math.tan(fov / 2);
+      const plX = -dirY * tHalf;
+      const plY = dirX * tHalf;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(ox, oy, rw, rh);
+      ctx.clip();
+
+      ctx.fillStyle = "#08070c";
+      ctx.fillRect(ox, oy, rw, rh / 2);
+      ctx.fillStyle = "#000";
+      ctx.fillRect(ox, oy + rh / 2, rw, rh / 2);
+
+      const rz: number[] = new Array(cols).fill(1e9);
+      for (let i = 0; i < cols; i++) {
+        const camX = (2 * i) / cols - 1;
+        const rX = dirX + plX * camX;
+        const rY = dirY + plY * camX;
+        let mapX = Math.floor(P.x);
+        let mapY = Math.floor(P.y);
+        const dX = Math.abs(1 / (rX || 1e-9));
+        const dY = Math.abs(1 / (rY || 1e-9));
+        const stepX = rX < 0 ? -1 : 1;
+        const stepY = rY < 0 ? -1 : 1;
+        let sideX = rX < 0 ? (P.x - mapX) * dX : (mapX + 1 - P.x) * dX;
+        let sideY = rY < 0 ? (P.y - mapY) * dY : (mapY + 1 - P.y) * dY;
+        let side = 0;
+        let tile = "#";
+        let n = 0;
+        while (n++ < 48) {
+          if (sideX < sideY) {
+            sideX += dX;
+            mapX += stepX;
+            side = 0;
+          } else {
+            sideY += dY;
+            mapY += stepY;
+            side = 1;
+          }
+          tile = cellAt(mapY, mapX);
+          if (tile === "#" || tile === "-") break;
+        }
+        const dist = Math.max(0.05, side === 0 ? sideX - dX : sideY - dY);
+        rz[i] = dist;
+        // Dimmer than the forward view, so the eye reads it as a mirror rather
+        // than as a second window.
+        const br = Math.max(0.08, 1 - dist / 11) * (side ? 0.72 : 1) * 0.62;
+        const hh = Math.min(rh * 2.4, rh / dist);
+        const y0 = oy + rh / 2 - hh / 2;
+        ctx.fillStyle =
+          tile === "-"
+            ? `rgb(${(242 * br) | 0},${(169 * br) | 0},${(10 * br) | 0})`
+            : `rgb(${(WALL_SIDE.r * br) | 0},${(WALL_SIDE.g * br) | 0},${(WALL_SIDE.b * br) | 0})`;
+        ctx.fillRect(ox + i * cw, y0, cw + 0.5, hh);
+        ctx.fillStyle = `rgb(${(WALL_TOP.r * br) | 0},${(WALL_TOP.g * br) | 0},${(WALL_TOP.b * br) | 0})`;
+        ctx.fillRect(ox + i * cw, y0, cw + 0.5, 2);
+      }
+
+      const inv = 1 / (plX * dirY - dirX * plY);
+      for (const b of bots) {
+        if (b.mode === "eyes") continue;
+        const rx = b.x - P.x;
+        const ry = b.y - P.y;
+        const tx = inv * (dirY * rx - dirX * ry);
+        const ty = inv * (-plY * rx + plX * ry);
+        if (ty <= 0.2 || ty > 11) continue;
+        const sx = ox + (rw / 2) * (1 + tx / ty);
+        const col = Math.floor(((sx - ox) / rw) * cols);
+        if (col < 0 || col >= cols || rz[col]! <= ty) continue;
+        const rad = Math.max(1.6, Math.min(8, 5 / ty));
+        ctx.globalAlpha = Math.max(0.25, Math.min(1, 1.3 - ty / 9));
+        ctx.fillStyle = b.mode === "fright" ? "#2438b8" : b.color;
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(sx, oy + rh / 2, rad, 0, 7);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+
+      ctx.restore();
+
+      ctx.strokeStyle = "rgba(95,33,103,.9)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(ox, oy, rw, rh);
+      ctx.font = "8px ui-monospace,Menlo,Consolas,monospace";
+      ctx.fillStyle = "rgba(255,255,255,.45)";
+      ctx.textAlign = "center";
+      ctx.fillText("REAR", ox + rw / 2, oy + rh - 3);
+      ctx.textAlign = "start";
+    }
+
     function frightBar() {
       const mw = COLS * MS;
       const ox = W - mw - 10;
@@ -826,7 +1168,23 @@ export function FirstPerson() {
         phase = "ready";
         phaseT = 0;
       }
-      render();
+
+      /*
+        The camera kick. Painted black underneath first: the frame is shifted
+        by a few pixels and without it the edge it leaves behind would smear
+        the previous frame down the side of the screen.
+      */
+      if (hurt > 0) {
+        const k = hurt * hurt * 9;
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, W, H);
+        ctx.save();
+        ctx.translate((Math.random() * 2 - 1) * k, (Math.random() * 2 - 1) * k);
+        render();
+        ctx.restore();
+      } else {
+        render();
+      }
     }
 
     window.addEventListener("keydown", handleKeydown);

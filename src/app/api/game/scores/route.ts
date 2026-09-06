@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { GAME_MODES, MAX_NAME_LENGTH, isGameMode, sanitisePlayerName } from "@/lib/leaderboard";
+import {
+  GAME_MODES,
+  MAX_NAME_LENGTH,
+  isGameMode,
+  parseLeaderboardSort,
+  sanitisePlayerName,
+} from "@/lib/leaderboard";
 import { clientKey, createRateLimiter } from "@/lib/rate-limit";
 
 // The board changes on every submission, so it must never be statically cached.
@@ -29,14 +35,28 @@ export async function GET(request: NextRequest) {
   const modeParam = request.nextUrl.searchParams.get("mode") ?? "classic";
   const mode = isGameMode(modeParam) ? modeParam : "classic";
 
+  const sort = parseLeaderboardSort(request.nextUrl.searchParams.get("sort"));
+
+  /*
+    Sector first, then score, then who got there first.
+
+    Score is still the tiebreak rather than being ignored: two players who both
+    died in sector 6 did not do equally well, and ordering those purely by
+    submission time would make the board a queue.
+  */
+  const orderBy =
+    sort === "sector"
+      ? ([{ level: "desc" }, { score: "desc" }, { createdAt: "asc" }] as const)
+      : ([{ score: "desc" }, { createdAt: "asc" }] as const);
+
   const scores = await prisma.gameScore.findMany({
     where: { mode },
-    orderBy: [{ score: "desc" }, { createdAt: "asc" }],
+    orderBy: [...orderBy],
     take: TOP_N,
     select: { id: true, playerName: true, score: true, level: true, createdAt: true },
   });
 
-  return NextResponse.json({ mode, scores });
+  return NextResponse.json({ mode, sort, scores });
 }
 
 export async function POST(request: NextRequest) {

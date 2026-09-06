@@ -75,6 +75,24 @@ export function sndDeath(): void {
 export function sndLevel(): void {
   [0, 120, 240, 360].forEach((d, i) => setTimeout(() => squeak(600 * (i + 1) * 0.8, 900 * (i + 1) * 0.8, 0.12, 0.12), d));
 }
+/**
+ * The proximity tick: one blip, pitched and weighted by how close the nearest
+ * robot is.
+ *
+ * First-person has no rear view of its own to rely on, so a robot arriving
+ * from behind used to be an unsignalled death. This is the mouse hearing what
+ * it cannot see. It deliberately reads straight-line distance and so carries
+ * through walls — a robot two tiles away round a corner is a robot two tiles
+ * away, and being told so is the difference between tense and unfair.
+ *
+ * The caller owns the interval between ticks; this only makes the sound.
+ */
+export function sndPing(closeness: number): void {
+  const c = Math.max(0, Math.min(1, closeness));
+  const f = 360 + c * 520;
+  squeak(f, f * 0.84, 0.05, 0.04 + c * 0.08, "triangle");
+}
+
 export function sndStart(): void {
   [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => squeak(f, f * 1.02, 0.14, 0.12, "triangle"), i * 130));
 }

@@ -26,7 +26,7 @@ import {
 import { audioInit, sndMunch, sndCheese, sndEatRobot, sndDeath, sndLevel, sndStart, isMuted, toggleMute } from "./audio";
 import { GAME_OVER_EVENT, type GameOverDetail } from "@/lib/leaderboard";
 
-type Phase = "idle" | "ready" | "play" | "paused" | "dying" | "levelup" | "over";
+type Phase = "idle" | "ready" | "play" | "paused" | "dying" | "levelup" | "intermission" | "over";
 type RobotMode = "house" | "exit" | "scatter" | "chase" | "fright" | "eyes";
 
 interface MouseEnt {
@@ -47,6 +47,17 @@ interface Robot {
   releaseAt: number;
   speed: number;
 }
+
+/**
+ * Sectors after which a short scene plays.
+ *
+ * Two of them, early, and then never again: an intermission is a reward for
+ * getting somewhere, and one that turns up every level becomes the thing
+ * standing between the player and the next level.
+ */
+const INTERMISSION_AFTER = new Set([2, 5]);
+/** Long enough for both passes across the screen, short enough not to nag. */
+const INTERMISSION_MS = 5.6;
 
 const HI_KEY = "mmrcClassicHi";
 
@@ -224,11 +235,14 @@ export function ClassicMaze() {
       sndStart();
     }
     function nextLevel() {
+      const cleared = level;
       level++;
       resetMaze();
       resetActors(true);
       updateHud();
-      setPhase("ready");
+      // The scene plays over the reset board, so everything is already in
+      // place for the round that follows it.
+      setPhase(INTERMISSION_AFTER.has(cleared) ? "intermission" : "ready");
     }
 
     function pauseGame() {
@@ -734,10 +748,144 @@ export function ClassicMaze() {
       }
       ctx.restore();
     }
+    /**
+     * Where each robot is actually aiming, drawn.
+     *
+     * The four of them have had real and different targeting since they were
+     * written — REX comes straight at you, VOLT aims four tiles ahead of where
+     * you are going, CYBER aims at a point reflected through REX, SERVO loses
+     * its nerve within six tiles — and none of that was visible. Four coloured
+     * shapes converging on you read as one threat with four bodies.
+     *
+     * A dashed line to a marked tile makes each one legible in a couple of
+     * seconds of watching, and turns "run away" into "run the way VOLT is not
+     * expecting". Only while chasing: in scatter they are all heading for their
+     * own corner and the lines would say nothing worth four extra marks on the
+     * board.
+     */
+    function drawTargets() {
+      if (phase !== "play") return;
+      for (const rb of robots) {
+        if (rb.mode !== "chase") continue;
+        const tgt = robotTarget(rb);
+        if (!tgt) continue;
+        const c = tileCenter(tgt.r, tgt.c);
+        ctx.save();
+        ctx.strokeStyle = rb.color;
+        ctx.lineWidth = 1.2;
+        ctx.globalAlpha = 0.38;
+        ctx.setLineDash([3, 4]);
+        ctx.beginPath();
+        ctx.moveTo(rb.x, rb.y);
+        ctx.lineTo(c.x, c.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 0.72;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 4.5, 0, 7);
+        ctx.moveTo(c.x - 2.6, c.y);
+        ctx.lineTo(c.x + 2.6, c.y);
+        ctx.moveTo(c.x, c.y - 2.6);
+        ctx.lineTo(c.x, c.y + 2.6);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    /**
+     * The scene between sectors.
+     *
+     * Cheddar is chased across the screen, and then comes back the other way
+     * chasing a robot that has just eaten a cheese — the oldest joke in the
+     * genre, and the reason anybody remembers the games that had them.
+     *
+     * It borrows the real drawing code by moving the actual mouse and robot to
+     * the right places for a frame and putting them back afterwards, rather
+     * than keeping a second copy of the artwork that would drift from the
+     * first. Nothing is simulated while this phase runs, so nothing is
+     * disturbed by the loan.
+     */
+    function drawIntermission() {
+      const t = phaseT;
+      /*
+        Below the banner, not through it. Both were centred on the house row,
+        so the mouse and the robot ran behind the word SECTOR and neither could
+        be read.
+      */
+      const y = 12.5 * TILE;
+      const w = canvas.width;
+
+      // Dims the board so this reads as a scene rather than as the game sitting
+      // paused with two sprites sliding over it.
+      ctx.fillStyle = "rgba(4,2,10,.72)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const rex = robots[0];
+      if (!rex) return;
+
+      const mSaved = { x: mouse.x, y: mouse.y, dir: mouse.dir, anim: mouse.anim };
+      const rSaved = { x: rex.x, y: rex.y, dir: rex.dir, mode: rex.mode };
+
+      if (t < 2.6) {
+        // Cheddar, running for his life, right to left.
+        const p = t / 2.6;
+        mouse.x = w + 40 - p * (w + 120);
+        mouse.y = y;
+        mouse.dir = "left";
+        mouse.anim = t * 12;
+        rex.x = mouse.x + 74;
+        rex.y = y;
+        rex.dir = "left";
+        rex.mode = "chase";
+      } else {
+        // And back the other way, with the tables turned.
+        const p = Math.min(1, (t - 2.9) / 2.6);
+        if (p <= 0) {
+          mouse.x = -999;
+          rex.x = -999;
+        } else {
+          rex.x = -40 + p * (w + 120);
+          rex.y = y;
+          rex.dir = "right";
+          rex.mode = "fright";
+          mouse.x = rex.x - 78;
+          mouse.y = y;
+          mouse.dir = "right";
+          mouse.anim = t * 14;
+        }
+      }
+
+      drawRobot(rex);
+      drawMouse();
+
+      mouse.x = mSaved.x;
+      mouse.y = mSaved.y;
+      mouse.dir = mSaved.dir;
+      mouse.anim = mSaved.anim;
+      rex.x = rSaved.x;
+      rex.y = rSaved.y;
+      rex.dir = rSaved.dir;
+      rex.mode = rSaved.mode;
+
+      ctx.save();
+      ctx.font = "600 11px ui-monospace,Menlo,Consolas,monospace";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(255,255,255,.4)";
+      ctx.fillText("PRESS ANY KEY TO SKIP", w / 2, canvas.height - 18);
+      ctx.restore();
+    }
+
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawMazeLayer();
       drawPellets();
+
+      if (phase === "intermission") {
+        drawIntermission();
+        banner("SECTOR " + level, GOLD);
+        return;
+      }
+
+      drawTargets();
       for (const rb of robots) drawRobot(rb);
       if (phase !== "dying" || Math.floor(phaseT * 10) % 2 === 0 || phaseT < 0.1) drawMouse();
       if (phase === "dying") drawDeath();
@@ -764,6 +912,7 @@ export function ClassicMaze() {
         }
       }
       if (phase === "levelup" && phaseT > 2) nextLevel();
+      if (phase === "intermission" && phaseT > INTERMISSION_MS) setPhase("ready");
       draw();
     }
 
@@ -773,6 +922,10 @@ export function ClassicMaze() {
       // Let the player type in the leaderboard name field without the game
       // eating the keystroke (or Enter restarting the run).
       if (isTypingTarget(e.target)) return;
+      if (phase === "intermission") {
+        setPhase("ready");
+        return;
+      }
       const dir = keyMap[e.key];
       if (dir) {
         e.preventDefault();
