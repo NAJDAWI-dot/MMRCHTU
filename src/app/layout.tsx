@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Bevan, Cairo, Inter, JetBrains_Mono } from "next/font/google";
 import { AmbientMice } from "@/components/brand/AmbientMice";
 import { MazeDescent } from "@/components/layout/MazeDescent";
@@ -136,6 +137,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </main>
           <Footer />
         </ThemeProvider>
+        {/*
+          Vercel Web Analytics.
+
+          The endpoint rather than the @vercel/analytics package: that package
+          declares an optional peer on SvelteKit, and npm 11 tries to satisfy
+          it, pulling in a Vite 8 that collides with the Vite 5 the test runner
+          already uses. The install fails outright — and it would fail the same
+          way on Vercel's own build, taking deployments with it. This file is
+          what the package loads anyway.
+
+          There is a real trade in that: the package maps a visit to its route
+          pattern, so every album would be counted as /gallery/[slug]. Here the
+          only dynamic routes are gallery albums and the four policies, and
+          which album somebody opened is the more useful of the two answers.
+
+          Rendered only on Vercel. Nothing serves /_vercel locally, and a 404 on
+          every page load in development is noise nobody needs.
+        */}
+        {process.env.VERCEL === "1" ? (
+          <Script src="/_vercel/insights/script.js" strategy="afterInteractive" />
+        ) : null}
       </body>
     </html>
   );
