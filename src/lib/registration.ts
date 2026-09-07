@@ -34,6 +34,12 @@ export { IEEE_STATUS_OPTIONS, type IeeeStatus };
  *
  * Registrations already stamped 2026-08-29 keep pointing at the drafts they
  * were actually shown, which is the whole point of storing this per row.
+ *
+ * Page-view measurement was disclosed in the privacy policy later the same day,
+ * under this same version rather than a new one. That is deliberate and not a
+ * missed bump: measurement was switched on in the same deployment that
+ * disclosed it, so no visit was ever counted under the earlier wording, and
+ * nobody accepted a text that was untrue while it stood.
  */
 export const CONSENT_VERSION = "2026-09-07";
 
