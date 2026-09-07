@@ -22,8 +22,20 @@ export { IEEE_STATUS_OPTIONS, type IeeeStatus };
  * which is an instruction on how to read every other sentence in them. This
  * field records which text was agreed to, not only what that text meant, and
  * every sentence in all four was rewritten.
+ *
+ * The 2026-09-07 bump is the publication of those same four documents. Until
+ * then each one opened with a banner calling itself a draft pending review, on
+ * the live site, above the text a team is asked to accept before paying. The
+ * banner is gone; the privacy policy now describes the browser storage this
+ * site actually writes, having claimed one key that had been deleted and named
+ * none of the five that exist; and the refund cutoff turns on registration
+ * closing rather than on an advertised deadline that closes nothing. No fee,
+ * right or obligation moved, but the wording a reader is bound by did.
+ *
+ * Registrations already stamped 2026-08-29 keep pointing at the drafts they
+ * were actually shown, which is the whole point of storing this per row.
  */
-export const CONSENT_VERSION = "2026-08-29";
+export const CONSENT_VERSION = "2026-09-07";
 
 // Status is constrained in the application rather than the database (see
 // prisma/schema.prisma) — this is the single source of truth for the valid

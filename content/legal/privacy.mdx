@@ -1,7 +1,3 @@
-> **Draft — pending review.** Written by the organizing committee, not by a lawyer.
-> Check the retention periods and the list of third parties against what the
-> chapter actually does before the competition opens publicly.
-
 > **How this document is written.** Everything here is written in the passive
 > voice. Where something is described as being done and nobody is named as
 > doing it — "is collected", "is refunded", "may be closed" — the party doing it
@@ -9,7 +5,7 @@
 > ("IEEE RAS HTU"), which organizes MMRC 26. Where anyone else is meant, they
 > are named. "You" always means you, the reader.
 
-Last updated 29 August 2026.
+Last updated 7 September 2026.
 
 This explains what the MMRC 26 website collects, why, and what is done with it.
 It covers mmrchtu.tech and the competition run by the IEEE Robotics and
@@ -40,16 +36,32 @@ Use a nickname if you would rather not be identifiable — nothing checks it.
 kept briefly to keep the site running and to rate-limit abuse of the
 registration and payment forms.
 
-**In your own browser.** While you are part-way through registering, what you
-have typed is saved continuously in your browser's local storage, on your own
-device, as you type it — so that refreshing the page, closing the tab, or
-leaving to make your bank transfer does not lose it. None of it leaves your
-device until you submit your payment, and it is erased from your browser as soon
-as your registration is recorded. Clearing your site data removes it at any time.
+**In your own browser.** A few things are kept in your browser's local storage,
+on your own device. None of them are sent anywhere, and each can be read only by
+this site:
 
-One further note is kept in local storage once you have finished registering, so
-that the animation at the end plays only once. It records nothing about you and
-never leaves your device.
+- `mmrc26.registration.draft` — your half-finished registration, saved
+  continuously as you type, so that refreshing the page, closing the tab, or
+  leaving to make your bank transfer does not lose it. Text only: the payment
+  screenshot is never written to your browser, and is uploaded only when you
+  submit. This entry is erased as soon as your registration is recorded.
+- `mmrc26-theme` — whether the light or the dark theme was chosen.
+- `mmrc26-readiness` — the boxes ticked on the readiness checklist.
+- `mmrcClassicHi` and `mmrcFpHi` — the best score reached in each Pac Mouse
+  mode.
+- `pacMousePlayerName` — the name last entered on the leaderboard, offered back
+  the next time so that it does not have to be typed again.
+
+Clearing your site data removes all of them, at any time.
+
+**Cookies.** No cookie is set on the public pages of this site. The one cookie
+in use is the sign-in session for the administration area, set only when a
+member of the organizing committee logs in. Nothing you do on the public pages
+is tracked with cookies.
+
+**An offline copy.** Copies of pages and images are stored in your browser by a
+service worker, so that the site still opens on a weak connection. No personal
+data is held in it, and it is cleared along with your site data.
 
 No advertising trackers are used, and nothing is sold to anybody.
 
