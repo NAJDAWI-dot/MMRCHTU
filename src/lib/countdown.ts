@@ -110,14 +110,51 @@ export function countdownUnits(remaining: Remaining): CountdownUnit[] {
 }
 
 /**
+ * What a clock is counting towards, in words.
+ *
+ * The digits are hidden from assistive tech and one sentence is announced in
+ * their place, which means the sentence has to name the deadline — and there is
+ * now more than one deadline on the site. The wording is passed in rather than
+ * chosen here by an enum, so the arithmetic never has to know what this year's
+ * competition happens to be counting down to.
+ *
+ * Three strings and not one, because the three readings genuinely differ. The
+ * first completes a sentence mid-flow, the second is a whole sentence, and the
+ * third is a display label where a full stop would be wrong.
+ */
+export interface CountdownSubject {
+  /** Completes "3 days and 2 hours until ___." */
+  until: string;
+  /** The whole sentence, for the moment it arrives. */
+  arrived: string;
+  /** The same moment as a visible label, without terminal punctuation. */
+  arrivedLabel: string;
+}
+
+export const COMPETITION_DAY_SUBJECT: CountdownSubject = {
+  until: "competition day",
+  arrived: "Competition day is here.",
+  arrivedLabel: "Competition day is here",
+};
+
+export const EARLY_BIRD_SUBJECT: CountdownSubject = {
+  until: "the early bird discount ends",
+  arrived: "The early bird discount has ended.",
+  arrivedLabel: "Early bird has ended",
+};
+
+/**
  * A single sentence for screen readers and for reduced-motion visitors.
  *
  * A row of ticking digits is meaningless read aloud one at a time, and an
  * aria-live region that updates every second is actively hostile — so the
  * digits are hidden from assistive tech and this is announced instead.
  */
-export function countdownSentence(remaining: Remaining): string {
-  if (remaining.done) return "Competition day is here.";
+export function countdownSentence(
+  remaining: Remaining,
+  subject: CountdownSubject = COMPETITION_DAY_SUBJECT,
+): string {
+  if (remaining.done) return subject.arrived;
 
   const parts: string[] = [];
   if (remaining.days > 0) parts.push(`${remaining.days} day${remaining.days === 1 ? "" : "s"}`);
@@ -127,9 +164,9 @@ export function countdownSentence(remaining: Remaining): string {
   if (remaining.days === 0 && remaining.minutes > 0) {
     parts.push(`${remaining.minutes} minute${remaining.minutes === 1 ? "" : "s"}`);
   }
-  if (parts.length === 0) return "Less than a minute until competition day.";
+  if (parts.length === 0) return `Less than a minute until ${subject.until}.`;
 
-  return `${listJoin(parts)} until competition day.`;
+  return `${listJoin(parts)} until ${subject.until}.`;
 }
 
 /** "a", "a and b", "a, b and c" — Oxford-comma-free, matching British usage. */

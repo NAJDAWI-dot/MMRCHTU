@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { Countdown } from "@/components/brand/Countdown";
+import { CountdownPanel } from "@/components/brand/CountdownPanel";
 import { FeatureCard } from "@/components/home/FeatureCard";
 import { EarlyBirdBadge } from "@/components/promo/EarlyBirdBadge";
 import { parseStatus } from "@/lib/competition-day";
@@ -128,43 +128,12 @@ export default async function HomePage() {
 
         {showCountdown && config.eventDate ? (
           <div className="mt-14">
-            {/* `isolate` is what keeps the two glows behind the text: it makes
-                this the stacking context, so the -z-10 below lands above the
-                panel's own gradient but under everything written on top of it.
-                Without it the glows paint over the digits, which at these
-                opacities is visible. */}
-            <div className="relative isolate mx-auto max-w-2xl overflow-hidden rounded-2xl border border-ras-purple/40 bg-gradient-to-br from-mood-orchid/25 via-ras-purple/10 to-mood-rose/25 px-5 py-7 shadow-lg shadow-ras-purple/10 sm:px-8 dark:border-mood-violet/45 dark:from-mood-violet/30 dark:via-transparent dark:to-mood-rose/30 dark:shadow-none">
-              {/* Two sweeps rather than one, from opposite corners: the panel
-                  reads as lit from both ends of the digits' gradient instead of
-                  fading off to nothing on the left. */}
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute -right-16 -top-16 -z-10 h-48 w-48 rounded-full bg-mood-rose/25 blur-3xl"
-              />
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute -bottom-20 -left-20 -z-10 h-52 w-52 rounded-full bg-mood-orchid/25 blur-3xl"
-              />
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
-                Competition day in
-              </p>
-              <div className="mt-4 flex justify-center">
-                <Countdown target={config.eventDate} />
-              </div>
-              {config.dateText || config.venue ? (
-                <p className="mt-5 text-sm text-ras-gray dark:text-white/70">
-                  {[config.dateText, config.venue].filter(Boolean).join(" · ")}
-                </p>
-              ) : null}
-              {dayPageVisible ? (
-                <Link
-                  href="/competition-day"
-                  className="-mx-2 mt-1 inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-semibold text-accent hover:underline"
-                >
-                  Competition day details →
-                </Link>
-              ) : null}
-            </div>
+            <CountdownPanel
+              target={config.eventDate}
+              meta={[config.dateText, config.venue].filter(Boolean).join(" · ")}
+              detailsHref={dayPageVisible ? "/competition-day" : null}
+              earlyBird={earlyBird}
+            />
           </div>
         ) : null}
       </section>

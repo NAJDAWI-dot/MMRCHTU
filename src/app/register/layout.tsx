@@ -1,8 +1,11 @@
+import { CountdownPanel } from "@/components/brand/CountdownPanel";
 import { EarlyBirdMarquee } from "@/components/promo/EarlyBirdMarquee";
 import { EarlyBirdNotice } from "@/components/promo/EarlyBirdNotice";
 
 import { guardHiddenPage } from "@/lib/page-visibility";
 import { getEarlyBirdState } from "@/lib/early-bird-server";
+import { shouldShowCountdown } from "@/lib/countdown";
+import { getCompetitionDayConfig } from "@/lib/site-config";
 
 /**
  * 404s this route while hidden. See guardHiddenPage.
@@ -26,13 +29,35 @@ import { getEarlyBirdState } from "@/lib/early-bird-server";
 export default async function RegisterLayout({ children }: { children: React.ReactNode }) {
   await guardHiddenPage("/register");
   const earlyBird = await getEarlyBirdState();
+  // Read only when there is a panel to build. Asked for unconditionally this
+  // would be a second query on every register page load, for a row nothing on
+  // the page would go on to use.
+  const competition = earlyBird.active ? await getCompetitionDayConfig() : null;
 
   return (
     <>
       {earlyBird.active ? (
         <>
           <EarlyBirdMarquee />
-          <div className="mx-auto max-w-lg px-4 pt-8">
+          <div className="mx-auto max-w-lg space-y-6 px-4 pt-8">
+            {/*
+              The homepage's panel, one size down: the two deadlines a team is
+              registering against — when the competition is, and how long the
+              discount lasts — above the form rather than only on the homepage.
+
+              Gated on the event date because the panel is built around the
+              competition-day clock. With no date configured there is nothing
+              for the discount to sit under, and the notice below still names
+              the cutoff in words.
+            */}
+            {competition && shouldShowCountdown(competition.eventDate) && competition.eventDate ? (
+              <CountdownPanel
+                target={competition.eventDate}
+                size="md"
+                meta={[competition.dateText, competition.venue].filter(Boolean).join(" · ")}
+                earlyBird={earlyBird}
+              />
+            ) : null}
             <EarlyBirdNotice percent={earlyBird.percent} cutoff={earlyBird.cutoff} />
           </div>
         </>

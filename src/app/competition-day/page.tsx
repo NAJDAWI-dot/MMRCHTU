@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Countdown } from "@/components/brand/Countdown";
+import { EarlyBirdCountdown } from "@/components/promo/EarlyBirdCountdown";
 import { parseStatus, toParagraphs } from "@/lib/competition-day";
 import { shouldShowCountdown } from "@/lib/countdown";
 import { buildTimeline, focusEvent } from "@/lib/schedule";
 import { getCompetitionDayConfig } from "@/lib/site-config";
+import { getEarlyBirdState } from "@/lib/early-bird-server";
 import { hiddenPageHrefs } from "@/lib/page-visibility";
 import { PageLink } from "@/components/layout/PageLink";
 import { prisma } from "@/lib/prisma";
@@ -22,10 +24,11 @@ export const metadata: Metadata = {
 };
 
 export default async function CompetitionDayPage() {
-  const [config, events, hidden] = await Promise.all([
+  const [config, events, hidden, earlyBird] = await Promise.all([
     getCompetitionDayConfig(),
     prisma.scheduleEvent.findMany({ orderBy: { startsAt: "asc" } }),
     hiddenPageHrefs(),
+    getEarlyBirdState(),
   ]);
 
   const status = parseStatus(config.status);
@@ -88,6 +91,18 @@ export default async function CompetitionDayPage() {
             <div className="mt-8 flex flex-wrap items-stretch justify-center gap-3">
               {config.dateText ? <Fact label="Date" value={config.dateText} /> : null}
               {config.venue ? <Fact label="Venue" value={config.venue} /> : null}
+            </div>
+          ) : null}
+
+          {/*
+            The discount deadline goes last, inside the same hero and at the
+            smallest of the three scales. It is a reason to act this week, not
+            what this page is about — and putting it between the clock and the
+            facts would split one thought in half.
+          */}
+          {earlyBird.active ? (
+            <div className="mx-auto max-w-md">
+              <EarlyBirdCountdown percent={earlyBird.percent} cutoff={earlyBird.cutoff} />
             </div>
           ) : null}
         </div>
