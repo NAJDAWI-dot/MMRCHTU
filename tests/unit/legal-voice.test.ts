@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { LEGAL_PAGES, type LegalSlug } from "@/lib/mdx";
+import { CONSENT_VERSION } from "@/lib/registration";
 import { VERIFICATION_WINDOW_TEXT } from "@/lib/payment-proof";
 
 /**
@@ -141,22 +142,70 @@ describe("the legal documents", () => {
   });
 
   /**
-   * Two blockquotes separated by a blank line render as two elements; without
-   * the blank line they collapse into one, and the declaration would be read as
-   * part of the draft banner — which is scaffolding due to be deleted before
-   * launch, and would take the declaration with it.
+   * The banner these four carried until publication — "Draft — pending review"
+   * — is gone. This is what stops it coming back: in a reverted file, in a
+   * paragraph copied out of an old draft, or in a fifth policy started from one.
+   *
+   * Matched on the banner's markup rather than on the word "draft", which
+   * appears legitimately and must keep appearing: `mmrc26.registration.draft`
+   * is a real local-storage key, and the privacy policy is obliged to name it.
    */
-  it("keeps the declaration clear of the draft banner", () => {
+  it("carries no draft scaffolding", () => {
+    const offences: string[] = [];
     for (const slug of slugs) {
-      expect(read(slug)).toMatch(
-        /\*\*Draft — pending review\.\*\*[\s\S]*?\n\n> \*\*How this document is written\.\*\*/,
-      );
+      const source = read(slug);
+      if (/pending review/i.test(source)) offences.push(`${slug}.mdx: "pending review"`);
+      if (/\*\*Draft\b/i.test(source)) offences.push(`${slug}.mdx: a **Draft** banner`);
+    }
+    expect(offences).toEqual([]);
+  });
+
+  /**
+   * With the banner removed the declaration leads each document, and has to
+   * stay a blockquote of its own. Folded into the paragraph beneath it, the one
+   * sentence telling a reader who the agentless passive is hiding would be read
+   * as part of the prose it exists to explain.
+   */
+  it("opens every document with the declaration, as a block of its own", () => {
+    for (const slug of slugs) {
+      const first = read(slug).split("\n\n")[0] ?? "";
+      expect(first.startsWith("> **How this document is written.**")).toBe(true);
+      expect(first.split("\n").every((line) => line.startsWith(">"))).toBe(true);
     }
   });
 
   it("carries one date across all four, since all four were rewritten at once", () => {
     const dates = new Set(slugs.map((slug) => /Last updated .*/.exec(read(slug))?.[0]));
     expect(dates.size).toBe(1);
+  });
+
+  /**
+   * The date on the page and CONSENT_VERSION are two halves of one fact. A
+   * registration stores the version; the version means something only if the
+   * text it names is the text that was on the page that day. Rewriting these
+   * documents without moving the constant would record teams against wording
+   * nobody was ever shown — the exact failure the stored version exists to
+   * prevent, and one nothing else would catch.
+   *
+   * One file is enough: the test above already pins all four to the same date.
+   */
+  it("is dated the day CONSENT_VERSION records", () => {
+    const months = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
+    ];
+
+    const match = /Last updated (\d{1,2}) (\w+) (\d{4})\./.exec(read("terms"));
+    if (!match) throw new Error("terms.mdx has no 'Last updated' line");
+
+    const [, day, month, year] = match;
+    if (!day || !month || !year) throw new Error("unreadable date line in terms.mdx");
+
+    const monthNumber = months.indexOf(month) + 1;
+    expect(monthNumber).toBeGreaterThan(0);
+
+    const iso = `${year}-${String(monthNumber).padStart(2, "0")}-${day.padStart(2, "0")}`;
+    expect(iso).toBe(CONSENT_VERSION);
   });
 
   /**

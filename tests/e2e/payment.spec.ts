@@ -172,7 +172,8 @@ test("every legal page renders and is reachable from the footer", async ({ page 
   ] as const) {
     await goto(page, `/legal/${slug}`);
     await expect(page.getByRole("heading", { name: title, level: 1 })).toBeVisible();
-    await expect(page.getByText(/pending review/i)).toBeVisible();
+    // Published, not drafts: no page may still call itself pending review.
+    await expect(page.getByText(/pending review/i)).toHaveCount(0);
   }
 
   // The refund policy is the one a paying team needs; check it states the
