@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
 import { MmrcLogo } from "@/components/brand/MmrcLogo";
+import { EngineeredBy } from "@/components/layout/EngineeredBy";
 import { LEGAL_PAGES, type LegalSlug } from "@/lib/mdx";
 
 export function Footer() {
@@ -46,13 +47,10 @@ export function Footer() {
         </p>
       </div>
 
-      {/* The last line on every page. Separated from the chapter's own credit
-          above it so the two are not read as one sentence. */}
-      <div className="border-t border-ras-gray/10 px-4 py-4 text-center">
-        <p className="font-display text-sm font-bold tracking-[0.35em] text-ras-purple dark:text-white/80">
-          NAJDAWI
-        </p>
-      </div>
+      {/* The last line on every page. Kept a separate band from the chapter's
+          own credit above it so the two are not read as one sentence: one says
+          who runs the competition, this one says who built the site. */}
+      <EngineeredBy />
     </footer>
   );
 }
