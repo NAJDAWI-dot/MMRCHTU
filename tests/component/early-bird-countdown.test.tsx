@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
 import { EarlyBirdCountdown } from "@/components/promo/EarlyBirdCountdown";
+import { EARLY_BIRD_LABEL_AR } from "@/lib/early-bird";
 
 /**
  * The discount deadline, ticking under the competition-day clock.
@@ -30,12 +31,14 @@ describe("the early bird countdown", () => {
     expect(screen.getByText(/early bird 20% off ends in/i)).toBeInTheDocument();
   });
 
-  it("carries the promotion's own word, and does not read it out twice", () => {
+  it("leaves the Arabic mark to the pill and the ribbon", () => {
     render(<EarlyBirdCountdown percent={20} cutoff={fromNow(30 * HOUR)} />);
 
-    // The English beside it says the same thing; announced together they are
-    // one phrase repeated.
-    expect(screen.getByText("تخفيضات")).toHaveAttribute("aria-hidden", "true");
+    // The word is a mark — a word set against a colour, doing no other work.
+    // Inside a line of running text it read as the same phrase said twice, so
+    // it belongs to the badge and the marquee and to nothing here.
+    expect(screen.queryByText(EARLY_BIRD_LABEL_AR)).toBeNull();
+    expect(document.querySelector('[lang="ar"]')).toBeNull();
   });
 
   it("announces its own deadline, not competition day's", () => {

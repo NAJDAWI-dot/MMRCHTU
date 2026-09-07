@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Countdown } from "@/components/brand/Countdown";
-import { EARLY_BIRD_LABEL_AR } from "@/lib/early-bird";
 import { EARLY_BIRD_SUBJECT } from "@/lib/countdown";
 
 /**
@@ -54,28 +53,17 @@ export function EarlyBirdCountdown({ percent, cutoff }: { percent: number; cutof
   return (
     <div className="mt-6 border-t border-ras-purple/20 pt-5 dark:border-white/15">
       {/*
+        English only. The Arabic word the promotion was signed off with belongs
+        to the pill and the ribbon, which are marks — a word set against a
+        colour, doing no other work. This is a line of running text introducing
+        a clock, and the same word inside it read as the phrase said twice.
+
         Crimson in the light theme and plain white in the dark one, rather than
         the crimson's own dark-theme tint. The moodboard palette is decorative
         by declaration — see the note above it in tailwind.config.ts — and every
         shade in it is dark enough to disappear into this panel's dark gradient.
-        The Arabic word is what carries the promotion in both themes; the colour
-        only has to be legible.
       */}
-      <p className="flex flex-wrap items-center justify-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-ras-crimson dark:text-white/75">
-        {/*
-          The Arabic word the promotion was signed off with, exactly as it
-          appears on the pill and in the ribbon. Hidden from assistive tech
-          here: the English beside it says the same thing, and the two read as
-          one repeated phrase otherwise.
-        */}
-        <span
-          dir="rtl"
-          lang="ar"
-          aria-hidden="true"
-          className="font-arabic text-xs font-bold leading-none"
-        >
-          {EARLY_BIRD_LABEL_AR}
-        </span>
+      <p className="text-center font-mono text-[11px] uppercase tracking-[0.18em] text-ras-crimson dark:text-white/75">
         Early bird {percent}% off ends in
       </p>
       <div className="mt-2.5 flex justify-center">
