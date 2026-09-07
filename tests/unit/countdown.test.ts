@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  COMPETITION_DAY_SUBJECT,
+  EARLY_BIRD_SUBJECT,
   countdownSentence,
   countdownUnits,
   pad,
@@ -122,6 +124,48 @@ describe("countdownSentence", () => {
     // "90 days and 12 minutes" is noise.
     const s = countdownSentence(remainingUntil(after(90 * DAY + 12 * MINUTE), BASE));
     expect(s).toBe("90 days until competition day.");
+  });
+});
+
+describe("countdown subjects", () => {
+  it("counts towards competition day unless told otherwise", () => {
+    // The default is what every existing caller relies on, so it is asserted
+    // rather than assumed.
+    const remaining = remainingUntil(after(3 * DAY + 2 * HOUR), BASE);
+
+    expect(countdownSentence(remaining)).toBe(
+      countdownSentence(remaining, COMPETITION_DAY_SUBJECT),
+    );
+  });
+
+  it("names the discount deadline when that is what is being counted", () => {
+    expect(
+      countdownSentence(remainingUntil(after(3 * DAY + 2 * HOUR), BASE), EARLY_BIRD_SUBJECT),
+    ).toBe("3 days and 2 hours until the early bird discount ends.");
+  });
+
+  it("says the offer has ended rather than that it has arrived", () => {
+    // A deadline that passes is the opposite of an event that starts, and the
+    // one sentence a screen reader gets has to know the difference.
+    expect(countdownSentence(remainingUntil(BASE, BASE), EARLY_BIRD_SUBJECT)).toBe(
+      "The early bird discount has ended.",
+    );
+  });
+
+  it("handles the last minute of the offer", () => {
+    expect(countdownSentence(remainingUntil(after(30 * SECOND), BASE), EARLY_BIRD_SUBJECT)).toBe(
+      "Less than a minute until the early bird discount ends.",
+    );
+  });
+
+  it("keeps the spoken sentence and the printed label apart", () => {
+    // One is read out and ends in a full stop; the other is set in display
+    // capitals, where a full stop is a typo.
+    for (const subject of [COMPETITION_DAY_SUBJECT, EARLY_BIRD_SUBJECT]) {
+      expect(subject.arrived.endsWith(".")).toBe(true);
+      expect(subject.arrivedLabel.endsWith(".")).toBe(false);
+      expect(subject.until.endsWith(".")).toBe(false);
+    }
   });
 });
 
