@@ -159,6 +159,21 @@ describe("the committee tributes", () => {
     expect(scrim!.compareDocumentPosition(words) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it("is presented by the chapter, not by the competition's own committee", () => {
+    // The mention is issued by IEEE RAS HTU. It is their recognition to give,
+    // and signing it "the MMRC 26 committee" would have the organisers thanking
+    // themselves — so the chapter's lockup signs it and the old sign-off is
+    // gone rather than merely reworded.
+    render(<Committee />);
+
+    const dialog = open("Lina Haddad");
+
+    expect(within(dialog).getByText(/presented by/i)).toBeInTheDocument();
+    expect(within(dialog).getByAltText("IEEE RAS HTU Student Chapter")).toBeInTheDocument();
+    expect(within(dialog).queryByText(/mmrc 26 committee/i)).toBeNull();
+    expect(within(dialog).queryByText(/with thanks/i)).toBeNull();
+  });
+
   it("darkens the scrim for an uploaded picture, and lifts it for a composed stage", () => {
     // The two ramps answer two different risks. A composed stage is built from
     // colours this codebase pins dark, so it gets almost no scrim and the

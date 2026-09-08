@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
 
 import { MouseMark } from "@/components/brand/MouseMark";
@@ -10,11 +10,16 @@ import type { TributePerson } from "./TributeStage";
 /**
  * One person, lit, with what they did written under them.
  *
- * Built as a stage rather than a card, and the difference is the whole design:
- * a pool of light, a beam coming down into it, dust drifting through the beam,
- * and the person standing in the middle of it. The words arrive a beat after
- * the panel does, so the tribute reads as something being said rather than
- * something that was already lying there.
+ * A citation rather than a card, and issued by the chapter rather than by the
+ * competition: the mention comes from IEEE RAS HTU, and the panel says so twice
+ * — once around the portrait, where the chapter's name is struck into the rim
+ * of the medal, and once at the foot, where the chapter's own lockup signs it.
+ *
+ * The staging is a theatre: a pool of light, a beam falling into it, dust
+ * drifting up through the beam, and the whole stage leaning a few pixels under
+ * the pointer so the light sits in front of the picture rather than on it. The
+ * words arrive a beat after the panel, so a tribute reads as something being
+ * said and not as something that was already lying there.
  *
  * Portalled to document.body, and that is not a preference. The Team page sits
  * inside PageTransition's .page-enter, which animates transform — and an
@@ -32,6 +37,25 @@ import type { TributePerson } from "./TributeStage";
 
 /** Everything the Tab trap treats as a stop. */
 const FOCUSABLE = "button, a[href]";
+
+/**
+ * The chapter's own lockup, and deliberately not the <Logo> component.
+ *
+ * Logo picks its variant from the site theme, which is the right rule for the
+ * page and the wrong one here: this panel is dark in both themes, so in light
+ * mode Logo would drop the full-colour mark onto a dark stage. The RAS
+ * guideline quoted in Logo.tsx — never white-on-light or black-on-dark, and
+ * swap the pre-coloured file rather than recolouring one — is satisfied by
+ * pinning the white lockup, because the surface under it is always dark.
+ */
+const CHAPTER_LOCKUP = "/brand/logo/lockup-htu-chapter-white.png";
+
+/** Struck around the rim of the medal. */
+const SEAL_LEGEND = "IEEE RAS HTU STUDENT CHAPTER · MICRO MOUSE ROBOT COMPETITION · ";
+
+/** Radius of the rim text, and the circumference the legend is fitted to. */
+const SEAL_RADIUS = 80;
+const SEAL_CIRCUMFERENCE = 2 * Math.PI * SEAL_RADIUS;
 
 /**
  * Dust in the beam.
@@ -142,10 +166,30 @@ export function TributeDialog({
     };
   }, [onClose, onStep]);
 
+  /**
+   * The stage leans a few pixels toward the pointer.
+   *
+   * Written straight onto the element as custom properties rather than held in
+   * state: this fires on every mouse move, and a re-render per move would be an
+   * absurd price for six pixels of parallax. Only the stage leans, never the
+   * scrim — the scrim has to stay pinned to the panel, or the contrast the type
+   * depends on moves around with it. CSS drops the effect under reduced motion.
+   */
+  function onPointerMove(event: PointerEvent<HTMLDivElement>) {
+    const panel = panelRef.current;
+    if (!panel) return;
+    const box = panel.getBoundingClientRect();
+    const x = (event.clientX - box.left) / box.width - 0.5;
+    const y = (event.clientY - box.top) / box.height - 0.5;
+    panel.style.setProperty("--par-x", `${(-x * 14).toFixed(2)}px`);
+    panel.style.setProperty("--par-y", `${(-y * 10).toFixed(2)}px`);
+  }
+
   if (!mounted) return null;
 
   const stage = stageFor(person.id);
   const headingId = `tribute-name-${person.id}`;
+  const sealPathId = `tribute-seal-${person.id}`;
   const composed = !person.stageUrl;
 
   const panelStyle = {
@@ -189,66 +233,72 @@ export function TributeDialog({
         aria-labelledby={headingId}
         tabIndex={-1}
         style={panelStyle}
+        onPointerMove={onPointerMove}
         className="tribute-panel tribute-rise relative my-auto w-full max-w-[33rem] overflow-hidden rounded-[28px] shadow-2xl ring-1 ring-white/15 focus:outline-none"
       >
-        {person.stageUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element -- blob-stored stage, downscaled at upload */
-          <img
-            src={person.stageUrl}
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            className="absolute inset-0 h-full w-full object-cover"
+        {/* Everything in here leans with the pointer. Oversized, so leaning it
+            can never drag an edge into view. */}
+        <div aria-hidden="true" className="tribute-parallax absolute -inset-6">
+          {person.stageUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element -- blob-stored stage, downscaled at upload */
+            <img
+              src={person.stageUrl}
+              alt=""
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : null}
+
+          {/* The pool of light they stand in — their own colour, over their own
+              picture if they have one, and the whole stage if they do not. */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(ellipse 78% 58% at 50% 26%, ${stage.glow}D9 0%, ${stage.glow}59 42%, transparent 74%)`,
+            }}
           />
-        ) : null}
 
-        {/* The pool of light they stand in — their own colour, over their own
-            picture if they have one, and the whole stage if they do not. */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0"
-          style={{
-            background: `radial-gradient(ellipse 78% 58% at 50% 24%, ${stage.glow}D9 0%, ${stage.glow}59 42%, transparent 74%)`,
-          }}
-        />
+          {/*
+            The beam, the flare as the lamp comes on, and the dust in the light —
+            for a stage this file composed only.
 
-        {/*
-          The beam and the dust in it, for a stage this file composed only.
-
-          Both sit under the scrim, so neither can affect the contrast of a
-          single word — and a picture somebody uploaded is lit however it was
-          lit when it was taken. Painting a fake shaft of light down the front of
-          a real photograph would look like exactly what it is.
-        */}
-        {composed ? (
-          <>
-            <div aria-hidden="true" className="tribute-beam absolute inset-0" />
-            <div aria-hidden="true" className="absolute inset-0 overflow-hidden">
-              {MOTES.map((mote, index) => (
-                <span
-                  key={index}
-                  className="tribute-mote"
-                  style={
-                    {
-                      left: `${mote.left}%`,
-                      bottom: `${mote.bottom}%`,
-                      width: `${mote.size}px`,
-                      height: `${mote.size}px`,
-                      "--mote-dur": `${mote.dur}s`,
-                      "--mote-delay": `${mote.delay}s`,
-                      "--mote-drift": `${mote.drift}px`,
-                    } as CSSProperties
-                  }
-                />
-              ))}
-            </div>
-          </>
-        ) : null}
+            All three sit under the scrim, so none of them can touch the contrast
+            of a single word. And a picture somebody uploaded was lit however it
+            was lit when it was taken: painting a fake shaft of light down the
+            front of a real photograph would look like exactly what it is.
+          */}
+          {composed ? (
+            <>
+              <div className="tribute-beam absolute inset-0" />
+              <div className="tribute-flare absolute inset-0" />
+              <div className="absolute inset-0 overflow-hidden">
+                {MOTES.map((mote, index) => (
+                  <span
+                    key={index}
+                    className="tribute-mote"
+                    style={
+                      {
+                        left: `${mote.left}%`,
+                        bottom: `${mote.bottom}%`,
+                        width: `${mote.size}px`,
+                        height: `${mote.size}px`,
+                        "--mote-dur": `${mote.dur}s`,
+                        "--mote-delay": `${mote.delay}s`,
+                        "--mote-drift": `${mote.drift}px`,
+                      } as CSSProperties
+                    }
+                  />
+                ))}
+              </div>
+            </>
+          ) : null}
+        </div>
 
         {/* The scrim. Heavier over an uploaded picture, because that picture is
             whatever somebody chooses next year and could be white; lighter over
             a stage this file composed, whose colours are known and are pinned
-            dark by a test. Both ramps live in globals.css with the arithmetic. */}
+            dark by a test. Both ramps live in globals.css with the arithmetic.
+            Pinned to the panel and never parallaxed — see onPointerMove. */}
         <div
           aria-hidden="true"
           className={`tribute-scrim absolute inset-0 ${composed ? "" : "tribute-scrim--photo"}`}
@@ -257,11 +307,17 @@ export function TributeDialog({
         {/* Corners fall away, so the eye is pushed to the middle of the stage. */}
         <div aria-hidden="true" className="tribute-vignette absolute inset-0" />
 
+        {/* The ruled border of a citation, set in from the edge. */}
+        <div
+          aria-hidden="true"
+          className="tribute-frame pointer-events-none absolute inset-3 rounded-[20px]"
+        />
+
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-3.5 top-3.5 z-20 grid h-9 w-9 place-items-center rounded-full bg-black/45 text-white/75 ring-1 ring-white/20 transition hover:bg-black/70 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white motion-reduce:transition-none"
+          className="absolute right-4 top-4 z-20 grid h-9 w-9 place-items-center rounded-full bg-black/45 text-white/75 ring-1 ring-white/20 transition hover:bg-black/70 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white motion-reduce:transition-none"
         >
           <svg
             viewBox="0 0 24 24"
@@ -276,18 +332,48 @@ export function TributeDialog({
           </svg>
         </button>
 
-        <div className="tribute-reveal relative z-10 px-6 pb-8 pt-10 text-center sm:px-10 sm:pt-12">
+        <div className="tribute-reveal relative z-10 px-6 pb-7 pt-9 text-center sm:px-10 sm:pt-10">
           <p className="flex items-center justify-center gap-3 font-mono text-[10px] uppercase tracking-[0.34em] text-white/85">
             <span aria-hidden="true" className="h-px w-6 bg-white/35" />
             Honourable mention
             <span aria-hidden="true" className="h-px w-6 bg-white/35" />
           </p>
 
-          <div className="mt-7 flex justify-center">
-            <span className="relative grid h-[136px] w-[136px] place-items-center">
-              {/* A rim of light turning slowly around them. The portrait covers
-                  the middle, so only the 8px edge of this is ever seen. */}
-              <span aria-hidden="true" className="tribute-ring absolute inset-0 rounded-full" />
+          <div className="mt-5 flex justify-center">
+            <span className="relative grid h-[184px] w-[184px] place-items-center">
+              {/* The chapter's name struck around the rim of the medal, fitted
+                  to the circle exactly rather than trusted to font metrics. */}
+              <svg
+                viewBox="0 0 184 184"
+                aria-hidden="true"
+                className="tribute-seal absolute inset-0 h-full w-full text-white/55"
+              >
+                <defs>
+                  <path
+                    id={sealPathId}
+                    fill="none"
+                    d={`M 92,92 m -${SEAL_RADIUS},0 a ${SEAL_RADIUS},${SEAL_RADIUS} 0 1,1 ${SEAL_RADIUS * 2},0 a ${SEAL_RADIUS},${SEAL_RADIUS} 0 1,1 -${SEAL_RADIUS * 2},0`}
+                  />
+                </defs>
+                <text
+                  fill="currentColor"
+                  className="font-mono"
+                  style={{ fontSize: 9, fontWeight: 500 }}
+                >
+                  <textPath
+                    href={`#${sealPathId}`}
+                    textLength={SEAL_CIRCUMFERENCE}
+                    lengthAdjust="spacing"
+                  >
+                    {SEAL_LEGEND}
+                  </textPath>
+                </text>
+              </svg>
+
+              {/* A rim of light turning the other way. The portrait covers the
+                  middle, so only the edge of this is ever seen. */}
+              <span aria-hidden="true" className="tribute-ring absolute inset-[26px] rounded-full" />
+
               <span className="tribute-spot relative grid place-items-center rounded-full">
                 {portrait}
               </span>
@@ -296,7 +382,7 @@ export function TributeDialog({
 
           <h2
             id={headingId}
-            className="mt-7 text-balance font-display text-[26px] font-extrabold leading-tight tracking-[-0.015em] text-white sm:text-[30px]"
+            className="mt-5 text-balance font-display text-[26px] font-extrabold leading-tight tracking-[-0.015em] text-white sm:text-[30px]"
           >
             {person.name}
           </h2>
@@ -313,22 +399,31 @@ export function TributeDialog({
             ) : null}
           </p>
 
-          <p className="mx-auto mt-7 max-w-[26rem] text-pretty text-[17px] leading-[1.65] text-white/95">
+          <p className="mx-auto mt-6 max-w-[26rem] text-pretty text-[17px] leading-[1.65] text-white/95">
             {person.tribute}
           </p>
 
-          <div aria-hidden="true" className="mt-7 flex items-center justify-center gap-3">
+          <div aria-hidden="true" className="mt-6 flex items-center justify-center gap-3">
             <span className="h-px w-12 bg-gradient-to-r from-transparent to-white/30" />
             <MouseMark className="h-5 w-5 text-white/60" />
             <span className="h-px w-12 bg-gradient-to-l from-transparent to-white/30" />
           </div>
 
-          <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.22em] text-white/65">
-            With thanks — MMRC 26
-          </p>
+          {/* Who this is from. The chapter signs it, not the competition. */}
+          <div className="mt-6 flex flex-col items-center gap-2.5">
+            <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/60">
+              Presented by
+            </p>
+            {/* eslint-disable-next-line @next/next/no-img-element -- static brand lockup; there is nothing for the optimiser to do to it */}
+            <img
+              src={CHAPTER_LOCKUP}
+              alt="IEEE RAS HTU Student Chapter"
+              className="h-20 w-auto opacity-95"
+            />
+          </div>
 
           {total > 1 ? (
-            <div className="mt-7 flex items-center justify-center gap-5 border-t border-white/12 pt-5">
+            <div className="mt-6 flex items-center justify-center gap-5 border-t border-white/12 pt-5">
               <NavButton
                 label={`Previous person: ${previousName}`}
                 onClick={() => onStep(-1)}
@@ -342,7 +437,7 @@ export function TributeDialog({
           ) : null}
 
           {total > 1 ? (
-            <p className="mt-3.5 hidden font-mono text-[9px] uppercase tracking-[0.2em] text-white/45 sm:block">
+            <p className="mt-3.5 hidden font-mono text-[9px] uppercase tracking-[0.2em] text-white/60 sm:block">
               ← → to move through the committee
             </p>
           ) : null}

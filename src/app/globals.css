@@ -2137,6 +2137,77 @@ header:has([data-mobile-nav-open]) {
 }
 
 /*
+  The stage leans a few pixels toward the pointer, on custom properties the
+  dialog writes straight onto the panel. Only the stage moves: the scrim above
+  it stays pinned, because the contrast every word on this panel depends on was
+  measured against a scrim that does not wander.
+*/
+.tribute-parallax {
+  transform: translate3d(var(--par-x, 0px), var(--par-y, 0px), 0);
+  transition: transform 220ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  will-change: transform;
+}
+
+/* The lamp coming on: one bloom of light as the citation opens, then gone. */
+@keyframes tributeFlare {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  22% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.28);
+  }
+}
+
+.tribute-flare {
+  background: radial-gradient(
+    circle at 50% 26%,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.12) 26%,
+    transparent 58%
+  );
+  animation: tributeFlare 900ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+/*
+  The ruled border of a citation: one line set in from the edge and a fainter
+  second inside it. Two lines rather than one because a single hairline reads as
+  a container, and a pair reads as a document.
+*/
+.tribute-frame {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.tribute-frame::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/*
+  The chapter's name struck around the rim of the medal, turning against the
+  sheen ring inside it. Slowly, and in the opposite direction: two rings moving
+  the same way would read as one thing slipping, and this is meant to read as
+  two — a struck rim, and the light crossing it.
+*/
+@keyframes tributeSealSpin {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+.tribute-seal {
+  letter-spacing: 0.02em;
+  animation: tributeSealSpin 48s linear infinite;
+}
+
+/*
   The panel arrives, then its contents do, in the order somebody would read
   them. Small delays and a short travel: this is a beat of ceremony before the
   tribute lands, not a slideshow to sit through.
@@ -2196,12 +2267,27 @@ header:has([data-mobile-nav-open]) {
   .tribute-dim,
   .tribute-rise,
   .tribute-ring,
+  .tribute-seal,
   .tribute-spot,
   .tribute-reveal > * {
     animation: none;
   }
 
-  .tribute-mote {
+  /* The stage stops following the pointer entirely. */
+  .tribute-parallax {
+    transform: none;
+    transition: none;
+  }
+
+  /*
+    Two things are removed rather than stilled, because both are nothing but
+    their movement. A mote is its drift: a dozen motionless specks over
+    somebody's portrait is not a calmer effect, it is a dirty screen. And the
+    flare is a lamp coming on: frozen with its fill kept it stops being a flash
+    and becomes a permanent white wash across the middle of the stage.
+  */
+  .tribute-mote,
+  .tribute-flare {
     display: none;
   }
 }
