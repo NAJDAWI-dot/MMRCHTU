@@ -3,28 +3,45 @@
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { fitWithin, isAllowedImageType } from "@/lib/gallery";
-import { uploadMemberPhoto } from "./actions";
+import { uploadMemberPhoto, uploadMemberStage } from "./actions";
 
 /**
- * Uploads one committee portrait, shrinking it in the browser first.
+ * Uploads one of a committee member's two pictures, shrinking it in the browser
+ * first.
  *
- * The same reasoning as the gallery's uploader, only more so: a portrait is
- * shown at about 160px and a phone photo is 4000px wide, so sending the
- * original wastes storage once and bandwidth on every visit to the Team page
- * afterwards. The expensive copy never leaves the device.
+ * The same reasoning as the gallery's uploader, only more so: a phone photo is
+ * 4000px wide and nothing here displays one at anything like that, so sending
+ * the original wastes storage once and bandwidth on every visit afterwards. The
+ * expensive copy never leaves the device.
  *
- * Capped smaller than gallery photos because nothing displays a portrait large
- * — it is a face in a circle, not something anyone opens full size.
+ * The two slots are capped differently because they are looked at differently.
+ * A portrait is a face in a circle; a stage is drawn full-bleed behind the
+ * tribute popup and would show its own compression if it were treated the same.
  */
 
-/** Longest edge kept for a portrait. */
-const MAX_PORTRAIT_EDGE = 800;
-const JPEG_QUALITY = 0.85;
+type Slot = "portrait" | "stage";
 
-async function shrink(file: File): Promise<File> {
+const SLOT = {
+  portrait: {
+    maxEdge: 800,
+    quality: 0.85,
+    action: uploadMemberPhoto,
+    add: "Add photo",
+    replace: "Replace photo",
+  },
+  stage: {
+    maxEdge: 1600,
+    quality: 0.82,
+    action: uploadMemberStage,
+    add: "Add stage",
+    replace: "Replace stage",
+  },
+} as const;
+
+async function shrink(file: File, maxEdge: number, quality: number): Promise<File> {
   try {
     const bitmap = await createImageBitmap(file);
-    const { width, height } = fitWithin(bitmap.width, bitmap.height, MAX_PORTRAIT_EDGE);
+    const { width, height } = fitWithin(bitmap.width, bitmap.height, maxEdge);
 
     const canvas = document.createElement("canvas");
     canvas.width = width;
@@ -38,7 +55,7 @@ async function shrink(file: File): Promise<File> {
     bitmap.close();
 
     const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY),
+      canvas.toBlob(resolve, "image/jpeg", quality),
     );
     // Keep the original when re-encoding made it bigger, which is true of
     // small PNGs and already-optimised images.
@@ -52,10 +69,20 @@ async function shrink(file: File): Promise<File> {
   }
 }
 
-export function PortraitUploader({ memberId, hasPhoto }: { memberId: string; hasPhoto: boolean }) {
+export function MemberImageUploader({
+  memberId,
+  slot,
+  hasImage,
+}: {
+  memberId: string;
+  slot: Slot;
+  hasImage: boolean;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const rules = SLOT[slot];
 
   async function handleFile(file: File) {
     setError(null);
@@ -67,12 +94,12 @@ export function PortraitUploader({ memberId, hasPhoto }: { memberId: string; has
 
     setBusy(true);
     try {
-      const prepared = await shrink(file);
+      const prepared = await shrink(file, rules.maxEdge, rules.quality);
       const body = new FormData();
       body.set("id", memberId);
       body.set("photo", prepared);
 
-      const result = await uploadMemberPhoto(body);
+      const result = await rules.action(body);
       if (!result.ok) setError(result.error ?? "The upload did not go through.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -102,7 +129,7 @@ export function PortraitUploader({ memberId, hasPhoto }: { memberId: string; has
         disabled={busy}
         onClick={() => inputRef.current?.click()}
       >
-        {busy ? "Uploading…" : hasPhoto ? "Replace photo" : "Add photo"}
+        {busy ? "Uploading…" : hasImage ? rules.replace : rules.add}
       </Button>
       {error ? (
         <p role="alert" className="mt-1 text-xs font-semibold text-accent">

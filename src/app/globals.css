@@ -1944,6 +1944,139 @@ header:has([data-mobile-nav-open]) {
 }
 
 /* ---------------------------------------------------------------------------
+   The tribute popup.
+
+   One committee member, lit on a stage of their own, with the honourable
+   mention written for them underneath. Four pieces of movement, each doing a
+   different job: the page recedes, the panel arrives, the words land a beat
+   after the panel so they read as being said rather than as having sat there
+   all along, and the light around the portrait breathes.
+
+   The colours are not hard-coded here. The panel sets --spot-strong and
+   --spot-soft inline from that person's own stage, so the halo is their colour
+   and not one shared by the whole committee.
+   --------------------------------------------------------------------------- */
+
+@keyframes tributeDim {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.tribute-dim {
+  background: rgba(8, 4, 10, 0.72);
+  backdrop-filter: blur(6px);
+  animation: tributeDim 200ms ease-out both;
+}
+
+/*
+  The scrim between the stage and the words. Two of them, for two different
+  risks.
+
+  The default is for a stage this codebase composed. Those colours are known and
+  the roster tests hold every one of them dark enough to read white type on
+  unaided, so the scrim here only has to seat the text — and keeping it light is
+  what lets the colour stay a spotlight instead of a rumour under grey.
+
+  The modifier is for an uploaded picture, which is whatever somebody chooses
+  next year and may well be white. Against that worst case, black at 0.66 leaves
+  white text above 7:1 and every line of type on the panel sits at 0.66 or
+  darker. Lightening THAT one is how this feature acquires a contrast bug six
+  uploads from now with nothing in the code changed to explain it.
+*/
+.tribute-scrim {
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.12) 0%,
+    rgba(0, 0, 0, 0.3) 45%,
+    rgba(0, 0, 0, 0.58) 100%
+  );
+}
+
+.tribute-scrim--photo {
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.66) 0%,
+    rgba(0, 0, 0, 0.72) 40%,
+    rgba(0, 0, 0, 0.88) 100%
+  );
+}
+
+@keyframes tributeRise {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.tribute-rise {
+  animation: tributeRise 320ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@keyframes tributeLineIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.tribute-line {
+  animation: tributeLineIn 420ms cubic-bezier(0.2, 0.7, 0.3, 1) 140ms both;
+}
+
+@keyframes tributeSpotPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px rgba(255, 255, 255, 0.22),
+      0 0 26px 5px var(--spot-strong),
+      0 0 64px 16px var(--spot-soft);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(255, 255, 255, 0.3),
+      0 0 34px 8px var(--spot-strong),
+      0 0 84px 24px var(--spot-soft);
+  }
+}
+
+.tribute-spot {
+  border-radius: 9999px;
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.22),
+    0 0 26px 5px var(--spot-strong),
+    0 0 64px 16px var(--spot-soft);
+  animation: tributeSpotPulse 3600ms ease-in-out infinite;
+}
+
+/*
+  Drop the travel, keep the payoff, as everywhere else in this file. The panel
+  still opens and every word is on screen the instant it does. The halo keeps
+  its colour — that is the part carrying the warmth — and loses only the
+  breathing, which is the part that would trouble anybody. The same split, for
+  the same reason, as .eb-glow.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .tribute-dim,
+  .tribute-rise,
+  .tribute-line,
+  .tribute-spot {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
    Ears twitch on hover.
 
    The one gesture every mouse on the site shares. It fires on the drawn
