@@ -53,6 +53,10 @@ test.describe("info pages", () => {
     const cards = page.getByRole("button", { name: /open their honourable mention/i });
     test.skip((await cards.count()) === 0, "No honourable mentions written yet.");
 
+    // The key to the stars. Hover tells a mouse user a card opens and tells a
+    // phone nothing, so if this line goes the mentions go unread.
+    await expect(page.getByText(/starred face/i)).toBeVisible();
+
     await cards.first().click();
 
     const dialog = page.getByRole("dialog");

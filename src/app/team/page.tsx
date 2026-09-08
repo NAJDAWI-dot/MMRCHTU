@@ -76,41 +76,81 @@ function toPerson(member: Member, department: string | null): TributePerson {
   };
 }
 
+/** The mark on a face that has a mention, and the key that explains it. */
+function Star({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
+      <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+    </svg>
+  );
+}
+
 function Portrait({
   member,
   size,
   ringed,
+  marked,
 }: {
   member: Member;
   size: number;
   ringed?: boolean;
+  /** Whether this person has a mention waiting behind their card. */
+  marked?: boolean;
 }) {
   const ring = ringed
     ? "ring-2 ring-accent/70 ring-offset-4 ring-offset-[var(--color-bg)]"
     : "ring-1 ring-ras-purple/15 dark:ring-white/15";
 
-  if (member.photoUrl) {
-    return (
-      /* eslint-disable-next-line @next/next/no-img-element -- blob-stored portrait, already downscaled at upload */
-      <img
-        src={member.photoUrl}
-        alt=""
-        width={size}
-        height={size}
-        loading="lazy"
-        style={{ width: size, height: size }}
-        className={`rounded-full object-cover ${ring}`}
-      />
-    );
-  }
-
-  return (
+  const face = member.photoUrl ? (
+    /* eslint-disable-next-line @next/next/no-img-element -- blob-stored portrait, already downscaled at upload */
+    <img
+      src={member.photoUrl}
+      alt=""
+      width={size}
+      height={size}
+      loading="lazy"
+      style={{ width: size, height: size }}
+      className={`rounded-full object-cover ${ring}`}
+    />
+  ) : (
     <span
       aria-hidden="true"
       style={{ width: size, height: size, fontSize: Math.round(size / 2.8) }}
       className={`grid place-items-center rounded-full bg-gradient-to-br from-ras-purple/15 to-ras-crimson/15 font-display font-extrabold text-ras-purple dark:from-white/15 dark:to-white/5 dark:text-white ${ring}`}
     >
       {initials(member.name)}
+    </span>
+  );
+
+  if (!marked) return face;
+
+  /*
+    Hover was the only thing saying a card could be opened, which told mouse
+    users and told nobody on a phone at all — where most of this will be read.
+    The star is the same signal, standing still, on every device.
+
+    Sat at 82% along both axes so it lands on the lower-right of the circle
+    rather than floating off the corner of its box, and ringed in the page
+    background so it separates from a dark photograph behind it.
+  */
+  const badge = Math.max(18, Math.round(size / 4.4));
+
+  return (
+    <span className="relative inline-flex">
+      {face}
+      <span
+        aria-hidden="true"
+        style={{
+          left: "82%",
+          top: "82%",
+          width: badge,
+          height: badge,
+          transform: "translate(-50%, -50%)",
+        }}
+        className="absolute grid place-items-center rounded-full bg-ras-crimson text-white ring-2 ring-[var(--color-bg)]"
+      >
+        <Star className="h-1/2 w-1/2" />
+      </span>
     </span>
   );
 }
@@ -124,7 +164,7 @@ function LeadCard({ member }: { member: Member }) {
       className="relative block w-full overflow-hidden rounded-2xl border border-ras-purple/20 bg-gradient-to-br from-ras-purple/10 via-transparent to-ras-crimson/10 p-6 text-center dark:border-white/10"
     >
       <span className="flex justify-center">
-        <Portrait member={member} size={132} ringed />
+        <Portrait member={member} size={132} ringed marked={hasTribute(member)} />
       </span>
       <span className="mt-5 block font-display text-xl font-extrabold text-ras-purple dark:text-white">
         {member.name}
@@ -144,7 +184,7 @@ function HeadCard({ member }: { member: Member }) {
       hasTribute={hasTribute(member)}
       className="flex w-full items-center gap-4 rounded-xl border border-ras-gray/20 bg-[var(--color-surface)] p-4 text-left dark:border-white/10"
     >
-      <Portrait member={member} size={72} ringed />
+      <Portrait member={member} size={72} ringed marked={hasTribute(member)} />
       <span className="block min-w-0">
         <span className="block truncate font-display text-base font-bold text-ras-purple dark:text-white">
           {member.name}
@@ -166,7 +206,7 @@ function MemberTile({ member }: { member: Member }) {
         hasTribute={hasTribute(member)}
         className="flex w-full flex-col items-center rounded-xl p-2 text-center"
       >
-        <Portrait member={member} size={88} />
+        <Portrait member={member} size={88} marked={hasTribute(member)} />
         <span className="mt-3 block font-semibold text-ras-purple dark:text-white">
           {member.name}
         </span>
@@ -219,6 +259,8 @@ export default async function TeamPage() {
     ...roster.unassigned.map((member) => toPerson(member, null)),
   ];
 
+  const markedCount = people.filter((person) => person.tribute.trim().length > 0).length;
+
   return (
     <TributeStage people={people}>
       <div className="relative mx-auto max-w-5xl px-4 py-16">
@@ -236,6 +278,21 @@ export default async function TeamPage() {
             judge the runs and keep the mazes standing — and who will be somewhere in the room on
             the day if you need them.
           </p>
+
+          {/*
+            The key to the stars. Without it the marks are decoration and the
+            mentions go unread — a hover state tells mouse users and tells
+            nobody on a phone, which is where most of this will be read.
+
+            Shown only once somebody actually has a mention, so the page never
+            invites a visitor to look for something that is not there yet.
+          */}
+          {markedCount > 0 ? (
+            <p className="mx-auto mt-6 inline-flex items-center gap-2.5 rounded-full border border-ras-purple/25 bg-[var(--color-surface)] px-4 py-2 text-sm text-ras-gray dark:border-white/15 dark:text-white/75">
+              <Star className="h-3.5 w-3.5 shrink-0 text-ras-crimson dark:text-accent" />
+              Click or tap a starred face to read their honourable mention.
+            </p>
+          ) : null}
         </header>
 
         {total === 0 ? (
