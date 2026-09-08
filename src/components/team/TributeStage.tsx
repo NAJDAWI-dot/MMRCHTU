@@ -116,6 +116,13 @@ export function TributeStage({
   const at = honoured.findIndex((person) => person.id === openId);
   const current = at === -1 ? null : honoured[at]!;
 
+  // Named rather than numbered, so the arrows can say who they lead to instead
+  // of only that there is somebody there. Wraps the same way stepping does.
+  const neighbour = (delta: number) =>
+    honoured.length === 0 || at === -1
+      ? ""
+      : honoured[(at + delta + honoured.length) % honoured.length]!.name;
+
   return (
     <TributeContext.Provider value={value}>
       {children}
@@ -124,6 +131,8 @@ export function TributeStage({
           person={current}
           position={at + 1}
           total={honoured.length}
+          previousName={neighbour(-1)}
+          nextName={neighbour(1)}
           onClose={close}
           onStep={step}
         />
