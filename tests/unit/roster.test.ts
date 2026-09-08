@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   COMMITTEE_RANKS,
+  COMMITTEE_STAGES,
   buildRoster,
   initials,
   isCommitteeRank,
@@ -9,6 +10,9 @@ import {
   portraitStorageKey,
   rankOrder,
   rosterSize,
+  stageFor,
+  stageSeed,
+  stageStorageKey,
 } from "@/lib/roster";
 
 const dept = (id: string, name: string, sortOrder = 0) => ({ id, name, sortOrder });
@@ -170,3 +174,90 @@ describe("portraitStorageKey", () => {
     expect(portraitStorageKey("حاتم", "image/webp", "abc")).toBe("team/member-abc.webp");
   });
 });
+
+describe("stageStorageKey", () => {
+  it("keeps stages out of the folder the faces are in", () => {
+    expect(stageStorageKey("Ada Lovelace", "image/png", "abc")).toBe(
+      "team/stages/ada-lovelace-abc.png",
+    );
+  });
+
+  it("cannot be steered out of its folder", () => {
+    const key = stageStorageKey("../../some/other/folder", "image/jpeg", "abc");
+    expect(key.startsWith("team/stages/")).toBe(true);
+    expect(key).not.toContain("..");
+  });
+
+  it("still produces a key for a name that slugifies to nothing", () => {
+    expect(stageStorageKey("حاتم", "image/webp", "abc")).toBe("team/stages/member-abc.webp");
+  });
+});
+
+/**
+ * The stage somebody is lit on when no picture has been uploaded for them.
+ *
+ * Three properties, and each of them is load-bearing somewhere the compiler
+ * cannot see. It has to be stable, because an unstable pick would differ
+ * between the server render and the browser's. It has to spread, because a
+ * fallback that lights the whole committee the same way is not a fallback worth
+ * having. And every colour has to be six hex digits, because the dialog builds
+ * its glow by concatenating an alpha pair onto the end of one.
+ */
+describe("the stage a member is given", () => {
+  const ids = Array.from({ length: 60 }, (_, index) => `cm_committee_member_${index}`);
+
+  it("is the same one every time, so it cannot change under them mid-visit", () => {
+    expect(stageSeed("ckabc123")).toBe(stageSeed("ckabc123"));
+    expect(stageFor("ckabc123")).toBe(stageFor("ckabc123"));
+  });
+
+  it("always lands on a stage that exists", () => {
+    for (const id of [...ids, "", "x", "٣", "a".repeat(500)]) {
+      const seed = stageSeed(id);
+      expect(seed).toBeGreaterThanOrEqual(0);
+      expect(seed).toBeLessThan(COMMITTEE_STAGES.length);
+      expect(stageFor(id)).toBeDefined();
+    }
+  });
+
+  it("spreads across the committee rather than lighting everybody alike", () => {
+    const used = new Set(ids.map(stageSeed));
+    expect(used.size).toBe(COMMITTEE_STAGES.length);
+  });
+
+  it("is written as six hex digits, which the dialog appends its alpha to", () => {
+    for (const stage of COMMITTEE_STAGES) {
+      expect(stage.glow).toMatch(/^#[0-9A-Fa-f]{6}$/);
+      expect(stage.ground).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    }
+  });
+
+  it("is grounded dark enough that white type reads on it", () => {
+    for (const stage of COMMITTEE_STAGES) {
+      expect(contrastWithWhite(stage.ground)).toBeGreaterThan(12);
+    }
+  });
+
+  it("is lit dark enough that white type reads on the pool of light too", () => {
+    // The assertion the light scrim in globals.css leans on. A composed stage
+    // gets barely any scrim, precisely so its colour reads as a spotlight
+    // rather than as grey — which is only safe while the brightest thing on it,
+    // the glow at full strength, still clears AA for the type over it.
+    for (const stage of COMMITTEE_STAGES) {
+      expect(contrastWithWhite(stage.glow)).toBeGreaterThan(4.5);
+    }
+  });
+});
+
+function contrastWithWhite(hex: string): number {
+  const channel = (value: number) => {
+    const c = value / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance =
+    0.2126 * channel(parseInt(hex.slice(1, 3), 16)) +
+    0.7152 * channel(parseInt(hex.slice(3, 5), 16)) +
+    0.0722 * channel(parseInt(hex.slice(5, 7), 16));
+
+  return 1.05 / (luminance + 0.05);
+}

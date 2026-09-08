@@ -1944,6 +1944,373 @@ header:has([data-mobile-nav-open]) {
 }
 
 /* ---------------------------------------------------------------------------
+   The tribute popup.
+
+   A stage, not a card. There is a pool of light, a beam coming down into it,
+   dust drifting up through the beam, and a rim of light turning slowly around
+   whoever is standing in the middle of it. The page behind recedes and blurs,
+   and the words arrive a beat after the panel — so a tribute reads as something
+   being said, rather than something that was already lying there.
+
+   Colours are not hard-coded here. The panel sets --spot-strong and --spot-soft
+   inline from that person's own stage, so each of these lights in their colour
+   and not in one shared by the whole committee.
+   --------------------------------------------------------------------------- */
+
+@keyframes tributeDim {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.tribute-dim {
+  background: rgba(8, 4, 10, 0.74);
+  backdrop-filter: blur(7px);
+  animation: tributeDim 220ms ease-out both;
+}
+
+/*
+  The scrim between the stage and the words. Two of them, for two different
+  risks.
+
+  The default is for a stage this codebase composed. Those colours are known and
+  the roster tests hold every one of them dark enough to read white type on
+  unaided, so the scrim here only has to seat the text — and keeping it light is
+  what lets the colour stay a spotlight instead of a rumour under grey.
+
+  The modifier is for an uploaded picture, which is whatever somebody chooses
+  next year and may well be white. Against that worst case, black at 0.66 leaves
+  white text above 7:1 and every line of type on the panel sits at 0.66 or
+  darker. Lightening THAT one is how this feature acquires a contrast bug six
+  uploads from now with nothing in the code changed to explain it.
+*/
+.tribute-scrim {
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.12) 0%,
+    rgba(0, 0, 0, 0.3) 45%,
+    rgba(0, 0, 0, 0.58) 100%
+  );
+}
+
+.tribute-scrim--photo {
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.66) 0%,
+    rgba(0, 0, 0, 0.72) 40%,
+    rgba(0, 0, 0, 0.88) 100%
+  );
+}
+
+@keyframes tributeRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.965);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.tribute-rise {
+  animation: tributeRise 380ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+/*
+  A hairline of light along the top edge, the way a lit object catches its own
+  rim. It is the cheapest thing on this panel and does more than anything else
+  to stop the rounded rectangle reading as a flat shape.
+*/
+.tribute-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent);
+}
+
+/*
+  The shaft of light itself: narrow where it leaves the lamp, wide on the floor.
+
+  The blur is not decoration, it is the whole trick. A clipped polygon has two
+  perfectly straight edges, and light does not — unblurred this reads as a grey
+  triangle laid over the panel rather than as air with a lamp pointed through
+  it. Blurring after the clip is what turns the edge into a falloff.
+*/
+.tribute-beam {
+  clip-path: polygon(41% 0%, 59% 0%, 84% 100%, 16% 100%);
+  filter: blur(16px);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.17) 0%,
+    rgba(255, 255, 255, 0.05) 46%,
+    rgba(255, 255, 255, 0) 82%
+  );
+}
+
+/* Corners fall away, so the eye is pushed into the middle of the stage. */
+.tribute-vignette {
+  background: radial-gradient(
+    ellipse 78% 62% at 50% 34%,
+    transparent 45%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+}
+
+@keyframes tributeMote {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  14% {
+    opacity: 0.45;
+  }
+  80% {
+    opacity: 0.22;
+  }
+  100% {
+    transform: translate3d(var(--mote-drift, 8px), -150px, 0);
+    opacity: 0;
+  }
+}
+
+.tribute-mote {
+  position: absolute;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.9);
+  /* Softened, so a speck reads as something floating in the light rather than
+     as a dead pixel or a mark on the reader's screen. */
+  filter: blur(0.5px);
+  animation: tributeMote var(--mote-dur, 12s) linear var(--mote-delay, 0s) infinite;
+}
+
+@keyframes tributeRingSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tribute-ring {
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0) 0deg,
+    var(--spot-soft) 44deg,
+    rgba(255, 255, 255, 0.55) 92deg,
+    var(--spot-strong) 138deg,
+    rgba(255, 255, 255, 0) 214deg,
+    rgba(255, 255, 255, 0) 360deg
+  );
+  animation: tributeRingSpin 18s linear infinite;
+}
+
+@keyframes tributeSpotPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px rgba(255, 255, 255, 0.22),
+      0 0 26px 5px var(--spot-strong),
+      0 0 64px 16px var(--spot-soft);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(255, 255, 255, 0.3),
+      0 0 34px 8px var(--spot-strong),
+      0 0 84px 24px var(--spot-soft);
+  }
+}
+
+.tribute-spot {
+  border-radius: 9999px;
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.22),
+    0 0 26px 5px var(--spot-strong),
+    0 0 64px 16px var(--spot-soft);
+  animation: tributeSpotPulse 3600ms ease-in-out infinite;
+}
+
+/*
+  The stage leans a few pixels toward the pointer, on custom properties the
+  dialog writes straight onto the panel. Only the stage moves: the scrim above
+  it stays pinned, because the contrast every word on this panel depends on was
+  measured against a scrim that does not wander.
+*/
+.tribute-parallax {
+  transform: translate3d(var(--par-x, 0px), var(--par-y, 0px), 0);
+  transition: transform 220ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  will-change: transform;
+}
+
+/* The lamp coming on: one bloom of light as the citation opens, then gone. */
+@keyframes tributeFlare {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  22% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.28);
+  }
+}
+
+.tribute-flare {
+  background: radial-gradient(
+    circle at 50% 26%,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.12) 26%,
+    transparent 58%
+  );
+  animation: tributeFlare 900ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+/*
+  The ruled border of a citation: one line set in from the edge and a fainter
+  second inside it. Two lines rather than one because a single hairline reads as
+  a container, and a pair reads as a document.
+*/
+.tribute-frame {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.tribute-frame::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/*
+  The chapter's name struck around the rim of the medal, turning against the
+  sheen ring inside it. Slowly, and in the opposite direction: two rings moving
+  the same way would read as one thing slipping, and this is meant to read as
+  two — a struck rim, and the light crossing it.
+*/
+@keyframes tributeSealSpin {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+.tribute-seal {
+  letter-spacing: 0.02em;
+  animation: tributeSealSpin 48s linear infinite;
+}
+
+/*
+  The panel arrives, then its contents do, in the order somebody would read
+  them. Small delays and a short travel: this is a beat of ceremony before the
+  tribute lands, not a slideshow to sit through.
+*/
+@keyframes tributeRevealIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.tribute-reveal > * {
+  animation: tributeRevealIn 460ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.tribute-reveal > *:nth-child(1) {
+  animation-delay: 120ms;
+}
+.tribute-reveal > *:nth-child(2) {
+  animation-delay: 180ms;
+}
+.tribute-reveal > *:nth-child(3) {
+  animation-delay: 260ms;
+}
+.tribute-reveal > *:nth-child(4) {
+  animation-delay: 310ms;
+}
+.tribute-reveal > *:nth-child(5) {
+  animation-delay: 380ms;
+}
+.tribute-reveal > *:nth-child(6) {
+  animation-delay: 450ms;
+}
+.tribute-reveal > *:nth-child(7) {
+  animation-delay: 500ms;
+}
+.tribute-reveal > *:nth-child(n + 8) {
+  animation-delay: 560ms;
+}
+
+/*
+  Drop the travel, keep the payoff, as everywhere else in this file. The panel
+  still opens, every word is on screen the instant it does, and the halo and the
+  rim keep their colour — that is the part carrying the warmth. Only the
+  movement goes.
+
+  The dust is the exception, and it is removed rather than frozen: a mote is
+  nothing but its drift, and a dozen motionless specks pinned over somebody's
+  portrait is not a calmer version of the effect, it is a dirty screen. The same
+  call, for the same reason, as .ambient-mice.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .tribute-dim,
+  .tribute-rise,
+  .tribute-ring,
+  .tribute-seal,
+  .tribute-spot,
+  .tribute-reveal > * {
+    animation: none;
+  }
+
+  /* The stage stops following the pointer entirely. */
+  .tribute-parallax {
+    transform: none;
+    transition: none;
+  }
+
+  /*
+    Two things are removed rather than stilled, because both are nothing but
+    their movement. A mote is its drift: a dozen motionless specks over
+    somebody's portrait is not a calmer effect, it is a dirty screen. And the
+    flare is a lamp coming on: frozen with its fill kept it stops being a flash
+    and becomes a permanent white wash across the middle of the stage.
+  */
+  .tribute-mote,
+  .tribute-flare {
+    display: none;
+  }
+}
+
+/*
+  A card that opens somebody lifts and glows in that person's own stage colour,
+  set inline as --card-glow. Colour rather than a heavier shadow, because what
+  it is really saying is not "this is a button" — the cursor and the focus ring
+  already say that — but "what opens here belongs to this person".
+
+  Hover only, deliberately. Tailwind builds its focus ring out of box-shadow, so
+  a :focus-visible arm here would replace the ring rather than join it, and the
+  keyboard user would lose the one indicator they actually depend on to keep a
+  decoration the mouse user already had.
+
+  Left alone under reduced motion: this is a colour that appears on hover, not
+  movement, and the lift beside it is already handled by motion-reduce.
+*/
+.tribute-card:hover {
+  box-shadow: 0 8px 26px -6px var(--card-glow);
+}
+
+/* ---------------------------------------------------------------------------
    Ears twitch on hover.
 
    The one gesture every mouse on the site shares. It fires on the drawn

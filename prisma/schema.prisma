@@ -457,6 +457,23 @@ model CommitteeMember {
   photoUrl String?
   photoKey String?
 
+  /// The honourable mention shown when this person is opened on /team.
+  ///
+  /// Blank is meaningful and is the default: it means no popup for them, and
+  /// the card on the public page stays a plain card rather than becoming a
+  /// button that opens an empty stage.
+  tribute String @default("")
+
+  /// The backdrop behind them in that popup, and the storage key kept so
+  /// deleting the row can delete the file too — the same pair, for the same
+  /// reason, as photoUrl/photoKey above.
+  ///
+  /// Null is not a missing stage. Everybody has one: with no upload the popup
+  /// composes a stage from their id, so no two people share a backdrop even
+  /// before a single picture has been uploaded.
+  stageUrl String?
+  stageKey String?
+
   /// Hidden members stay in the admin list but leave the public page, so
   /// somebody can be added before an announcement without being visible.
   isPublished Boolean @default(true)

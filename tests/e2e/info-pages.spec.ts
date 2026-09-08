@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { goto } from "./helpers";
 
 test.describe("info pages", () => {
@@ -31,5 +32,46 @@ test.describe("info pages", () => {
 
     const darkSrc = await logo.getAttribute("src");
     expect(darkSrc).not.toBe(lightSrc);
+  });
+
+  /**
+   * The one thing about the tribute popup that only a real browser can answer.
+   *
+   * The Team page is wrapped in an element that animates transform, which makes
+   * it a containing block for its fixed-position descendants — so an overlay
+   * rendered inline lands somewhere down the page at the wrong size instead of
+   * covering the screen. It renders, it is visible, and every unit test passes.
+   * Only measuring it catches it.
+   *
+   * Skips itself while nothing has been written about anybody, because the
+   * roster is filled in over weeks and a suite that fails until then is a suite
+   * people learn to ignore.
+   */
+  test("a tribute covers the screen and is readable on its stage", async ({ page }) => {
+    await goto(page, "/team");
+
+    const cards = page.getByRole("button", { name: /open their honourable mention/i });
+    test.skip((await cards.count()) === 0, "No honourable mentions written yet.");
+
+    await cards.first().click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+
+    const overlay = page.locator(".tribute-dim");
+    const box = await overlay.boundingBox();
+    const viewport = page.viewportSize();
+    expect(box).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    expect(box!.y).toBeLessThanOrEqual(1);
+    expect(box!.height).toBeGreaterThanOrEqual(viewport!.height - 2);
+
+    // Scoped to the dialog: the stage is the one surface here whose contrast
+    // depends on a picture chosen after this test was written.
+    const audit = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
+    expect(audit.violations).toEqual([]);
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
   });
 });

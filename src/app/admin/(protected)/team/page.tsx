@@ -12,13 +12,14 @@ import {
   initials,
   rosterSize,
 } from "@/lib/roster";
-import { PortraitUploader } from "./PortraitUploader";
+import { MemberImageUploader } from "./MemberImageUploader";
 import {
   createDepartment,
   createMember,
   deleteDepartment,
   deleteMember,
   removeMemberPhoto,
+  removeMemberStage,
   updateDepartment,
   updateMember,
 } from "./actions";
@@ -73,6 +74,8 @@ type MemberRecord = {
   rank: string;
   departmentId: string | null;
   photoUrl: string | null;
+  stageUrl: string | null;
+  tribute: string;
   isPublished: boolean;
   sortOrder: number;
 };
@@ -139,6 +142,23 @@ function MemberRow({
                 says, so it is offered but does not change where they appear. */}
             <DepartmentSelect departments={departments} value={member.departmentId} />
           </div>
+          <div className="sm:col-span-2">
+            <label className={LABEL}>Honourable mention</label>
+            <textarea
+              name="tribute"
+              defaultValue={member.tribute}
+              rows={3}
+              placeholder="What they did, in a sentence or two. Shown when their card is opened on the Team page."
+              className={`${FIELD} resize-y`}
+            />
+            {/* Blank is the default and a perfectly good state, so this is a
+                note about what is missing and not anything resembling an error. */}
+            {member.tribute.trim() ? null : (
+              <p className="mt-1 text-xs text-ras-gray dark:text-white/50">
+                Nothing written yet — their card stays unclickable on the site.
+              </p>
+            )}
+          </div>
           <div>
             <label className={LABEL}>Order</label>
             <input
@@ -161,7 +181,11 @@ function MemberRow({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-ras-gray/15 pt-3">
-        <PortraitUploader memberId={member.id} hasPhoto={Boolean(member.photoUrl)} />
+        <MemberImageUploader
+          memberId={member.id}
+          slot="portrait"
+          hasImage={Boolean(member.photoUrl)}
+        />
         {member.photoUrl ? (
           <form action={removeMemberPhoto}>
             <input type="hidden" name="id" value={member.id} />
@@ -170,6 +194,22 @@ function MemberRow({
             </Button>
           </form>
         ) : null}
+
+        <span aria-hidden="true" className="h-4 w-px bg-ras-gray/25 dark:bg-white/20" />
+
+        <MemberImageUploader memberId={member.id} slot="stage" hasImage={Boolean(member.stageUrl)} />
+        {member.stageUrl ? (
+          <form action={removeMemberStage}>
+            <input type="hidden" name="id" value={member.id} />
+            <Button type="submit" variant="ghost" size="sm">
+              Remove stage
+            </Button>
+          </form>
+        ) : (
+          <span className="text-xs text-ras-gray dark:text-white/50">
+            Optional — without one they are given a stage of their own colour.
+          </span>
+        )}
         <span className="flex-1" />
         <form action={deleteMember}>
           <input type="hidden" name="id" value={member.id} />

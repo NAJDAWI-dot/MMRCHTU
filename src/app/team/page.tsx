@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { TeamMice } from "@/components/team/TeamMice";
+import { TributeStage, type TributePerson } from "@/components/team/TributeStage";
+import { TributeTrigger } from "@/components/team/TributeTrigger";
 import {
   COMMITTEE_RANK_LABELS,
   buildRoster,
@@ -29,6 +31,15 @@ export const metadata: Metadata = {
  * chrome at all. Three different treatments, so the structure is legible
  * before a single role is read — which the same card repeated forty times
  * would not manage no matter what the captions said.
+ *
+ * Anybody who has had an honourable mention written for them also opens: their
+ * card becomes a button, and the tribute is shown on a stage of their own. The
+ * card markup below stays on the server and is handed to the trigger as
+ * children, so making the page clickable does not send it to the browser.
+ *
+ * One consequence, and it is the reason the cards below are built out of spans:
+ * a button may only contain phrasing content, so no <p> or <div> can appear
+ * inside one of these cards.
  */
 
 type Member = {
@@ -37,6 +48,8 @@ type Member = {
   role: string;
   rank: string;
   photoUrl: string | null;
+  stageUrl: string | null;
+  tribute: string;
 };
 
 function roleLabel(member: Member): string {
@@ -44,6 +57,23 @@ function roleLabel(member: Member): string {
   // Falls back to the rank so a card is never captionless. Someone added in a
   // hurry with no job title still reads as a member of something.
   return isCommitteeRank(member.rank) ? COMMITTEE_RANK_LABELS[member.rank] : "Committee";
+}
+
+function hasTribute(member: Member): boolean {
+  return member.tribute.trim().length > 0;
+}
+
+/** The shape the popup wants, with the role already resolved. */
+function toPerson(member: Member, department: string | null): TributePerson {
+  return {
+    id: member.id,
+    name: member.name,
+    role: roleLabel(member),
+    department,
+    photoUrl: member.photoUrl,
+    stageUrl: member.stageUrl,
+    tribute: member.tribute,
+  };
 }
 
 function Portrait({
@@ -88,42 +118,60 @@ function Portrait({
 /** The chair and co-chair: the only people who get a panel to themselves. */
 function LeadCard({ member }: { member: Member }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-ras-purple/20 bg-gradient-to-br from-ras-purple/10 via-transparent to-ras-crimson/10 p-6 text-center dark:border-white/10">
-      <div className="flex justify-center">
+    <TributeTrigger
+      id={member.id}
+      hasTribute={hasTribute(member)}
+      className="relative block w-full overflow-hidden rounded-2xl border border-ras-purple/20 bg-gradient-to-br from-ras-purple/10 via-transparent to-ras-crimson/10 p-6 text-center dark:border-white/10"
+    >
+      <span className="flex justify-center">
         <Portrait member={member} size={132} ringed />
-      </div>
-      <p className="mt-5 font-display text-xl font-extrabold text-ras-purple dark:text-white">
+      </span>
+      <span className="mt-5 block font-display text-xl font-extrabold text-ras-purple dark:text-white">
         {member.name}
-      </p>
-      <p className="mt-1 text-sm font-semibold uppercase tracking-wide text-accent">
+      </span>
+      <span className="mt-1 block text-sm font-semibold uppercase tracking-wide text-accent">
         {roleLabel(member)}
-      </p>
-    </div>
+      </span>
+    </TributeTrigger>
   );
 }
 
 /** A department head: a row of their own, above the people they lead. */
 function HeadCard({ member }: { member: Member }) {
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-ras-gray/20 bg-[var(--color-surface)] p-4 dark:border-white/10">
+    <TributeTrigger
+      id={member.id}
+      hasTribute={hasTribute(member)}
+      className="flex w-full items-center gap-4 rounded-xl border border-ras-gray/20 bg-[var(--color-surface)] p-4 text-left dark:border-white/10"
+    >
       <Portrait member={member} size={72} ringed />
-      <div className="min-w-0">
-        <p className="truncate font-display text-base font-bold text-ras-purple dark:text-white">
+      <span className="block min-w-0">
+        <span className="block truncate font-display text-base font-bold text-ras-purple dark:text-white">
           {member.name}
-        </p>
-        <p className="truncate text-sm text-ras-gray dark:text-white/70">{roleLabel(member)}</p>
-      </div>
-    </div>
+        </span>
+        <span className="block truncate text-sm text-ras-gray dark:text-white/70">
+          {roleLabel(member)}
+        </span>
+      </span>
+    </TributeTrigger>
   );
 }
 
 /** Everyone else: no border, no shadow — a face and a name. */
 function MemberTile({ member }: { member: Member }) {
   return (
-    <li className="flex flex-col items-center text-center">
-      <Portrait member={member} size={88} />
-      <p className="mt-3 font-semibold text-ras-purple dark:text-white">{member.name}</p>
-      <p className="text-xs text-ras-gray dark:text-white/60">{roleLabel(member)}</p>
+    <li>
+      <TributeTrigger
+        id={member.id}
+        hasTribute={hasTribute(member)}
+        className="flex w-full flex-col items-center rounded-xl p-2 text-center"
+      >
+        <Portrait member={member} size={88} />
+        <span className="mt-3 block font-semibold text-ras-purple dark:text-white">
+          {member.name}
+        </span>
+        <span className="block text-xs text-ras-gray dark:text-white/60">{roleLabel(member)}</span>
+      </TributeTrigger>
     </li>
   );
 }
@@ -159,86 +207,100 @@ export default async function TeamPage() {
     (group) => group.heads.length + group.members.length > 0,
   );
 
+  // Flattened in the order the page reads, top to bottom, because that is the
+  // order the popup's arrows walk. A visitor stepping through the committee is
+  // moving down the page, not through a query result.
+  const people: TributePerson[] = [
+    ...roster.leadership.map((member) => toPerson(member, null)),
+    ...filled.flatMap((group) => [
+      ...group.heads.map((member) => toPerson(member, group.department.name)),
+      ...group.members.map((member) => toPerson(member, group.department.name)),
+    ]),
+    ...roster.unassigned.map((member) => toPerson(member, null)),
+  ];
+
   return (
-    <div className="relative mx-auto max-w-5xl px-4 py-16">
-      <TeamMice />
+    <TributeStage people={people}>
+      <div className="relative mx-auto max-w-5xl px-4 py-16">
+        <TeamMice />
 
-      <header className="relative text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent">
-          IEEE RAS HTU Student Chapter
-        </p>
-        <h1 className="mt-3 font-display text-4xl font-extrabold text-ras-purple dark:text-white sm:text-5xl">
-          The Committee
-        </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-ras-gray dark:text-white/70">
-          MMRC 26 is built by students. These are the people who write the rules, run the desk,
-          judge the runs and keep the mazes standing — and who will be somewhere in the room on
-          the day if you need them.
-        </p>
-      </header>
-
-      {total === 0 ? (
-        <div className="relative mt-16 rounded-2xl border border-ras-gray/20 bg-[var(--color-surface)] p-10 text-center">
-          <p className="font-display text-lg font-bold text-ras-purple dark:text-white">
-            Still being introduced
+        <header className="relative text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent">
+            IEEE RAS HTU Student Chapter
           </p>
-          <p className="mx-auto mt-2 max-w-md text-sm text-ras-gray dark:text-white/70">
-            The committee will be announced here shortly.
+          <h1 className="mt-3 font-display text-4xl font-extrabold text-ras-purple dark:text-white sm:text-5xl">
+            The Committee
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-ras-gray dark:text-white/70">
+            MMRC 26 is built by students. These are the people who write the rules, run the desk,
+            judge the runs and keep the mazes standing — and who will be somewhere in the room on
+            the day if you need them.
           </p>
-        </div>
-      ) : null}
+        </header>
 
-      {roster.leadership.length > 0 ? (
-        <section className="relative mt-14">
-          <div
-            className={`mx-auto grid gap-5 ${
-              roster.leadership.length === 1 ? "max-w-sm" : "max-w-3xl sm:grid-cols-2"
-            }`}
-          >
-            {roster.leadership.map((member) => (
-              <LeadCard key={member.id} member={member} />
-            ))}
+        {total === 0 ? (
+          <div className="relative mt-16 rounded-2xl border border-ras-gray/20 bg-[var(--color-surface)] p-10 text-center">
+            <p className="font-display text-lg font-bold text-ras-purple dark:text-white">
+              Still being introduced
+            </p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-ras-gray dark:text-white/70">
+              The committee will be announced here shortly.
+            </p>
           </div>
-        </section>
-      ) : null}
+        ) : null}
 
-      {filled.map((group) => (
-        <section key={group.department.id} className="relative mt-16">
-          <SectionHeading
-            title={group.department.name}
-            description={group.department.description || undefined}
-          />
-
-          {group.heads.length > 0 ? (
+        {roster.leadership.length > 0 ? (
+          <section className="relative mt-14">
             <div
-              className={`mb-8 grid gap-4 ${group.heads.length === 1 ? "sm:max-w-sm" : "sm:grid-cols-2"}`}
+              className={`mx-auto grid gap-5 ${
+                roster.leadership.length === 1 ? "max-w-sm" : "max-w-3xl sm:grid-cols-2"
+              }`}
             >
-              {group.heads.map((member) => (
-                <HeadCard key={member.id} member={member} />
+              {roster.leadership.map((member) => (
+                <LeadCard key={member.id} member={member} />
               ))}
             </div>
-          ) : null}
+          </section>
+        ) : null}
 
-          {group.members.length > 0 ? (
+        {filled.map((group) => (
+          <section key={group.department.id} className="relative mt-16">
+            <SectionHeading
+              title={group.department.name}
+              description={group.department.description || undefined}
+            />
+
+            {group.heads.length > 0 ? (
+              <div
+                className={`mb-8 grid gap-4 ${group.heads.length === 1 ? "sm:max-w-sm" : "sm:grid-cols-2"}`}
+              >
+                {group.heads.map((member) => (
+                  <HeadCard key={member.id} member={member} />
+                ))}
+              </div>
+            ) : null}
+
+            {group.members.length > 0 ? (
+              <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+                {group.members.map((member) => (
+                  <MemberTile key={member.id} member={member} />
+                ))}
+              </ul>
+            ) : null}
+          </section>
+        ))}
+
+        {roster.unassigned.length > 0 ? (
+          <section className="relative mt-16">
+            <SectionHeading title="Also on the committee" />
             <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
-              {group.members.map((member) => (
+              {roster.unassigned.map((member) => (
                 <MemberTile key={member.id} member={member} />
               ))}
             </ul>
-          ) : null}
-        </section>
-      ))}
-
-      {roster.unassigned.length > 0 ? (
-        <section className="relative mt-16">
-          <SectionHeading title="Also on the committee" />
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
-            {roster.unassigned.map((member) => (
-              <MemberTile key={member.id} member={member} />
-            ))}
-          </ul>
-        </section>
-      ) : null}
-    </div>
+          </section>
+        ) : null}
+      </div>
+    </TributeStage>
   );
 }

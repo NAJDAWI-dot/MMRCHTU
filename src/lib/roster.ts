@@ -211,11 +211,101 @@ export function initials(name: string): string {
  * than from anything the uploader wrote. The name is folded in only so a file
  * pulled out of the store months later can be recognised.
  */
-export function portraitStorageKey(
+function memberImageKey(
+  folder: string,
   name: string,
   imageType: AllowedImageType,
   unique: string,
 ): string {
   const stem = slugify(name) || "member";
-  return `team/${stem}-${unique}.${EXTENSION_FOR_IMAGE_TYPE[imageType]}`;
+  return `${folder}/${stem}-${unique}.${EXTENSION_FOR_IMAGE_TYPE[imageType]}`;
+}
+
+export function portraitStorageKey(
+  name: string,
+  imageType: AllowedImageType,
+  unique: string,
+): string {
+  return memberImageKey("team", name, imageType, unique);
+}
+
+/**
+ * A safe storage key for one member's tribute stage.
+ *
+ * Its own folder rather than a suffix on the portrait key, so the two kinds of
+ * picture can be told apart in the store by looking, and so a listing of
+ * `team/` stays a listing of faces.
+ */
+export function stageStorageKey(
+  name: string,
+  imageType: AllowedImageType,
+  unique: string,
+): string {
+  return memberImageKey("team/stages", name, imageType, unique);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Stages                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One backdrop for the tribute popup: a pool of light, and the dark it falls
+ * off into.
+ *
+ * Two colours and not an image, because this is what somebody gets before
+ * anybody has uploaded anything for them. A tribute that is written but has no
+ * picture yet still opens onto a stage built for that person alone.
+ */
+export interface CommitteeStage {
+  /** The pool of light the person stands in. */
+  glow: string;
+  /** The dark the pool falls off into. */
+  ground: string;
+}
+
+/**
+ * The stages, one of which every member is given.
+ *
+ * Drawn from the moodboard palette, which tailwind.config.ts marks decorative
+ * and unfit for text — true, and irrelevant here: every one of these is a
+ * backdrop sitting behind a fixed scrim, which is the decorative use it is
+ * reserved for. Each ground is near-black so that near-white type over the
+ * scrim clears its contrast threshold no matter which stage is drawn.
+ *
+ * Eight rather than six so that two people listed next to each other are
+ * unlikely to be lit the same way.
+ */
+export const COMMITTEE_STAGES: readonly CommitteeStage[] = [
+  { glow: "#732E7D", ground: "#1B0A1F" }, // orchid
+  { glow: "#97012D", ground: "#1E0710" }, // garnet
+  { glow: "#5F2167", ground: "#150818" }, // RAS purple
+  { glow: "#A11640", ground: "#1F0912" }, // rose
+  { glow: "#82468C", ground: "#180B1C" }, // violet
+  { glow: "#862633", ground: "#1C080D" }, // RAS crimson
+  { glow: "#611169", ground: "#130616" }, // plum
+  { glow: "#74347D", ground: "#170A1A" }, // amethyst
+] as const;
+
+/**
+ * Which stage this member stands on, by id.
+ *
+ * Deterministic, so somebody's stage is the same every time the page renders
+ * and the same on the server as in the browser — a random pick would change
+ * under them mid-visit and would differ across a hydration boundary.
+ *
+ * djb2, because the requirement is only that different ids usually land apart
+ * and that one id always lands in the same place. Nothing here is security, and
+ * a cryptographic hash would be a much slower way to choose a colour.
+ */
+export function stageSeed(id: string): number {
+  let hash = 5381;
+  for (let index = 0; index < id.length; index += 1) {
+    hash = ((hash << 5) + hash + id.charCodeAt(index)) | 0;
+  }
+  return Math.abs(hash) % COMMITTEE_STAGES.length;
+}
+
+export function stageFor(id: string): CommitteeStage {
+  // stageSeed is a modulo of the same array's length, so this is always a hit.
+  return COMMITTEE_STAGES[stageSeed(id)]!;
 }

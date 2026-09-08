@@ -4,8 +4,13 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { removePhoto, storePhoto } from "@/lib/photo-storage";
-import { SNIFF_BYTES, checkUpload, sniffImageType } from "@/lib/gallery";
-import { parseCommitteeRank, portraitStorageKey } from "@/lib/roster";
+import {
+  SNIFF_BYTES,
+  checkUpload,
+  sniffImageType,
+  type AllowedImageType,
+} from "@/lib/gallery";
+import { parseCommitteeRank, portraitStorageKey, stageStorageKey } from "@/lib/roster";
 
 /**
  * Everything the Team tab writes.
@@ -108,6 +113,7 @@ export async function createMember(formData: FormData): Promise<void> {
     data: {
       name,
       role: String(formData.get("role") ?? "").trim(),
+      tribute: String(formData.get("tribute") ?? "").trim(),
       rank: parseCommitteeRank(formData.get("rank")),
       departmentId: departmentOrNull(formData.get("departmentId")),
       sortOrder: numberOr(formData.get("sortOrder"), 0),
@@ -129,6 +135,7 @@ export async function updateMember(formData: FormData): Promise<void> {
     data: {
       name,
       role: String(formData.get("role") ?? "").trim(),
+      tribute: String(formData.get("tribute") ?? "").trim(),
       rank: parseCommitteeRank(formData.get("rank")),
       departmentId: departmentOrNull(formData.get("departmentId")),
       sortOrder: numberOr(formData.get("sortOrder"), 0),
@@ -148,12 +155,13 @@ export async function deleteMember(formData: FormData): Promise<void> {
   const member = await prisma.committeeMember.findUnique({ where: { id } });
   if (!member) return;
 
-  // File first: the row is the only record that the file exists, so removing
-  // it first would strand the portrait in the store with nothing pointing at
-  // it. A failed file delete is logged, never fatal.
-  if (member.photoKey) {
-    const result = await removePhoto(member.photoKey);
-    if (!result.ok) console.error(`team: could not delete ${member.photoKey}: ${result.error}`);
+  // Files first: the row is the only record that either file exists, so
+  // removing it first would strand them in the store with nothing pointing at
+  // them. A failed file delete is logged, never fatal.
+  for (const key of [member.photoKey, member.stageKey]) {
+    if (!key) continue;
+    const result = await removePhoto(key);
+    if (!result.ok) console.error(`team: could not delete ${key}: ${result.error}`);
   }
 
   await prisma.committeeMember.delete({ where: { id } });
@@ -162,7 +170,7 @@ export async function deleteMember(formData: FormData): Promise<void> {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Portraits                                                                   */
+/* Pictures                                                                    */
 /* -------------------------------------------------------------------------- */
 
 export interface PortraitResult {
@@ -170,14 +178,42 @@ export interface PortraitResult {
   error?: string;
 }
 
+/** The two pictures a committee member can have. */
+type ImageSlot = "portrait" | "stage";
+
+interface SlotRules {
+  storageKey(name: string, imageType: AllowedImageType, unique: string): string;
+  keyOf(member: { photoKey: string | null; stageKey: string | null }): string | null;
+  columns(url: string | null, key: string | null): Record<string, string | null>;
+}
+
+const SLOT: Record<ImageSlot, SlotRules> = {
+  portrait: {
+    storageKey: portraitStorageKey,
+    keyOf: (member) => member.photoKey,
+    columns: (url, key) => ({ photoUrl: url, photoKey: key }),
+  },
+  stage: {
+    storageKey: stageStorageKey,
+    keyOf: (member) => member.stageKey,
+    columns: (url, key) => ({ stageUrl: url, stageKey: key }),
+  },
+};
+
 /**
- * Replaces one member's portrait.
+ * Replaces one of a member's pictures.
+ *
+ * One body for both slots on purpose. Two upload paths reaching the same store
+ * under separately maintained rules is how the safer one quietly stops being
+ * the way in — so the sniffing, the size check and the store-then-delete order
+ * are written once and the slot only decides which key to build and which two
+ * columns to write.
  *
  * The new file is stored before the old one is deleted. The other order would
  * mean a failed upload leaves the member with no picture at all, having had a
  * perfectly good one a moment earlier.
  */
-export async function uploadMemberPhoto(formData: FormData): Promise<PortraitResult> {
+async function replaceMemberImage(slot: ImageSlot, formData: FormData): Promise<PortraitResult> {
   await requireAdmin();
 
   const id = String(formData.get("id") ?? "");
@@ -196,16 +232,18 @@ export async function uploadMemberPhoto(formData: FormData): Promise<PortraitRes
   const imageType = sniffImageType(head);
   if (!imageType) return { ok: false, error: "That is not a JPEG, PNG, WebP or AVIF image." };
 
+  const rules = SLOT[slot];
+
   try {
     const unique = Date.now().toString(36);
-    const key = portraitStorageKey(member.name, imageType, unique);
+    const key = rules.storageKey(member.name, imageType, unique);
     const stored = await storePhoto(key, file, imageType);
 
-    const previousKey = member.photoKey;
+    const previousKey = rules.keyOf(member);
 
     await prisma.committeeMember.update({
       where: { id },
-      data: { photoUrl: stored.url, photoKey: stored.key },
+      data: rules.columns(stored.url, stored.key),
     });
 
     // Only once the row points at the new file. Keys differ every time, so
@@ -222,7 +260,7 @@ export async function uploadMemberPhoto(formData: FormData): Promise<PortraitRes
   }
 }
 
-export async function removeMemberPhoto(formData: FormData): Promise<void> {
+async function clearMemberImage(slot: ImageSlot, formData: FormData): Promise<void> {
   await requireAdmin();
 
   const id = String(formData.get("id") ?? "");
@@ -231,15 +269,38 @@ export async function removeMemberPhoto(formData: FormData): Promise<void> {
   const member = await prisma.committeeMember.findUnique({ where: { id } });
   if (!member) return;
 
-  if (member.photoKey) {
-    const result = await removePhoto(member.photoKey);
-    if (!result.ok) console.error(`team: could not delete ${member.photoKey}: ${result.error}`);
+  const rules = SLOT[slot];
+  const key = rules.keyOf(member);
+
+  if (key) {
+    const result = await removePhoto(key);
+    if (!result.ok) console.error(`team: could not delete ${key}: ${result.error}`);
   }
 
-  await prisma.committeeMember.update({
-    where: { id },
-    data: { photoUrl: null, photoKey: null },
-  });
+  await prisma.committeeMember.update({ where: { id }, data: rules.columns(null, null) });
 
   revalidateTeam();
+}
+
+export async function uploadMemberPhoto(formData: FormData): Promise<PortraitResult> {
+  return replaceMemberImage("portrait", formData);
+}
+
+export async function removeMemberPhoto(formData: FormData): Promise<void> {
+  return clearMemberImage("portrait", formData);
+}
+
+/**
+ * The backdrop this person's tribute is shown against.
+ *
+ * Optional in a way the portrait is not: with no stage uploaded the popup
+ * composes one from their id, so leaving this empty is a legitimate finished
+ * state rather than a gap to be filled in later.
+ */
+export async function uploadMemberStage(formData: FormData): Promise<PortraitResult> {
+  return replaceMemberImage("stage", formData);
+}
+
+export async function removeMemberStage(formData: FormData): Promise<void> {
+  return clearMemberImage("stage", formData);
 }
