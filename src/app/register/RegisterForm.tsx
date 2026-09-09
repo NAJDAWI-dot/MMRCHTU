@@ -8,6 +8,7 @@ import Link from "next/link";
 import {
   checkTeamDetails,
   completeRegistration,
+  type CompleteRegistrationErrors,
   type CompleteRegistrationState,
   type TeamCheckState,
 } from "@/app/register/actions";
@@ -15,7 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { CheddarCelebration } from "@/components/register/CheddarCelebration";
 import { CliqPanel } from "@/components/payment/CliqPanel";
 import { IEEE_STATUS_OPTIONS } from "@/lib/ieee-status";
-import { formatFils, type CliqDetails } from "@/lib/payment";
+import { PAYER_NAME_FIELDS, formatFils, type CliqDetails } from "@/lib/payment";
 import { VERIFICATION_WINDOW_TEXT } from "@/lib/payment-proof";
 import { MAX_UPLOAD_BYTES, formatBytes } from "@/lib/gallery";
 import type { FeeBreakdown } from "@/lib/pricing";
@@ -415,7 +416,9 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
 interface PaymentStepProps {
   fee: FeeBreakdown;
   cliq: CliqDetails | null;
-  errors?: { reference?: string; amount?: string; screenshot?: string; form?: string };
+  /* The action's own error type rather than a copy of its shape — a second
+     declaration of the same fields is one that gets forgotten. */
+  errors?: CompleteRegistrationErrors;
   onBack: () => void;
 }
 
@@ -485,6 +488,44 @@ function PaymentStep({ fee, cliq, errors, onBack }: PaymentStepProps) {
               {errors.form}
             </p>
           ) : null}
+
+          {/*
+            Asked because the statement does not list team names. Every line in
+            it is a name and a figure, and the fee is very often sent by a
+            parent or by one member for all three — so without this the desk is
+            matching a reference against a stranger and hoping.
+
+            No autoComplete, deliberately. The browser would offer the name of
+            whoever is sitting at the keyboard, which is exactly the name this
+            field is not asking for, and a wrong name that was filled in for you
+            is one nobody re-reads.
+          */}
+          {/* Carries its own surface, like the member boxes on stage one. A
+              transparent panel here sits directly on the page artwork, and the
+              artwork runs from cream to deep purple down the left — which left
+              these labels legible on some scroll positions and invisible on
+              others. */}
+          <fieldset className="rounded-lg border border-ras-gray/20 bg-[var(--color-surface)] p-4">
+            <legend className="px-1 font-display text-sm font-bold text-ras-purple dark:text-white">
+              Name on the account you paid from
+            </legend>
+            <p className="text-xs text-ras-gray dark:text-white/70">
+              All four parts, exactly as the bank holds them. It does not have to be one of your
+              team — a parent&apos;s or a friend&apos;s account is fine, we just need the name we
+              will see against the transfer.
+            </p>
+            <div className="mt-3 grid gap-4 sm:grid-cols-2">
+              {PAYER_NAME_FIELDS.map((field) => (
+                <Field
+                  key={field.part}
+                  id={field.field}
+                  name={field.field}
+                  label={field.label}
+                  error={errors?.payer?.[field.part]}
+                />
+              ))}
+            </div>
+          </fieldset>
 
           <div className="grid gap-5 sm:grid-cols-2">
             <Field

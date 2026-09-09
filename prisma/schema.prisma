@@ -72,6 +72,26 @@ model Registration {
   paymentScreenshotUrl String?
   paymentScreenshotKey String?
 
+  /// The legal name of the person whose account the transfer came from, in the
+  /// four parts a Jordanian bank account carries it in.
+  ///
+  /// Kept apart from the team's own names on purpose. A fee is very often sent
+  /// by a parent, a sibling or one member on behalf of the rest, so the name on
+  /// the CliQ line in the statement is regularly nobody listed in TeamMember —
+  /// and matching a transfer is exactly the job of reading that name off the
+  /// statement and finding the team it belongs to.
+  ///
+  /// Stored as four columns rather than one joined string because that is how
+  /// the bank holds it, and a name that arrives in parts can always be joined
+  /// for display while a joined one cannot be reliably split back.
+  ///
+  /// Blank is meaningful and is the default: it means a registration made
+  /// before this was asked for, not a team that declined to answer.
+  payerFirstName  String @default("")
+  payerSecondName String @default("")
+  payerThirdName  String @default("")
+  payerLastName   String @default("")
+
   /// Which of the three team-wide tiers this registration is priced at.
   /// Deliberately distinct from TeamMember.ieeeStatus: that stays a per-person
   /// record, while the fee is one flat price for the whole team. See FeeTier in

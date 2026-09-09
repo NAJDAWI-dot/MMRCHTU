@@ -9,11 +9,14 @@ import { getPaymentConfig } from "@/lib/site-config";
 import {
   comparePayments,
   formatFils,
+  formatPayerName,
   isPaymentConfigured,
   isPaymentStatus,
+  payerNameFromRow,
   paymentActor,
   paymentDelta,
 } from "@/lib/payment";
+import { shortIeeeStatusLabel } from "@/lib/ieee-status";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminFilters } from "@/components/admin/AdminFilters";
 import { isEarlyBirdActive } from "@/lib/pricing";
@@ -69,7 +72,27 @@ export default async function AdminPaymentsPage({
   // searching for one team must not appear to change it.
   const [config, registrations, total, verifiedCount, awaitingCount, collected] = await Promise.all([
     getPaymentConfig(),
-    prisma.registration.findMany({ where, orderBy: { createdAt: "desc" } }),
+    // The members ride along with the row. The fee tier is priced from the
+    // leader's IEEE status, so the membership numbers behind that price belong
+    // on the same card as the price — checking one against the other used to
+    // mean opening the registrations list in another tab.
+    prisma.registration.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        members: {
+          orderBy: { order: "asc" },
+          select: {
+            id: true,
+            order: true,
+            firstName: true,
+            lastName: true,
+            ieeeStatus: true,
+            ieeeMembershipId: true,
+          },
+        },
+      },
+    }),
     prisma.registration.count(),
     prisma.registration.count({ where: { paymentStatus: "VERIFIED" } }),
     prisma.registration.count({ where: { paymentStatus: "SUBMITTED" } }),
@@ -319,6 +342,9 @@ export default async function AdminPaymentsPage({
           // Who last decided this row's status, whatever that status is.
           const actor = paymentActor(reg);
 
+          // Empty for every registration made before the field existed.
+          const payerName = formatPayerName(payerNameFromRow(reg));
+
           return (
             <Card key={reg.id}>
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -340,7 +366,13 @@ export default async function AdminPaymentsPage({
               <dl className="mt-3 grid gap-x-6 gap-y-1 text-xs sm:grid-cols-2">
                 <div className="flex justify-between gap-3">
                   <dt className="text-ras-gray dark:text-white/60">Tier</dt>
-                  <dd className="text-ras-gray dark:text-white/80">{reg.feeTier}</dd>
+                  {/* Said the same way as the statuses listed below it. Printing
+                      the stored IEEE_RAS_MEMBER here and "RAS member" two inches
+                      down is one value in two spellings, and the reader has to
+                      work out they are the same thing. */}
+                  <dd className="text-ras-gray dark:text-white/80">
+                    {shortIeeeStatusLabel(reg.feeTier)}
+                  </dd>
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-ras-gray dark:text-white/60">Quoted</dt>
@@ -368,6 +400,26 @@ export default async function AdminPaymentsPage({
                   <dt className="text-ras-gray dark:text-white/60">Reference</dt>
                   <dd className="font-mono text-ras-gray dark:text-white/80">
                     {reg.paymentReference ?? "—"}
+                  </dd>
+                </div>
+                {/* Beside the reference, because the two do the same job: the
+                    reference finds the transfer once you are in the right part
+                    of the statement, and the name is how you get there. Often
+                    a parent's or one member's, so it is regularly nobody in
+                    the team list below. */}
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ras-gray dark:text-white/60">Paid by</dt>
+                  <dd className="text-ras-gray dark:text-white/80">
+                    {payerName ? (
+                      <span className="font-semibold">{payerName}</span>
+                    ) : (
+                      /* Registered before this was asked for. An em dash here
+                         would read as "they left it blank", which is a
+                         different and unfair thing to say about the team. */
+                      <span className="italic text-ras-gray/70 dark:text-white/40">
+                        not asked at the time
+                      </span>
+                    )}
                   </dd>
                 </div>
                 {/* Shown for every status, not only for verified rows. "Who
@@ -402,6 +454,46 @@ export default async function AdminPaymentsPage({
                   check before verifying.
                 </p>
               ) : null}
+
+              {/*
+                The numbers the price was derived from, on the card where the
+                price is being checked. feeTierForTeam reads the leader's status
+                and nobody else's, so the leader is marked — a team whose leader
+                is a non-member pays the non-member fee however many RAS members
+                sit behind them, and that is the line to query if a tier looks
+                wrong.
+              */}
+              <div className="mt-3 rounded-md border border-ras-gray/20 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ras-gray dark:text-white/60">
+                  IEEE membership
+                </p>
+                {reg.members.length === 0 ? (
+                  <p className="mt-1 text-xs text-ras-gray dark:text-white/50">
+                    No members recorded on this registration.
+                  </p>
+                ) : (
+                  <ul className="mt-1.5 space-y-1 text-xs">
+                    {reg.members.map((member, index) => (
+                      <li
+                        key={member.id}
+                        className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5"
+                      >
+                        <span className="text-ras-gray dark:text-white/80">
+                          {member.firstName} {member.lastName}
+                          <span className="text-ras-gray/70 dark:text-white/50">
+                            {" · "}
+                            {shortIeeeStatusLabel(member.ieeeStatus)}
+                            {index === 0 ? " · sets the tier" : ""}
+                          </span>
+                        </span>
+                        <span className="break-all font-mono text-ras-gray dark:text-white/80">
+                          {member.ieeeMembershipId.trim() || "—"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
 
               {reg.paymentScreenshotUrl ? (
                 /* Served through an admin-only route rather than linked at its

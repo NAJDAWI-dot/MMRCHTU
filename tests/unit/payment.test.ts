@@ -21,6 +21,13 @@ import {
   parseAmountToFils,
   parsePayment,
   validatePayment,
+  PAYER_NAME_FIELDS,
+  MAX_PAYER_NAME_PART_LENGTH,
+  formatPayerName,
+  hasPayerNameErrors,
+  parsePayerName,
+  payerNameFromRow,
+  validatePayerName,
   type CliqDetails,
 } from "@/lib/payment";
 
@@ -431,5 +438,106 @@ describe("validatePaymentDecision", () => {
     expect(validatePaymentDecision("VERIFIED", "")).toBeNull();
     expect(validatePaymentDecision("UNPAID", "")).toBeNull();
     expect(validatePaymentDecision("SUBMITTED", "")).toBeNull();
+  });
+});
+
+/*
+  The name on the transferring account.
+
+  Its whole job is to be matched against a line in a bank statement, and the
+  three things that can stop it doing that job are: a part missing, a part that
+  is not a name, and a stored value that does not match what the bank prints
+  because of stray whitespace. One test each.
+*/
+describe("the name on the account a fee came from", () => {
+  const complete = { first: "Hashem", second: "Ali", third: "Mahmoud", last: "Najdawi" };
+
+  it("accepts a complete four-part name", () => {
+    expect(validatePayerName(complete)).toEqual({});
+    expect(hasPayerNameErrors(validatePayerName(complete))).toBe(false);
+  });
+
+  it("names the part that is missing rather than the whole field", () => {
+    const errors = validatePayerName({ ...complete, third: "" });
+    expect(Object.keys(errors)).toEqual(["third"]);
+    expect(errors.third).toMatch(/grandfather/i);
+  });
+
+  it("asks for every part, because a half-name matches nothing", () => {
+    const errors = validatePayerName({});
+    expect(Object.keys(errors).sort()).toEqual(["first", "last", "second", "third"]);
+  });
+
+  it("rejects a part with no letter in it", () => {
+    expect(validatePayerName({ ...complete, second: "-" }).second).toMatch(/does not look like/i);
+    expect(validatePayerName({ ...complete, second: "3" }).second).toMatch(/does not look like/i);
+  });
+
+  it("accepts Arabic, which is what most of these are typed in", () => {
+    expect(
+      validatePayerName({ first: "هاشم", second: "علي", third: "محمود", last: "النجداوي" }),
+    ).toEqual({});
+  });
+
+  it("accepts the punctuation real names carry", () => {
+    expect(
+      validatePayerName({ first: "Mary-Jane", second: "O'Brien", third: "Abu Bakr", last: "Al-Smadi" }),
+    ).toEqual({});
+  });
+
+  it("collapses whitespace so the stored name matches what the bank prints", () => {
+    expect(parsePayerName({ ...complete, first: "  Hashem   " }).first).toBe("Hashem");
+    expect(parsePayerName({ ...complete, third: "Abu  Bakr" }).third).toBe("Abu Bakr");
+  });
+
+  it("bounds each part rather than storing whatever was pasted", () => {
+    const long = "a".repeat(MAX_PAYER_NAME_PART_LENGTH + 20);
+    expect(parsePayerName({ first: long }).first).toHaveLength(MAX_PAYER_NAME_PART_LENGTH);
+  });
+
+  it("survives a missing input entirely", () => {
+    expect(parsePayerName(undefined)).toEqual({ first: "", second: "", third: "", last: "" });
+    expect(formatPayerName(null)).toBe("");
+  });
+
+  it("joins the four parts in the order a bank writes them", () => {
+    expect(formatPayerName(complete)).toBe("Hashem Ali Mahmoud Najdawi");
+  });
+
+  it("reads a stored row back into a name", () => {
+    expect(
+      formatPayerName(
+        payerNameFromRow({
+          payerFirstName: "Hashem",
+          payerSecondName: "Ali",
+          payerThirdName: "Mahmoud",
+          payerLastName: "Najdawi",
+        }),
+      ),
+    ).toBe("Hashem Ali Mahmoud Najdawi");
+  });
+
+  it("gives a registration made before the field existed an empty name, not a run of spaces", () => {
+    // The admin view branches on this being falsy to say "not asked at the
+    // time" rather than accusing the team of leaving it blank.
+    expect(
+      formatPayerName(
+        payerNameFromRow({
+          payerFirstName: "",
+          payerSecondName: "",
+          payerThirdName: "",
+          payerLastName: "",
+        }),
+      ),
+    ).toBe("");
+  });
+
+  it("carries a form field name for every part, and they are distinct", () => {
+    // The action reads FormData key by key, so a part with no field name here,
+    // or two parts sharing one, stores a blank or the wrong word silently.
+    expect(PAYER_NAME_FIELDS).toHaveLength(4);
+    const fields = PAYER_NAME_FIELDS.map((f) => f.field);
+    expect(new Set(fields).size).toBe(4);
+    expect(fields.every(Boolean)).toBe(true);
   });
 });

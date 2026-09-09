@@ -388,6 +388,140 @@ export function parsePayment(input: PaymentInput): ParsedPayment {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Who sent the money                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The name on the transferring account, in the four parts a Jordanian bank
+ * holds it in.
+ *
+ * A reference and an amount identify a transfer among a team's own claims; they
+ * do not identify it in the statement, where every line is a name and a figure.
+ * The fee is very often sent by a parent, a sibling, or one member for all
+ * three, so the name on that line is regularly nobody on the team — which is
+ * precisely why asking for it is worth a field, and why it cannot be inferred
+ * from TeamMember.
+ *
+ * Four parts rather than one box because that is the shape of the thing being
+ * copied: a name in parts can always be joined, and a joined one cannot be
+ * split back with any confidence.
+ */
+export interface PayerName {
+  first: string;
+  second: string;
+  third: string;
+  last: string;
+}
+
+export type PayerNamePart = keyof PayerName;
+
+/**
+ * The four parts in order: what each one is called, and the form field that
+ * carries it.
+ *
+ * Labelled by relation rather than "Second name" / "Third name", which is a
+ * form asking somebody to work out what it wants.
+ *
+ * The field names live here rather than being spelled out separately in the
+ * form and again in the action that reads it. FormData is read key by key, so a
+ * name typed in only one of those two places does not fail — it silently
+ * returns an empty string, and the payment is stored under a blank name.
+ */
+export const PAYER_NAME_FIELDS: readonly {
+  part: PayerNamePart;
+  label: string;
+  field: string;
+}[] = [
+  { part: "first", label: "First name", field: "payerFirstName" },
+  { part: "second", label: "Father's name", field: "payerSecondName" },
+  { part: "third", label: "Grandfather's name", field: "payerThirdName" },
+  { part: "last", label: "Family name", field: "payerLastName" },
+] as const;
+
+export type PayerNameErrors = Partial<Record<PayerNamePart, string>>;
+
+/** Long enough for any real part of a name, short enough to bound the column. */
+export const MAX_PAYER_NAME_PART_LENGTH = 40;
+
+/** Whitespace collapsed and length bounded, before storage or comparison. */
+function tidyNamePart(raw: string | null | undefined): string {
+  return (raw ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_PAYER_NAME_PART_LENGTH);
+}
+
+export function parsePayerName(input: Partial<PayerName> | null | undefined): PayerName {
+  return {
+    first: tidyNamePart(input?.first),
+    second: tidyNamePart(input?.second),
+    third: tidyNamePart(input?.third),
+    last: tidyNamePart(input?.last),
+  };
+}
+
+/**
+ * Every part is required.
+ *
+ * A partial name is worse than none for the one job this field has: "Hashem
+ * ????? Najdawi" cannot be matched against a statement any faster than a blank
+ * can, and it looks answered.
+ *
+ * The only rule beyond presence is that a part contains a letter — Arabic or
+ * Latin, since both are typed here. It rejects a dash or a lone digit typed to
+ * get past the field, and deliberately rejects nothing else: names carry
+ * apostrophes, hyphens and spaces, and a form that argues with somebody about
+ * the spelling of their own name has failed.
+ */
+export function validatePayerName(input: Partial<PayerName> | null | undefined): PayerNameErrors {
+  const name = parsePayerName(input);
+  const errors: PayerNameErrors = {};
+
+  for (const field of PAYER_NAME_FIELDS) {
+    const value = name[field.part];
+    if (!value) {
+      errors[field.part] = `Enter the ${field.label.toLowerCase()} on the account you paid from.`;
+    } else if (!/\p{L}/u.test(value)) {
+      errors[field.part] = `That does not look like a name — check the ${field.label.toLowerCase()}.`;
+    }
+  }
+
+  return errors;
+}
+
+export function hasPayerNameErrors(errors: PayerNameErrors): boolean {
+  return Object.keys(errors).length > 0;
+}
+
+/** The shape a Registration row carries the four parts in. */
+export interface PayerNameRow {
+  payerFirstName: string;
+  payerSecondName: string;
+  payerThirdName: string;
+  payerLastName: string;
+}
+
+/** A stored row back into the shape everything else here works in. */
+export function payerNameFromRow(row: PayerNameRow): PayerName {
+  return {
+    first: row.payerFirstName,
+    second: row.payerSecondName,
+    third: row.payerThirdName,
+    last: row.payerLastName,
+  };
+}
+
+/**
+ * The four parts as one line, for reading rather than for storage.
+ *
+ * Blank parts are dropped instead of leaving a double space, so a registration
+ * made before this was asked for renders as an empty string that a caller can
+ * fall back on, and a half-filled one from any other source still reads.
+ */
+export function formatPayerName(name: Partial<PayerName> | null | undefined): string {
+  return PAYER_NAME_FIELDS.map((field) => tidyNamePart(name?.[field.part]))
+    .filter(Boolean)
+    .join(" ");
+}
+
+/* -------------------------------------------------------------------------- */
 /* Configuration                                                               */
 /* -------------------------------------------------------------------------- */
 

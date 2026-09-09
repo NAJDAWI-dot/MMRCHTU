@@ -6,7 +6,7 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { PaymentScreenshot } from "@/components/admin/PaymentScreenshot";
 import { ReviewShortcuts } from "@/components/admin/ReviewShortcuts";
 import { prisma } from "@/lib/prisma";
-import { formatFils, paymentDelta } from "@/lib/payment";
+import { formatFils, formatPayerName, payerNameFromRow, paymentDelta } from "@/lib/payment";
 import { rejectPayment, verifyPayment } from "../actions";
 
 export const metadata: Metadata = {
@@ -44,9 +44,17 @@ function queueHref(skipped: readonly string[]): string {
 const FIELD =
   "w-full rounded-md border border-ras-gray/30 bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-fg)] transition-colors focus-visible:border-ras-purple focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ras-purple/40 dark:focus-visible:border-white dark:focus-visible:ring-white/30";
 
-function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+function Fact({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div>
+    <div className={className}>
       <dt className="text-xs uppercase tracking-wide text-ras-gray dark:text-white/50">{label}</dt>
       <dd className="mt-0.5 text-ras-purple dark:text-white">{children}</dd>
     </div>
@@ -110,6 +118,8 @@ export default async function ReviewPaymentsPage({
   }
 
   const delta = paymentDelta(team.feeDueFils, team.paymentAmountFils);
+  // Empty for anything registered before the field existed.
+  const payerName = formatPayerName(payerNameFromRow(team));
   // Each decision lands back here, minus the team just decided — it is no
   // longer SUBMITTED, so it drops out of the query on its own. The skip list
   // has to survive, or a skipped team would reappear immediately.
@@ -183,6 +193,18 @@ export default async function ReviewPaymentsPage({
           </Fact>
           <Fact label="Reference">
             <span className="break-all font-mono text-sm">{team.paymentReference ?? "—"}</span>
+          </Fact>
+          {/* Full width under the figures rather than a fourth column: it is
+              the line you read first in the statement to find the transfer at
+              all, and it is a name, which does not fit a third of a row. */}
+          <Fact label="Paid by" className="sm:col-span-3">
+            <span className="text-base font-semibold">
+              {payerName || (
+                <span className="italic font-normal text-ras-gray/70 dark:text-white/40">
+                  not asked at the time
+                </span>
+              )}
+            </span>
           </Fact>
         </dl>
 
