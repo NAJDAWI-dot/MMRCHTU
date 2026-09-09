@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { PaymentScreenshot } from "@/components/admin/PaymentScreenshot";
 import { ReviewShortcuts } from "@/components/admin/ReviewShortcuts";
+import { TeamMembership } from "@/components/admin/TeamMembership";
 import { prisma } from "@/lib/prisma";
 import { formatFils, formatPayerName, payerNameFromRow, paymentDelta } from "@/lib/payment";
 import { rejectPayment, verifyPayment } from "../actions";
@@ -79,6 +80,22 @@ export default async function ReviewPaymentsPage({
       // scanned; a queue is worked through to the end, so every row is seen
       // either way and the only thing left to get right is fairness.
       orderBy: [{ paymentSubmittedAt: "asc" }, { createdAt: "asc" }],
+      // The membership numbers ride along, for the same reason they do on the
+      // list: this is where the tier is accepted or refused, and it is priced
+      // from a status whose evidence is a number nobody could see from here.
+      include: {
+        members: {
+          orderBy: { order: "asc" },
+          select: {
+            id: true,
+            order: true,
+            firstName: true,
+            lastName: true,
+            ieeeStatus: true,
+            ieeeMembershipId: true,
+          },
+        },
+      },
     }),
     prisma.registration.count({ where: { paymentStatus: "SUBMITTED" } }),
   ]);
@@ -214,6 +231,8 @@ export default async function ReviewPaymentsPage({
             quoted. Check the statement before verifying.
           </p>
         ) : null}
+
+        <TeamMembership members={team.members} className="mt-4" />
 
         {team.paymentScreenshotUrl ? (
           <PaymentScreenshot

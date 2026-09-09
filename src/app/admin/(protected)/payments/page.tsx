@@ -17,6 +17,7 @@ import {
   paymentDelta,
 } from "@/lib/payment";
 import { shortIeeeStatusLabel } from "@/lib/ieee-status";
+import { TeamMembership } from "@/components/admin/TeamMembership";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminFilters } from "@/components/admin/AdminFilters";
 import { isEarlyBirdActive } from "@/lib/pricing";
@@ -455,45 +456,7 @@ export default async function AdminPaymentsPage({
                 </p>
               ) : null}
 
-              {/*
-                The numbers the price was derived from, on the card where the
-                price is being checked. feeTierForTeam reads the leader's status
-                and nobody else's, so the leader is marked — a team whose leader
-                is a non-member pays the non-member fee however many RAS members
-                sit behind them, and that is the line to query if a tier looks
-                wrong.
-              */}
-              <div className="mt-3 rounded-md border border-ras-gray/20 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-ras-gray dark:text-white/60">
-                  IEEE membership
-                </p>
-                {reg.members.length === 0 ? (
-                  <p className="mt-1 text-xs text-ras-gray dark:text-white/50">
-                    No members recorded on this registration.
-                  </p>
-                ) : (
-                  <ul className="mt-1.5 space-y-1 text-xs">
-                    {reg.members.map((member, index) => (
-                      <li
-                        key={member.id}
-                        className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5"
-                      >
-                        <span className="text-ras-gray dark:text-white/80">
-                          {member.firstName} {member.lastName}
-                          <span className="text-ras-gray/70 dark:text-white/50">
-                            {" · "}
-                            {shortIeeeStatusLabel(member.ieeeStatus)}
-                            {index === 0 ? " · sets the tier" : ""}
-                          </span>
-                        </span>
-                        <span className="break-all font-mono text-ras-gray dark:text-white/80">
-                          {member.ieeeMembershipId.trim() || "—"}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+              <TeamMembership members={reg.members} className="mt-3" />
 
               {reg.paymentScreenshotUrl ? (
                 /* Served through an admin-only route rather than linked at its
