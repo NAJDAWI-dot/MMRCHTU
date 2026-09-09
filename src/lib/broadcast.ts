@@ -82,3 +82,26 @@ export function parseContactInput(raw: string): { contacts: ParsedContact[]; inv
 
   return { contacts: [...byEmail.values()], invalid };
 }
+
+/**
+ * The three lives of a Broadcast row.
+ *
+ * DRAFT is being written, SENDING is going out in batches right now, TEMPLATE is
+ * kept to start from next time, and SENT is one that went out. One table rather
+ * than four, because a draft *becomes* the sent record — nothing is copied at
+ * the moment of sending, so the log is literally the email that was sent.
+ *
+ * SENT is the default so every row written before drafts existed keeps meaning
+ * what it always meant.
+ */
+export const BROADCAST_STATUSES = ["DRAFT", "SENDING", "SENT", "TEMPLATE"] as const;
+export type BroadcastStatus = (typeof BROADCAST_STATUSES)[number];
+
+export function isBroadcastStatus(value: string): value is BroadcastStatus {
+  return (BROADCAST_STATUSES as readonly string[]).includes(value);
+}
+
+export function parseBroadcastStatus(value: unknown): BroadcastStatus {
+  const raw = String(value ?? "").toUpperCase();
+  return isBroadcastStatus(raw) ? raw : "SENT";
+}
