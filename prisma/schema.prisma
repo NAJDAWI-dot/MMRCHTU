@@ -254,19 +254,101 @@ model BroadcastContact {
   @@index([listId])
 }
 
-// Send log: one row per broadcast attempt, kept so the admin can see what was
-// already sent to a list rather than re-sending blind.
+// One row per email: the one being written, the one saved to start from next
+// time, and the one already sent. Three states of the same thing rather than
+// three tables, because a draft becomes a sent record without anything being
+// copied, and the send log is then literally the email that went out.
 model Broadcast {
-  id          String        @id @default(cuid())
-  listId      String
-  list        BroadcastList @relation(fields: [listId], references: [id], onDelete: Cascade)
-  subject     String
-  body        String
-  sentCount   Int           @default(0)
-  failedCount Int           @default(0)
-  sentAt      DateTime      @default(now())
+  id     String         @id @default(cuid())
+  /// Null only for a TEMPLATE, which by definition belongs to no one list.
+  listId String?
+  list   BroadcastList? @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  subject String
+  /// The plain-text rendition, which is also every pre-rich-text broadcast's
+  /// only body. Written on every send, so the log stays readable whatever the
+  /// email was composed in, and so a mail client that refuses HTML has words.
+  body    String
+
+  /// The email as authored, exactly as the editor left it.
+  ///
+  /// Stored raw rather than sanitised: what is safe to *send* is decided at
+  /// render time by src/lib/rich-text.ts, and storing only the cleaned form
+  /// would mean reopening a draft in the editor loses whatever the cleaner
+  /// dropped, silently, with no way to get it back. Nothing renders this
+  /// without going through that module.
+  bodyHtml String @default("")
+
+  /// The wording around the message, editable per email with a saved default.
+  /// {name} in the greeting is the recipient's own name where one is known.
+  greeting   String @default("")
+  signOff    String @default("")
+  footerNote String @default("")
+
+  /// The call-to-action buttons, as a JSON array of {label, href}. JSON rather
+  /// than a table because they are read and written only as a whole, always
+  /// belong to exactly one email, and are never queried across emails.
+  buttons String @default("[]")
+
+  /// Extra recipients, comma separated. Each receives ONE copy of the email —
+  /// not one per contact — which is the only reading that makes sense when the
+  /// list itself is sent as individual private messages.
+  cc  String @default("")
+  bcc String @default("")
+
+  /// DRAFT, SENDING, SENT or TEMPLATE. See BROADCAST_STATUSES in
+  /// src/lib/broadcast.ts. Defaulted to SENT so every row written before drafts
+  /// existed keeps meaning what it meant: an email that went out.
+  status String @default("SENT")
+  /// What a TEMPLATE is called in the picker. Empty for the others.
+  name   String @default("")
+
+  /// Who this email is going to, frozen at the moment sending began, as JSON
+  /// [{email, name}].
+  ///
+  /// A snapshot rather than a re-query per batch. A large send runs as a series
+  /// of requests, and the position in the list is an offset — so a contact
+  /// added or removed while it runs would shift every later offset and either
+  /// skip somebody or send to them twice. Empty until a send starts.
+  recipients String @default("")
+
+  /// The addresses that failed, accumulated across batches, comma separated.
+  /// Kept because "3 failed" without saying which three is not a report anyone
+  /// can act on.
+  failedEmails String @default("")
+
+  sentCount   Int      @default(0)
+  failedCount Int      @default(0)
+  /// When it was sent — and, for a draft, when it was started.
+  sentAt      DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  attachments BroadcastAttachment[]
 
   @@index([listId])
+  @@index([status])
+}
+
+// A file that rides along with one email. Same url/key pair as GalleryPhoto and
+// the payment screenshots, for the same reason: the key is what lets deleting
+// the row delete the file rather than orphaning it in the blob store.
+model BroadcastAttachment {
+  id          String    @id @default(cuid())
+  broadcastId String
+  broadcast   Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  /// The name the recipient sees. Sanitised on the way in — never the raw
+  /// upload name, which is attacker-controlled on any public form and merely
+  /// untidy on this one.
+  filename    String
+  url         String
+  key         String
+  contentType String
+  /// Bytes, kept so the composer can total a message before it is refused by
+  /// the mail provider rather than after.
+  size        Int
+  addedAt     DateTime  @default(now())
+
+  @@index([broadcastId])
 }
 
 // Pac Mouse leaderboard. `mode` separates the Classic and First-Person boards

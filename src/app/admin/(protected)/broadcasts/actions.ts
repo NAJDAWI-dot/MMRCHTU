@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendBroadcast } from "@/lib/email";
 import { KIND_IMPORT_STATUS, parseContactInput, parseListKind, type BroadcastListKind } from "@/lib/broadcast";
 
 // Actions that report a result back to the admin are `useFormState` handlers
@@ -167,41 +166,5 @@ export async function importFromRegistrations(_prev: ActionState, formData: Form
   return {
     message: `Imported ${added} new contact${added === 1 ? "" : "s"} from ${registrations.length} ${status} registration${registrations.length === 1 ? "" : "s"}. ${skipped} already on the list.`,
     ok: added > 0,
-  };
-}
-
-export async function sendBroadcastToList(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireAdmin();
-
-  const listId = String(formData.get("listId") ?? "");
-  const subject = String(formData.get("subject") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
-
-  if (!listId) return { message: "Missing list id.", ok: false };
-  if (!subject || !body) {
-    return { message: "Subject and message are both required to send a broadcast.", ok: false };
-  }
-
-  const contacts = await prisma.broadcastContact.findMany({ where: { listId }, orderBy: { addedAt: "asc" } });
-  if (!contacts.length) {
-    return { message: "This list has no contacts yet — nothing was sent.", ok: false };
-  }
-
-  const result = await sendBroadcast(
-    contacts.map((c) => ({ email: c.email, name: c.name })),
-    subject,
-    body,
-  );
-
-  await prisma.broadcast.create({
-    data: { listId, subject, body, sentCount: result.sent, failedCount: result.failed },
-  });
-
-  revalidatePath(`/admin/broadcasts/${listId}`);
-  return {
-    message: result.failed
-      ? `Sent to ${result.sent} of ${contacts.length}. Failed: ${result.failedEmails.join(", ")}`
-      : `Sent "${subject}" to all ${result.sent} contact${result.sent === 1 ? "" : "s"}.`,
-    ok: result.failed === 0,
   };
 }
