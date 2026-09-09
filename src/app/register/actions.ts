@@ -12,7 +12,16 @@ import {
   type IeeeStatus,
   type TeamMemberInput,
 } from "@/lib/registration";
-import { isPaymentConfigured, validatePayment, type CliqDetails } from "@/lib/payment";
+import {
+  PAYER_NAME_FIELDS,
+  hasPayerNameErrors,
+  isPaymentConfigured,
+  validatePayerName,
+  validatePayment,
+  type CliqDetails,
+  type PayerName,
+  type PayerNameErrors,
+} from "@/lib/payment";
 import { computeFee, type FeeBreakdown } from "@/lib/pricing";
 import { getPaymentConfig, getRegisterFormConfig } from "@/lib/site-config";
 import { paymentScreenshotKey } from "@/lib/payment-proof";
@@ -35,6 +44,15 @@ function readMember(formData: FormData, index: number): Partial<TeamMemberInput>
     ieeeStatus: String(formData.get(`member${index}IeeeStatus`) ?? "") as IeeeStatus,
     ieeeMembershipId: String(formData.get(`member${index}IeeeMembershipId`) ?? ""),
   };
+}
+
+/** The four parts of the payer's name, keyed off the one list that names them. */
+function readPayerName(formData: FormData): PayerName {
+  const parts = {} as PayerName;
+  for (const field of PAYER_NAME_FIELDS) {
+    parts[field.part] = String(formData.get(field.field) ?? "");
+  }
+  return parts;
 }
 
 function readTeam(formData: FormData) {
@@ -157,6 +175,8 @@ export interface CompleteRegistrationErrors {
   reference?: string;
   amount?: string;
   screenshot?: string;
+  /** One message per missing part of the payer's name, keyed by part. */
+  payer?: PayerNameErrors;
   /** Something that is not about one field: a rate limit, a team-details problem. */
   form?: string;
 }
@@ -237,6 +257,15 @@ export async function completeRegistration(
     { required: true },
   );
 
+  // Checked here rather than trusted to the browser's `required`: this action
+  // is a public endpoint, and every other field on this form is re-checked on
+  // the server for the same reason.
+  const payerName = readPayerName(formData);
+  const payerErrors = validatePayerName(payerName);
+  if (hasPayerNameErrors(payerErrors)) {
+    errors.payer = payerErrors;
+  }
+
   const file = formData.get("screenshot");
   const hasFile = file instanceof File && file.size > 0;
   if (!hasFile) {
@@ -246,7 +275,7 @@ export async function completeRegistration(
     if (problem) errors.screenshot = problem;
   }
 
-  if (errors.reference || errors.amount || errors.screenshot) {
+  if (errors.reference || errors.amount || errors.screenshot || errors.payer) {
     return { status: "error", errors };
   }
 
@@ -299,6 +328,7 @@ export async function completeRegistration(
         amount,
         screenshotUrl: stored.url,
         screenshotKey: stored.key,
+        payerName,
       },
     });
   } catch (error) {

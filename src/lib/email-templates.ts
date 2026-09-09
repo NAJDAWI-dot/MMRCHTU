@@ -4,16 +4,20 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { MMRC_PLATE } from "@/lib/brand";
+import { applyGreeting, type EmailButton } from "@/lib/broadcast-compose";
+import { renderRichText, richTextSummary } from "@/lib/rich-text";
 import { formatFils } from "@/lib/payment";
 import { VERIFICATION_WINDOW_TEXT } from "@/lib/payment-proof";
 
-const PURPLE = "#5F2167";
-const PURPLE_DEEP = "#3F1546";
-const CRIMSON = "#862633";
-const GOLD = "#F2A900";
-const GRAY = "#57565B";
-const BORDER = "#e3dde5";
-const SURFACE = "#f7f5f8";
+import {
+  EMAIL_BORDER as BORDER,
+  EMAIL_CRIMSON as CRIMSON,
+  EMAIL_GOLD as GOLD,
+  EMAIL_GRAY as GRAY,
+  EMAIL_PURPLE as PURPLE,
+  EMAIL_PURPLE_DEEP as PURPLE_DEEP,
+  EMAIL_SURFACE as SURFACE,
+} from "@/lib/email-theme";
 
 /**
  * The marks in the email header: the HTU logo, the IEEE RAS HTU Student Chapter
@@ -183,33 +187,90 @@ function button(label: string, href: string): string {
 
 export interface BroadcastEmailData {
   subject: string;
-  /** Plain text written by the admin; newlines become <br> in the HTML part. */
-  body: string;
+  /** The message as authored. Never trusted — see src/lib/rich-text.ts. */
+  bodyHtml: string;
+  /** May contain {name}; becomes the recipient's own name where one is known. */
+  greeting: string;
+  signOff: string;
+  footerNote: string;
+  buttons: readonly EmailButton[];
   recipientName?: string | null;
   siteUrl: string;
 }
 
 /**
- * Admin-authored broadcast to a mailing list. The body is plain text rather
- * than HTML on purpose — it goes through nl2br/escapeHtml so an admin can't
- * accidentally (or deliberately) inject markup into outgoing mail.
+ * A site path to something a mail client can open.
+ *
+ * "/rules" is the natural thing for an admin to type and the one thing an email
+ * cannot carry: there is no page for it to be relative to.
  */
-export function broadcastEmail(data: BroadcastEmailData): { subject: string; html: string; text: string } {
-  const greeting = data.recipientName?.trim() ? `Hi ${escapeHtml(data.recipientName.trim())},` : "Hi,";
+function absolute(href: string, siteUrl: string): string {
+  return href.startsWith("/") ? `${siteUrl}${href}` : href;
+}
+
+/**
+ * The admin's own buttons, in the order they put them in.
+ *
+ * Laid out as a table rather than inline-blocks with margins, because Outlook
+ * ignores the margin and stacks them flush against each other. Each cell is its
+ * own button so a long label wraps inside its own pill instead of pushing the
+ * next one off the width of the message.
+ */
+function buttonRow(buttons: readonly EmailButton[], siteUrl: string): string {
+  if (buttons.length === 0) return "";
+  const cells = buttons
+    .map(
+      (item) =>
+        `<td style="padding:20px 10px 0 0;">${button(item.label, absolute(item.href, siteUrl))}</td>`,
+    )
+    .join("");
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr>${cells}</tr></table>`;
+}
+
+/**
+ * An admin-authored broadcast, as one recipient will receive it.
+ *
+ * Rendered per recipient rather than once for the list, because the greeting
+ * carries their name — which is also why the list is sent as individual
+ * messages rather than one with everybody in the header.
+ */
+export function broadcastEmail(data: BroadcastEmailData): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const body = renderRichText(data.bodyHtml);
+  const greeting = applyGreeting(data.greeting, data.recipientName);
 
   const html = baseEmailHtml(
-    data.body.slice(0, 140),
+    richTextSummary(data.bodyHtml),
     `
-      <p style="margin:0 0 16px; color:${GRAY};">${greeting}</p>
-      <div style="margin:0 0 8px; color:#1a1a1a;">${nl2br(data.body)}</div>
-      ${button("Visit the MMRC 26 site", data.siteUrl)}
+      ${greeting ? `<p style="margin:0 0 16px; color:${GRAY};">${escapeHtml(greeting)}</p>` : ""}
+      ${body.html}
+      ${buttonRow(data.buttons, data.siteUrl)}
+      ${
+        data.signOff
+          ? `<p style="margin:24px 0 0; color:${GRAY};">${nl2br(data.signOff)}</p>`
+          : ""
+      }
+      ${
+        data.footerNote
+          ? `<p style="margin:24px 0 0; padding-top:16px; border-top:1px solid ${BORDER}; color:${GRAY}; font-size:12px; line-height:1.6;">${escapeHtml(data.footerNote)}</p>`
+          : ""
+      }
     `,
     data.siteUrl,
   );
 
-  const text = `${data.recipientName?.trim() ? `Hi ${data.recipientName.trim()},` : "Hi,"}\n\n${data.body}\n\n${data.siteUrl}`;
+  const textParts = [
+    greeting,
+    body.text,
+    ...data.buttons.map((item) => `${item.label}: ${absolute(item.href, data.siteUrl)}`),
+    data.signOff,
+    data.footerNote,
+  ].filter((part) => part && part.trim());
 
-  return { subject: data.subject, html, text };
+  return { subject: data.subject, html, text: textParts.join("\n\n") };
 }
 
 export interface FaqNotificationData {

@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { sendRegistrationConfirmation } from "@/lib/email";
 import { IEEE_STATUS_OPTIONS, type IeeeStatus } from "@/lib/ieee-status";
 import { computeFee, isFeeTier, type FeeTier } from "@/lib/pricing";
-import { parsePayment } from "@/lib/payment";
+import { parsePayment, parsePayerName, type PayerName } from "@/lib/payment";
 import { createUniqueResumeCode } from "@/lib/registration-code";
 import { getPaymentConfig } from "@/lib/site-config";
 
@@ -65,6 +65,15 @@ export interface RegistrationPaymentInput {
   amount: string;
   screenshotUrl: string;
   screenshotKey: string;
+  /**
+   * The name on the account the transfer came from — see PayerName.
+   *
+   * Optional here, and only here: this is the one write path, so leaving it out
+   * would be a mistake rather than a case, but the type stays lenient so a
+   * caller that predates the field still compiles into blank columns instead of
+   * failing to build.
+   */
+  payerName?: Partial<PayerName>;
 }
 
 export interface RegistrationInput {
@@ -224,6 +233,8 @@ export async function createRegistration(input: RegistrationInput) {
     amount: input.payment.amount,
   });
 
+  const payer = parsePayerName(input.payment.payerName);
+
   const resumeCode = await createUniqueResumeCode(async (code) => {
     const clash = await prisma.registration.findUnique({
       where: { resumeCode: code },
@@ -255,6 +266,10 @@ export async function createRegistration(input: RegistrationInput) {
         paymentSubmittedAt: new Date(),
         paymentScreenshotUrl: input.payment.screenshotUrl,
         paymentScreenshotKey: input.payment.screenshotKey,
+        payerFirstName: payer.first,
+        payerSecondName: payer.second,
+        payerThirdName: payer.third,
+        payerLastName: payer.last,
         members: {
           create: input.members.map((member, i) => ({
             order: i + 1,

@@ -2,7 +2,7 @@
 
 import { useFormState, useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/Button";
-import { addContacts, importFromRegistrations, sendBroadcastToList } from "./actions";
+import { addContacts, importFromRegistrations } from "./actions";
 import { EMPTY_STATE, type ActionState } from "./state";
 
 function Result({ state }: { state: ActionState }) {
@@ -71,37 +71,6 @@ export function ImportForm({ listId, status }: { listId: string; status: string 
       </p>
       <SubmitButton pendingLabel="Importing…" variant="ghost" className="mt-2 px-3 py-1 text-xs">
         Import from {status} registrations
-      </SubmitButton>
-      <Result state={state} />
-    </form>
-  );
-}
-
-export function SendBroadcastForm({ listId, contactCount }: { listId: string; contactCount: number }) {
-  const [state, action] = useFormState(sendBroadcastToList, EMPTY_STATE);
-
-  return (
-    <form action={action} className="mt-3 space-y-3">
-      <input type="hidden" name="listId" value={listId} />
-      <label className="block text-sm">
-        <span className="text-ras-gray dark:text-white/70">Subject</span>
-        <input
-          name="subject"
-          required
-          className="mt-1 w-full rounded-md border border-ras-gray/30 bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-fg)]"
-        />
-      </label>
-      <label className="block text-sm">
-        <span className="text-ras-gray dark:text-white/70">Message</span>
-        <textarea
-          name="body"
-          rows={8}
-          required
-          className="mt-1 w-full rounded-md border border-ras-gray/30 bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-fg)]"
-        />
-      </label>
-      <SubmitButton pendingLabel="Sending…" variant="secondary" disabled={contactCount === 0}>
-        Send to {contactCount} contact{contactCount === 1 ? "" : "s"}
       </SubmitButton>
       <Result state={state} />
     </form>

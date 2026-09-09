@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { headers } from "next/headers";
 import { optionalEnv } from "@/lib/env";
 import { siteOrigin } from "@/lib/site-url";
+import type { EmailButton } from "@/lib/broadcast-compose";
 import {
   broadcastEmail,
   faqNotificationEmail,
@@ -35,35 +36,70 @@ function getSiteUrl(): string {
   }
 }
 
+export interface EmailAttachment {
+  /** The name the recipient sees. */
+  filename: string;
+  /** Where the provider fetches the bytes from. */
+  url: string;
+}
+
+interface SendOptions {
+  cc?: readonly string[];
+  bcc?: readonly string[];
+  attachments?: readonly EmailAttachment[];
+}
+
 /**
  * Best-effort email send via the Resend HTTP API. Silently no-ops (with a
  * console log) if RESEND_API_KEY isn't configured yet — a missing key must
  * never block the action that triggered the email (registration, a FAQ
  * question).
+ *
+ * Attachments are handed over as URLs rather than as bytes. The alternative is
+ * base64 in the request body, which inflates every file by a third and means a
+ * 40-recipient broadcast uploads the same PDF forty times.
  */
-async function sendEmail(to: string, subject: string, html: string, text: string): Promise<boolean> {
+async function sendEmail(
+  to: string | readonly string[],
+  subject: string,
+  html: string,
+  text: string,
+  options: SendOptions = {},
+): Promise<boolean> {
   const { resendApiKey, resendFromEmail } = optionalEnv;
+  const label = Array.isArray(to) ? to.join(", ") : String(to);
 
   if (!resendApiKey) {
-    console.warn(`[email] Skipped "${subject}" to ${to} — RESEND_API_KEY not configured.`);
+    console.warn(`[email] Skipped "${subject}" to ${label} — RESEND_API_KEY not configured.`);
     return false;
   }
 
   if (!resendFromEmail) {
-    console.warn(`[email] Skipped "${subject}" to ${to} — RESEND_FROM_EMAIL not configured.`);
+    console.warn(`[email] Skipped "${subject}" to ${label} — RESEND_FROM_EMAIL not configured.`);
     return false;
   }
 
   try {
     const resend = new Resend(resendApiKey);
-    const { error } = await resend.emails.send({ from: resendFromEmail, to, subject, html, text });
+    const { error } = await resend.emails.send({
+      from: resendFromEmail,
+      to: Array.isArray(to) ? [...to] : (to as string),
+      subject,
+      html,
+      text,
+      ...(options.cc?.length ? { cc: [...options.cc] } : {}),
+      ...(options.bcc?.length ? { bcc: [...options.bcc] } : {}),
+      ...(options.attachments?.length
+        ? { attachments: options.attachments.map((file) => ({ filename: file.filename, path: file.url })) }
+        : {}),
+    });
     if (error) {
-      console.error(`[email] Failed to send "${subject}" to ${to}:`, error);
+      console.error(`[email] Failed to send "${subject}" to ${label}:`, error);
       return false;
     }
     return true;
   } catch (error) {
-    console.error(`[email] Failed to send "${subject}" to ${to}:`, error);
+    console.error(`[email] Failed to send "${subject}" to ${label}:`, error);
     return false;
   }
 }
@@ -85,42 +121,121 @@ export interface BroadcastRecipient {
   name?: string | null;
 }
 
+/** Everything about the email that does not change from recipient to recipient. */
+export interface BroadcastMessage {
+  subject: string;
+  bodyHtml: string;
+  greeting: string;
+  signOff: string;
+  footerNote: string;
+  buttons: readonly EmailButton[];
+  attachments: readonly EmailAttachment[];
+}
+
 export interface BroadcastSendResult {
   sent: number;
   failed: number;
   failedEmails: string[];
+  /** Whether the single copy to the people cc'd or bcc'd went out. */
+  copySent: boolean;
+  copyAttempted: boolean;
+}
+
+/** Pacing between sends. Resend's default limit is 2 requests a second. */
+const SEND_GAP_MS = 550;
+
+function pause(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, SEND_GAP_MS));
 }
 
 /**
  * Sends one personalised copy per recipient rather than a single message with
- * everyone in `to:` — the list members must not see each other's addresses.
+ * everyone in `to:` — the list members must not see each other's addresses, and
+ * the greeting carries each person's own name.
  *
- * Sends are sequential with a short gap: Resend's default rate limit is 2
- * requests/second, and a parallel fan-out over a list of any size trips it and
- * fails most of the batch. A failed recipient is recorded and the run
- * continues, so one bad address can't abort the whole broadcast.
+ * Sends are sequential with a short gap, because a parallel fan-out over a list
+ * of any size trips the provider's rate limit and fails most of the batch. A
+ * failed recipient is recorded and the run continues, so one bad address cannot
+ * abort a whole broadcast.
+ *
+ * Anyone cc'd or bcc'd gets ONE copy, sent after the list, not one per
+ * recipient. Copying somebody in on a mailing list is a request to show them
+ * what went out; on forty individual messages the literal reading would send
+ * them forty emails, which is never what was meant. That copy is addressed to
+ * the cc'd people themselves when there are any, so they can see each other as
+ * cc implies, and to the sending address when the copy is blind — a message
+ * still needs somebody in `to:`.
  */
 export async function sendBroadcast(
-  recipients: BroadcastRecipient[],
-  subject: string,
-  body: string,
+  recipients: readonly BroadcastRecipient[],
+  message: BroadcastMessage,
+  extra: { cc: readonly string[]; bcc: readonly string[] } = { cc: [], bcc: [] },
 ): Promise<BroadcastSendResult> {
   const siteUrl = getSiteUrl();
-  const result: BroadcastSendResult = { sent: 0, failed: 0, failedEmails: [] };
+  const result: BroadcastSendResult = {
+    sent: 0,
+    failed: 0,
+    failedEmails: [],
+    copySent: false,
+    copyAttempted: false,
+  };
 
   for (const recipient of recipients) {
-    const { html, text } = broadcastEmail({ subject, body, recipientName: recipient.name, siteUrl });
-    const ok = await sendEmail(recipient.email, subject, html, text);
+    const { html, text } = broadcastEmail({
+      ...message,
+      recipientName: recipient.name,
+      siteUrl,
+    });
+    const ok = await sendEmail(recipient.email, message.subject, html, text, {
+      attachments: message.attachments,
+    });
     if (ok) {
-      result.sent++;
+      result.sent += 1;
     } else {
-      result.failed++;
+      result.failed += 1;
       result.failedEmails.push(recipient.email);
     }
-    await new Promise((resolve) => setTimeout(resolve, 550));
+    await pause();
+  }
+
+  const copied = [...extra.cc, ...extra.bcc];
+  if (copied.length > 0) {
+    result.copyAttempted = true;
+    // No name to greet: this copy goes to several people at once, so the
+    // greeting falls back to its nameless form rather than addressing all of
+    // them as whoever happens to be first.
+    const { html, text } = broadcastEmail({ ...message, recipientName: null, siteUrl });
+    const to = extra.cc.length > 0 ? extra.cc : [optionalEnv.resendFromEmail ?? ""];
+    result.copySent = await sendEmail(to, message.subject, html, text, {
+      bcc: extra.bcc,
+      attachments: message.attachments,
+    });
   }
 
   return result;
+}
+
+/**
+ * One copy of exactly what the list would receive, to an address the admin
+ * types.
+ *
+ * The point is that it is not a special "test" rendering — the same template,
+ * the same buttons, the same attachments — because a preview that is built
+ * differently from the real thing is a preview of something else.
+ */
+export async function sendBroadcastTest(
+  to: string,
+  message: BroadcastMessage,
+  recipientName?: string | null,
+): Promise<boolean> {
+  const { html, text } = broadcastEmail({
+    ...message,
+    recipientName: recipientName ?? null,
+    siteUrl: getSiteUrl(),
+  });
+  return sendEmail(to, `[Test] ${message.subject}`, html, text, {
+    attachments: message.attachments,
+  });
 }
 
 export async function sendRegistrationConfirmation(
