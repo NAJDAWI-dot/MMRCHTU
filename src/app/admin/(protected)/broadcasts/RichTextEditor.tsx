@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
+
 import { renderRichText } from "@/lib/rich-text";
 
 /**
@@ -19,6 +20,12 @@ import { renderRichText } from "@/lib/rich-text";
  * re-renders — the classic "typing backwards" bug. The DOM holds the value and
  * a hidden input mirrors it for the form.
  */
+
+/** What the page can do to the editor from outside it. */
+export interface EditorHandle {
+  /** Replaces what is being edited — used when starting from a template. */
+  setContent(html: string): void;
+}
 
 interface ToolbarButton {
   /** execCommand name, or a block tag for formatBlock. */
@@ -78,11 +85,14 @@ export function RichTextEditor({
   name,
   initialHtml,
   onChange,
+  handleRef,
   ariaLabel = "Message",
 }: {
   name: string;
   initialHtml: string;
   onChange?: (html: string) => void;
+  /** Lets the page replace what is being edited — see EditorHandle. */
+  handleRef?: MutableRefObject<EditorHandle | null>;
   ariaLabel?: string;
 }) {
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -100,6 +110,29 @@ export function RichTextEditor({
     onChange?.(value);
   }, [onChange]);
 
+  /**
+   * The content is put into the DOM by hand, once, and React is never told
+   * about it.
+   *
+   * It used to arrive through dangerouslySetInnerHTML, which cost the editor
+   * the ability to be typed in at all: React owns the children of an element it
+   * renders that way, so every re-render — and there is one per keystroke,
+   * because the preview updates as you type — wrote the original content back
+   * over whatever had just been typed. Measured, it replaced all three child
+   * nodes three times for a single character.
+   *
+   * With no children in the JSX there is nothing for React to restore, and the
+   * browser's own editing is the only thing that ever touches them.
+   */
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (editor) editor.innerHTML = renderRichText(initialHtml).html;
+    // Deliberately on mount alone. Re-running this when initialHtml changed
+    // would move the caret to the start mid-sentence; replacing the content
+    // deliberately is what the handle below is for.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     // New lines become <p> rather than <div>. Both are handled downstream, but
     // paragraphs are what the email actually wants and what the editor should
@@ -111,6 +144,21 @@ export function RichTextEditor({
       // rich-text.ts maps to a paragraph anyway.
     }
   }, []);
+
+  useEffect(() => {
+    if (!handleRef) return;
+    handleRef.current = {
+      setContent(next: string) {
+        const editor = editorRef.current;
+        if (!editor) return;
+        editor.innerHTML = renderRichText(next).html;
+        publish();
+      },
+    };
+    return () => {
+      handleRef.current = null;
+    };
+  }, [handleRef, publish]);
 
   const refreshActive = useCallback(() => {
     const next: Record<string, boolean> = {};
@@ -276,13 +324,6 @@ export function RichTextEditor({
         onKeyUp={refreshActive}
         onMouseUp={refreshActive}
         onBlur={publish}
-        /*
-          Seeded through the same renderer that will draw the email, not with the
-          stored markup as-is. Reopening a draft therefore shows exactly what
-          will be sent — and an image tag carrying an onerror handler, pasted in
-          from another page, never reaches the DOM of the admin's own session.
-        */
-        dangerouslySetInnerHTML={{ __html: renderRichText(initialHtml).html }}
         className="min-h-[16rem] max-w-none px-4 py-3 text-sm leading-relaxed text-[var(--color-fg)] focus:outline-none [&_a]:text-ras-purple [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-ras-purple/40 [&_blockquote]:pl-3 [&_blockquote]:text-ras-gray [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:font-display [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-ras-purple [&_li]:ml-5 [&_li]:list-item [&_ol]:my-2 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc dark:[&_a]:text-white dark:[&_blockquote]:text-white/70 dark:[&_h2]:text-white"
       />
 

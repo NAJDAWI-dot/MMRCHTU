@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
-import { RichTextEditor } from "./RichTextEditor";
+import { RichTextEditor, type EditorHandle } from "./RichTextEditor";
 import {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_TYPE_SUMMARY,
@@ -117,6 +117,8 @@ export function EmailComposer({
 
   // The editor is uncontrolled; this is the value it last reported.
   const bodyRef = useRef(draft?.bodyHtml ?? "");
+  // The one way to put content *into* it, for starting from a template.
+  const editor = useRef<EditorHandle | null>(null);
 
   function formData(extra?: Record<string, string>): FormData {
     const data = new FormData();
@@ -184,9 +186,12 @@ export function EmailComposer({
       setResult({ ok: current.ok, message: current.message, draftId: current.draftId });
       if (current.done && current.ok) {
         // The draft has become the sent record, so the composer starts clean
-        // rather than offering to send the same email again.
+        // rather than offering to send the same email again. The editor is
+        // emptied through its handle, since its content is in the DOM and
+        // clearing the state alone would leave the sent email on screen.
         setDraftId("");
         setSubject("");
+        editor.current?.setContent("");
         setBody("");
         bodyRef.current = "";
         setAttachments([]);
@@ -224,6 +229,10 @@ export function EmailComposer({
     const template = templates.find((item) => item.id === id);
     if (!template) return;
     setSubject(template.subject);
+    // Through the editor's own handle. Setting the state alone changed the
+    // preview and left the editor showing the previous email, because the
+    // editor's content lives in the DOM rather than in React.
+    editor.current?.setContent(template.bodyHtml);
     setBody(template.bodyHtml);
     bodyRef.current = template.bodyHtml;
     setGreeting(template.greeting);
@@ -342,6 +351,7 @@ export function EmailComposer({
         <div className="mt-1">
           <RichTextEditor
             name="bodyHtml"
+            handleRef={editor}
             initialHtml={draft?.bodyHtml ?? ""}
             onChange={(value) => {
               bodyRef.current = value;

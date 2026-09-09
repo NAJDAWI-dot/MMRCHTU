@@ -162,6 +162,88 @@ describe("the preview", () => {
   });
 });
 
+describe("the message box", () => {
+  const draft = {
+    id: "draft-1",
+    subject: "Rule change",
+    bodyHtml: "<p>Original text.</p>",
+    greeting: "Hi {name},",
+    signOff: "",
+    footerNote: "",
+    buttons: [],
+    cc: "",
+    bcc: "",
+    attachments: [],
+  };
+
+  /*
+    These pin the contract, and one of them regresses.
+
+    The bug they were written for: the editor's content arrived through
+    dangerouslySetInnerHTML, so React owned those child nodes and put the
+    original back on every re-render — and there is a re-render per keystroke,
+    because the preview updates as you type. The box took focus, accepted
+    keystrokes, and kept none of them.
+
+    Only the template case below actually fails against that version. jsdom does
+    not reproduce the restore: setting innerHTML by hand is not the same as a
+    browser editing a contenteditable, and React's commit behaves differently
+    against the two. The typing tests are still worth having as a statement of
+    what must hold, but the guard that caught this — and the one that would
+    catch it again — is driving a real browser.
+  */
+  it("keeps what was typed when the page re-renders around it", () => {
+    renderComposer({ draft });
+    const editor = screen.getByRole("textbox", { name: "Message" });
+
+    editor.innerHTML = "<p>Typed by hand</p>";
+    fireEvent.input(editor);
+
+    // Anything at all that re-renders the composer.
+    fireEvent.change(screen.getByLabelText("Subject"), { target: { value: "Changed" } });
+
+    expect(editor.innerHTML).toContain("Typed by hand");
+    expect(editor.innerHTML).not.toContain("Original text");
+  });
+
+  it("carries what was typed into the form data the actions receive", () => {
+    renderComposer({ draft });
+    const editor = screen.getByRole("textbox", { name: "Message" });
+
+    editor.innerHTML = "<p>Typed by hand</p>";
+    fireEvent.input(editor);
+
+    const hidden = document.querySelector('input[type="hidden"][name="bodyHtml"]');
+    expect((hidden as HTMLInputElement | null)?.value).toContain("Typed by hand");
+  });
+
+  it("replaces the text when an email is started from a template", () => {
+    // The same ownership problem the other way round: setting state alone
+    // changed the preview and left the editor showing the previous email.
+    renderComposer({
+      draft,
+      templates: [
+        {
+          id: "t1",
+          name: "Week-before reminder",
+          subject: "One week to go",
+          bodyHtml: "<p>From the template.</p>",
+          greeting: "Hi {name},",
+          signOff: "",
+          footerNote: "",
+          buttons: [],
+        },
+      ],
+    });
+
+    fireEvent.change(screen.getByLabelText("Start from"), { target: { value: "t1" } });
+
+    const editor = screen.getByRole("textbox", { name: "Message" });
+    expect(editor.innerHTML).toContain("From the template");
+    expect(editor.innerHTML).not.toContain("Original text");
+  });
+});
+
 describe("what the server says", () => {
   it("puts a rejected send's error on the field it is about", async () => {
     beginSend.mockResolvedValue({
