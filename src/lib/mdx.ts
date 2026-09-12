@@ -6,14 +6,10 @@ import type { ComponentType } from "react";
  * this module's implementation, not the pages that call it.
  *
  * Schedule and FAQ content moved to the ScheduleEvent/FaqEntry Prisma models
- * (admin-editable); the rulebook has no editing requirement yet, so it stays
- * MDX here.
+ * (admin-editable). The /rules page is now the official PDF as a flip-book
+ * (see `src/lib/rulebook-book.ts`); `content/rules/rulebook.mdx` remains as
+ * the prose the site search indexes.
  */
-
-export async function loadRulebook(): Promise<ComponentType> {
-  const mod = await import("../../content/rules/rulebook.mdx");
-  return mod.default;
-}
 
 /**
  * The site's legal pages, slug to title.
@@ -39,7 +35,7 @@ export function isLegalSlug(value: string): value is LegalSlug {
  *
  * `import(\`../../content/legal/${slug}.mdx\`)` would build, but the bundler
  * can only guess at what it might load and pulls the whole folder in. Spelled
- * out, each import is statically analysable exactly like loadRulebook's.
+ * out, each import is statically analysable.
  */
 export async function loadLegalPage(slug: LegalSlug): Promise<ComponentType> {
   switch (slug) {

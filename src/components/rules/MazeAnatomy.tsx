@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { CELL, generateMaze, type Maze } from "@/lib/maze";
 import { DIAGRAM_BRAID, RULES, cellCentre, pathData, shortestPath, startCell } from "@/lib/rules";
 import { CellTint, GoalBlock, MazeCanvas } from "@/components/rules/MazeCanvas";
-import { Figure, Legend, Stat } from "@/components/rules/Figure";
+import { Figure, type FigureVariant, Legend, Stat } from "@/components/rules/Figure";
 
 /**
  * The maze section of the rulebook, drawn instead of described.
@@ -19,7 +19,7 @@ import { Figure, Legend, Stat } from "@/components/rules/Figure";
  * producing one on the server would disagree with the one the browser makes and
  * React would throw a hydration mismatch.
  */
-export function MazeAnatomy() {
+export function MazeAnatomy({ variant }: { variant?: FigureVariant }) {
   const [maze, setMaze] = useState<Maze | null>(null);
   const [showRoute, setShowRoute] = useState(false);
   // Bumped on every new maze, including the first, so the entrance animation
@@ -38,6 +38,7 @@ export function MazeAnatomy() {
 
   return (
     <Figure
+      variant={variant}
       id="the-maze"
       title="The competition maze"
       controls={

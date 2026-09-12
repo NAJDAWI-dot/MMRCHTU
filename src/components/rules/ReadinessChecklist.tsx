@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import {
   CHECKLIST,
   CHECKLIST_GROUPS,
+  type ChecklistGroup,
   type ChecklistItem,
   checklistReport,
   checklistSummary,
@@ -28,7 +29,20 @@ import {
 
 const STORAGE_KEY = "mmrc26-readiness";
 
-export function ReadinessChecklist({ earlyBird = false }: { earlyBird?: boolean }) {
+export function ReadinessChecklist({
+  earlyBird = false,
+  groups = CHECKLIST_GROUPS,
+  compact = false,
+}: {
+  earlyBird?: boolean;
+  /** Which groups to list. The progress summary always counts the whole list. */
+  groups?: readonly ChecklistGroup[];
+  /**
+   * The flip-book's taster: the chosen groups and the progress, without the
+   * copy and clear actions, which belong on the full checklist page.
+   */
+  compact?: boolean;
+}) {
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
   const [hydrated, setHydrated] = useState(false);
   const [copied, setCopied] = useState<"idle" | "done" | "failed">("idle");
@@ -88,7 +102,7 @@ export function ReadinessChecklist({ earlyBird = false }: { earlyBird?: boolean 
     <div className="space-y-6">
       <ProgressSummary summary={summary} />
 
-      {CHECKLIST_GROUPS.map((group) => {
+      {groups.map((group) => {
         const items = CHECKLIST.filter((item) => item.group === group);
         if (!items.length) return null;
         return (
@@ -115,38 +129,36 @@ export function ReadinessChecklist({ earlyBird = false }: { earlyBird?: boolean 
         );
       })}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button
-          variant="ghost"
-          className="min-h-[44px] transition-transform active:scale-95"
-          onClick={copyReport}
-        >
-          {copied === "done"
-            ? "Copied"
-            : copied === "failed"
-              ? "Could not copy"
-              : "Copy as text"}
-        </Button>
-        <Button
-          variant="ghost"
-          className="min-h-[44px] transition-transform active:scale-95"
-          onClick={() => {
-            if (!confirmingReset) {
-              setConfirmingReset(true);
-              return;
-            }
-            setAnswers({});
-            setConfirmingReset(false);
-          }}
-          onBlur={() => setConfirmingReset(false)}
-          disabled={!summary.confirmed}
-        >
-          {confirmingReset ? "Tap again to clear" : "Clear"}
-        </Button>
-        <p className="text-sm text-ras-gray dark:text-white/60">
-          Saved on this device only — nothing is sent to the organisers.
-        </p>
-      </div>
+      {compact ? null : (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="ghost"
+            className="min-h-[44px] transition-transform active:scale-95"
+            onClick={copyReport}
+          >
+            {copied === "done" ? "Copied" : copied === "failed" ? "Could not copy" : "Copy as text"}
+          </Button>
+          <Button
+            variant="ghost"
+            className="min-h-[44px] transition-transform active:scale-95"
+            onClick={() => {
+              if (!confirmingReset) {
+                setConfirmingReset(true);
+                return;
+              }
+              setAnswers({});
+              setConfirmingReset(false);
+            }}
+            onBlur={() => setConfirmingReset(false)}
+            disabled={!summary.confirmed}
+          >
+            {confirmingReset ? "Tap again to clear" : "Clear"}
+          </Button>
+          <p className="text-sm text-ras-gray dark:text-white/60">
+            Saved on this device only — nothing is sent to the organisers.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

@@ -15,6 +15,7 @@ export function Figure({
   controls,
   children,
   id,
+  variant = "default",
 }: {
   title: string;
   /** What the reader should take from the diagram. */
@@ -23,25 +24,42 @@ export function Figure({
   controls?: ReactNode;
   children: ReactNode;
   id?: string;
+  /**
+   * `page` is the figure bound into the flip-book: the page itself is the
+   * frame, so the card's border, fill and margins would only box it twice.
+   */
+  variant?: FigureVariant;
 }) {
+  const page = variant === "page";
+
   return (
     <figure
-      id={id}
-      className="not-prose my-8 rounded-lg border border-ras-gray/20 bg-[var(--color-surface)] p-4 shadow-sm sm:p-6"
+      id={page ? undefined : id}
+      className={
+        page
+          ? "not-prose"
+          : "not-prose my-8 rounded-lg border border-ras-gray/20 bg-[var(--color-surface)] p-4 shadow-sm sm:p-6"
+      }
     >
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <h3 className="font-display text-base font-bold text-ras-purple dark:text-white">
+        <h3
+          className={`font-display font-bold text-ras-purple dark:text-white ${page ? "text-sm" : "text-base"}`}
+        >
           {title}
         </h3>
         {controls ? <div className="flex flex-wrap items-center gap-2">{controls}</div> : null}
       </div>
-      <div className="mt-4">{children}</div>
-      <figcaption className="mt-4 text-sm leading-relaxed text-ras-gray dark:text-white/70">
+      <div className={page ? "mt-3" : "mt-4"}>{children}</div>
+      <figcaption
+        className={`leading-relaxed text-ras-gray dark:text-white/70 ${page ? "mt-3 text-xs" : "mt-4 text-sm"}`}
+      >
         {caption}
       </figcaption>
     </figure>
   );
 }
+
+export type FigureVariant = "default" | "page";
 
 export type SwatchKind = "line" | "dashed" | "cell" | "dot";
 

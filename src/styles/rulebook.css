@@ -1,0 +1,468 @@
+/*
+  The /rules flip-book. See src/components/rulebook/FlipBook.tsx.
+
+  The book itself is paper in both themes — it is the organisers' printed
+  manual — while the stage around it, the toolbar and the hint follow the
+  site's tokens.
+*/
+
+.book-stage {
+  --book-ink: #1f1a17;
+  --book-leather: #3a2417;
+  --book-gold: #d6b27a;
+  --book-cream: #f4e6c8;
+  position: relative;
+}
+
+/*
+  Wide enough for two A4 pages side by side, but never taller than the window:
+  1.413 is the width of an open spread over its height (2 × 595 / 842).
+*/
+.book-host {
+  position: relative;
+  width: min(100%, calc((100svh - 15rem) * 1.413));
+  min-width: min(100%, 18rem);
+  margin-inline: auto;
+  filter: drop-shadow(0 22px 28px rgb(20 10 5 / 0.28)) drop-shadow(0 4px 6px rgb(20 10 5 / 0.18));
+}
+
+.book-host--loading {
+  visibility: hidden;
+}
+
+.book-placeholder {
+  position: absolute;
+  inset: 0 0 auto 0;
+  display: flex;
+  justify-content: center;
+}
+
+.book-placeholder img {
+  width: min(50%, calc((100svh - 15rem) * 0.707));
+  aspect-ratio: 595 / 842;
+  object-fit: cover;
+  border-radius: 3px 8px 8px 3px;
+  box-shadow: 0 22px 28px rgb(20 10 5 / 0.28);
+  animation: book-breathe 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes book-breathe {
+  from {
+    opacity: 0.75;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.book-page {
+  background: #ffffff;
+  color: var(--book-ink);
+  overflow: hidden;
+}
+
+.book-sheet {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.book-page-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+/*
+  The gutter. Light pools where a real page curves down into the binding, so
+  each page darkens towards the spine and catches a highlight just off it.
+*/
+.book-page.--left .book-sheet::after,
+.book-page.--right .book-sheet::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.book-page.--left .book-sheet::after {
+  background: linear-gradient(
+    to left,
+    rgb(0 0 0 / 0.16) 0%,
+    rgb(0 0 0 / 0.05) 3%,
+    rgb(255 255 255 / 0.08) 5%,
+    transparent 9%
+  );
+}
+
+.book-page.--right .book-sheet::after {
+  background: linear-gradient(
+    to right,
+    rgb(0 0 0 / 0.16) 0%,
+    rgb(0 0 0 / 0.05) 3%,
+    rgb(255 255 255 / 0.08) 5%,
+    transparent 9%
+  );
+}
+
+.book-page.--hard .book-sheet::after {
+  background: linear-gradient(to right, rgb(0 0 0 / 0.25), transparent 4%);
+}
+
+.book-hotspot {
+  position: absolute;
+  z-index: 2;
+  border-radius: 3px;
+  cursor: pointer;
+  background: transparent;
+  transition: background-color 150ms ease;
+}
+
+.book-hotspot:hover {
+  background: rgb(134 38 51 / 0.08);
+}
+
+.book-hotspot:focus-visible {
+  outline: 2px solid #5f2167;
+  outline-offset: 1px;
+}
+
+.book-badge {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Times New Roman", Times, serif;
+  font-weight: 700;
+  font-size: clamp(7px, 1.55cqw, 13px);
+  color: #111;
+  pointer-events: none;
+}
+
+.book-body {
+  position: absolute;
+  z-index: 2;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(95 33 103 / 0.35) transparent;
+}
+
+/*
+  The diagrams are drawn to fill a column on the old rules page. A full-width
+  square maze on an A4 page leaves no room for its legend and figures, so on a
+  page they are held to a size that lets the whole figure sit above the footer.
+*/
+.book-body svg[role="img"] {
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  margin-inline: auto;
+}
+
+/* The type of the manual's own headings: Word's Times, not the site's Inter. */
+.book-kicker {
+  font-family: "Times New Roman", Times, serif;
+  font-style: italic;
+  font-size: 13px;
+  color: #862633;
+}
+
+.book-title {
+  margin-top: 2px;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 26px;
+  line-height: 1.15;
+  color: #111;
+}
+
+/* The page sizes itself from its width, so the badge scales with it. */
+.book-page {
+  container-type: inline-size;
+}
+
+.book-back-cover {
+  background: var(--book-leather);
+}
+
+/*
+  The front board's artwork as the back of the same binding. Not mirrored: the
+  logos in it would read backwards. The panel sits over the cartouche, where
+  the front has its title, and is opaque so none of that title shows through.
+*/
+.book-back-art {
+  filter: saturate(0.9) brightness(0.88);
+}
+
+.book-back-panel {
+  position: absolute;
+  inset: 33% 18% 31%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 1rem;
+  text-align: center;
+  color: var(--book-cream);
+  background: radial-gradient(ellipse at center, #45291b, #2c1a10);
+  border: 3px double var(--book-gold);
+  border-radius: 14px;
+  box-shadow: inset 0 0 30px rgb(0 0 0 / 0.45);
+}
+
+.book-back-wordmark {
+  font-family: var(--font-brand), Rockwell, Georgia, serif;
+  font-size: clamp(18px, 7cqw, 40px);
+  letter-spacing: 0.04em;
+}
+
+.book-back-line {
+  font-family: "Times New Roman", Times, serif;
+  font-size: clamp(9px, 2.4cqw, 15px);
+  line-height: 1.35;
+  opacity: 0.92;
+}
+
+.book-back-rule {
+  width: 60%;
+  height: 1px;
+  margin-block: 0.3rem;
+  background: var(--book-gold);
+  opacity: 0.7;
+}
+
+.book-back-url {
+  margin-top: 0.4rem;
+  font-family: "Times New Roman", Times, serif;
+  font-size: clamp(9px, 2.2cqw, 14px);
+  color: var(--book-gold);
+  letter-spacing: 0.06em;
+}
+
+/* Side arrows: on a desktop spread they sit in the margin beside the book. */
+.book-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 5;
+  display: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  color: var(--color-fg);
+  background: var(--color-surface-translucent);
+  border: 1px solid var(--color-border);
+  backdrop-filter: blur(6px);
+  transform: translateY(-50%);
+  transition:
+    background-color 150ms ease,
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.book-arrow:hover:not(:disabled) {
+  background: var(--color-surface);
+}
+
+.book-arrow:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.94);
+}
+
+.book-arrow:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.book-arrow--prev {
+  left: 0;
+}
+
+.book-arrow--next {
+  right: 0;
+}
+
+@media (min-width: 1100px) {
+  .book-arrow {
+    display: grid;
+  }
+}
+
+.book-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 1.25rem auto 0;
+  padding: 0.4rem;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 12px;
+  background: var(--color-surface-translucent);
+  border: 1px solid var(--color-border);
+  backdrop-filter: blur(8px);
+}
+
+.book-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  min-width: 44px;
+  justify-content: center;
+  padding-inline: 0.7rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-fg);
+  transition:
+    background-color 150ms ease,
+    transform 120ms ease;
+}
+
+.book-tool:hover:not(:disabled) {
+  background: rgb(95 33 103 / 0.1);
+}
+
+.dark .book-tool:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.1);
+}
+
+.book-tool:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.book-tool:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.book-tool:focus-visible,
+.book-arrow:focus-visible,
+.book-contents select:focus-visible {
+  outline: 2px solid rgb(var(--color-accent-rgb));
+  outline-offset: 2px;
+}
+
+.book-contents select {
+  min-height: 44px;
+  max-width: 13rem;
+  padding-inline: 0.6rem 1.6rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: var(--color-fg);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+}
+
+.book-counter {
+  padding-inline: 0.5rem;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  color: var(--color-fg);
+  opacity: 0.8;
+}
+
+/* On the same frosted ground as the toolbar: the site background behind it is
+   busy artwork, and small text straight on it does not stay readable. */
+.book-hint {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0.6rem auto 0;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--color-fg);
+  background: var(--color-surface-translucent);
+  backdrop-filter: blur(8px);
+}
+
+.book-stage--fullscreen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.5rem 4.5rem;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgb(255 255 255 / 0.06), transparent 60%),
+    var(--color-bg);
+  overflow: auto;
+}
+
+.book-stage--fullscreen .book-host {
+  width: min(100%, calc((100svh - 9rem) * 1.413));
+}
+
+.book-zoom {
+  width: min(100vw - 1.5rem, 960px);
+  max-height: calc(100svh - 1.5rem);
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  overflow: hidden;
+}
+
+.book-zoom::backdrop {
+  background: rgb(10 5 12 / 0.7);
+  backdrop-filter: blur(3px);
+}
+
+.book-zoom[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.book-zoom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem 0.25rem 1rem;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.book-zoom-pages {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  overflow: auto;
+  background: rgb(0 0 0 / 0.04);
+}
+
+.book-zoom-pages img {
+  width: 100%;
+  height: auto;
+  background: #fff;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.15);
+}
+
+@media (min-width: 900px) {
+  .book-zoom-pages:has(img + img) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-placeholder img {
+    animation: none;
+  }
+
+  .book-tool,
+  .book-arrow,
+  .book-hotspot {
+    transition: none;
+  }
+}

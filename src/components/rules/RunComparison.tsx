@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { generateMaze, type Maze } from "@/lib/maze";
 import { DIAGRAM_BRAID, RULES, compareRuns, pathData } from "@/lib/rules";
 import { CellTint, GoalBlock, MazeCanvas } from "@/components/rules/MazeCanvas";
-import { Figure, Legend, Stat } from "@/components/rules/Figure";
+import { Figure, type FigureVariant, Legend, Stat } from "@/components/rules/Figure";
 
 /**
  * Why a speed run is bounded by the search before it, shown rather than stated.
@@ -19,7 +19,7 @@ import { Figure, Legend, Stat } from "@/components/rules/Figure";
  * The search run is modelled as a depth-first walk (see `searchRun`), which is
  * roughly what a first attempt looks like before anyone implements flood fill.
  */
-export function RunComparison() {
+export function RunComparison({ variant }: { variant?: FigureVariant }) {
   const [maze, setMaze] = useState<Maze | null>(null);
   const [view, setView] = useState<"search" | "speed">("search");
   // See MazeAnatomy for why this exists: a `key` needs a value that actually
@@ -39,6 +39,7 @@ export function RunComparison() {
 
   return (
     <Figure
+      variant={variant}
       id="runs"
       title="A search run, then a speed run"
       controls={
