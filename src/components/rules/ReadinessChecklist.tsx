@@ -129,36 +129,38 @@ export function ReadinessChecklist({
         );
       })}
 
-      {compact ? null : (
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="ghost"
-            className="min-h-[44px] transition-transform active:scale-95"
-            onClick={copyReport}
-          >
-            {copied === "done" ? "Copied" : copied === "failed" ? "Could not copy" : "Copy as text"}
-          </Button>
-          <Button
-            variant="ghost"
-            className="min-h-[44px] transition-transform active:scale-95"
-            onClick={() => {
-              if (!confirmingReset) {
-                setConfirmingReset(true);
-                return;
-              }
-              setAnswers({});
-              setConfirmingReset(false);
-            }}
-            onBlur={() => setConfirmingReset(false)}
-            disabled={!summary.confirmed}
-          >
-            {confirmingReset ? "Tap again to clear" : "Clear"}
-          </Button>
-          <p className="text-sm text-ras-gray dark:text-white/60">
-            Saved on this device only — nothing is sent to the organisers.
-          </p>
-        </div>
-      )}
+      <div className={compact ? "hidden" : "flex flex-wrap items-center gap-3"}>
+        <Button
+          variant="ghost"
+          className="min-h-[44px] transition-transform active:scale-95"
+          onClick={copyReport}
+        >
+          {copied === "done"
+            ? "Copied"
+            : copied === "failed"
+              ? "Could not copy"
+              : "Copy as text"}
+        </Button>
+        <Button
+          variant="ghost"
+          className="min-h-[44px] transition-transform active:scale-95"
+          onClick={() => {
+            if (!confirmingReset) {
+              setConfirmingReset(true);
+              return;
+            }
+            setAnswers({});
+            setConfirmingReset(false);
+          }}
+          onBlur={() => setConfirmingReset(false)}
+          disabled={!summary.confirmed}
+        >
+          {confirmingReset ? "Tap again to clear" : "Clear"}
+        </Button>
+        <p className="text-sm text-ras-gray dark:text-white/60">
+          Saved on this device only — nothing is sent to the organisers.
+        </p>
+      </div>
     </div>
   );
 }
