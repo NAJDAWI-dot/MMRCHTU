@@ -463,7 +463,7 @@ model PageVisibility {
 // the public register page.
 model RegisterFormConfig {
   id           String    @id @default("singleton")
-  deadlineText String    @default("Registration closes soon — check back for the exact date.")
+  deadlineText String    @default("Registration closes soon. Check back for the exact date.")
   deadlineDate DateTime?
   /// Human-written prose about the fee. Descriptive only — the amount actually
   /// charged comes from PaymentConfig's per-tier prices, so this can say

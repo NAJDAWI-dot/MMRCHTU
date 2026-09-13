@@ -50,8 +50,8 @@ export function RegistrationExport({ feedConfigured }: { feedConfigured: boolean
           {feedConfigured ? (
             <>
               <p>
-                Excel can refresh itself from this site, so the sheet stays current without anyone
-                re-exporting it. Set it up once:
+                Excel can pull the latest data from this site, so you don&rsquo;t have to export it
+                again. Set it up once:
               </p>
               <ol className="mt-2 list-decimal space-y-1 pl-5">
                 <li>
@@ -76,8 +76,8 @@ export function RegistrationExport({ feedConfigured }: { feedConfigured: boolean
               </ol>
               <p className="mt-3 rounded-md bg-ras-crimson/5 p-3 text-xs">
                 <strong>Treat that address like a password.</strong> Anyone who has it can read every
-                registrant&rsquo;s name, email, WhatsApp number and university without logging in — so
-                keep the workbook off shared drives, and don&rsquo;t paste the address into chats or
+                registrant&rsquo;s name, email, WhatsApp number and university without logging in. Keep
+                the workbook off shared drives, and don&rsquo;t paste the address into chats or
                 screenshots. Changing{" "}
                 <code className="font-mono">REGISTRATIONS_EXPORT_TOKEN</code> revokes it immediately,
                 and removing it switches the feed off while leaving these download buttons working.

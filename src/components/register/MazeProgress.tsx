@@ -107,7 +107,7 @@ export function MazeProgress({ step, steps }: { step: number; steps: readonly Pr
             </span>
             {i < steps.length - 1 ? (
               <span aria-hidden="true" className="text-ras-gray/40">
-                —
+                ›
               </span>
             ) : null}
           </li>

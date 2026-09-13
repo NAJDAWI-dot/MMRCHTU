@@ -70,12 +70,12 @@ async function sendEmail(
   const label = Array.isArray(to) ? to.join(", ") : String(to);
 
   if (!resendApiKey) {
-    console.warn(`[email] Skipped "${subject}" to ${label} — RESEND_API_KEY not configured.`);
+    console.warn(`[email] Skipped "${subject}" to ${label}: RESEND_API_KEY not configured.`);
     return false;
   }
 
   if (!resendFromEmail) {
-    console.warn(`[email] Skipped "${subject}" to ${label} — RESEND_FROM_EMAIL not configured.`);
+    console.warn(`[email] Skipped "${subject}" to ${label}: RESEND_FROM_EMAIL not configured.`);
     return false;
   }
 
@@ -108,7 +108,7 @@ export async function sendAdminNotification(data: Omit<FaqNotificationData, "sit
   const { adminNotificationEmail } = optionalEnv;
 
   if (!adminNotificationEmail) {
-    console.warn(`[email] Skipped FAQ admin notification — ADMIN_NOTIFICATION_EMAIL not configured.`);
+    console.warn(`[email] Skipped FAQ admin notification: ADMIN_NOTIFICATION_EMAIL not configured.`);
     return;
   }
 

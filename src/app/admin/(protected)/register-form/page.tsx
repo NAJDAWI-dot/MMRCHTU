@@ -6,7 +6,7 @@ import { updateFormConfig } from "./actions";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const metadata: Metadata = {
-  title: "Admin — Register Form",
+  title: "Admin | Register Form",
 };
 
 const inputClass =
@@ -29,8 +29,8 @@ export default async function AdminRegisterFormPage() {
         subtitle={
           <>
             Controls the deadline and fee copy shown on the public <code>/register</code> page, and
-            whether it accepts submissions. The deadline is informational only — closing
-            registration always requires flipping the toggle below. Prices, CliQ details and the
+            whether it accepts submissions. The deadline is for display only. To close
+            registration, turn off the toggle below. Prices, CliQ details and the
             early-bird discount live under{" "}
             <a href="/admin/payments" className="font-semibold text-ras-purple underline dark:text-white">
               Payments

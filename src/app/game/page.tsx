@@ -13,8 +13,8 @@ export default function GamePage() {
         Pac Mouse
       </h1>
       <p className="mx-auto mt-2 max-w-md text-center text-sm text-ras-gray dark:text-white/70">
-        Guide the lab mouse through the circuit maze, collect solder dots, and dodge the patrol robots &mdash; in
-        classic top-down or first-person view.
+        Guide the lab mouse through the circuit maze, collect solder dots and dodge the patrol robots,
+        in classic top-down or first-person view.
       </p>
       <div className="mt-8">
         <GameTabs />

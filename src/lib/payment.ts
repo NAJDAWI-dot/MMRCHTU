@@ -243,7 +243,7 @@ export function comparePayments(a: PaymentSortSource, b: PaymentSortSource): num
  */
 export function validatePaymentDecision(status: PaymentStatus, note: string): string | null {
   if (status === "REJECTED" && !note.trim()) {
-    return "Say why it could not be matched — the team is shown this on their registration page.";
+    return "Say why it couldn't be matched. The team will see this on their registration page.";
   }
   return null;
 }
@@ -364,7 +364,7 @@ export function validatePayment(
   if (!reference) {
     errors.reference = "Enter the transaction reference from your banking app.";
   } else if (reference.length < 4) {
-    errors.reference = "That reference looks too short — check it against your receipt.";
+    errors.reference = "That reference looks too short. Check it against your receipt.";
   }
 
   if (!rawAmount) {
@@ -479,7 +479,7 @@ export function validatePayerName(input: Partial<PayerName> | null | undefined):
     if (!value) {
       errors[field.part] = `Enter the ${field.label.toLowerCase()} on the account you paid from.`;
     } else if (!/\p{L}/u.test(value)) {
-      errors[field.part] = `That does not look like a name — check the ${field.label.toLowerCase()}.`;
+      errors[field.part] = `That doesn't look like a name. Check the ${field.label.toLowerCase()}.`;
     }
   }
 

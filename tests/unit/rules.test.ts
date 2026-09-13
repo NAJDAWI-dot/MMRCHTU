@@ -389,6 +389,6 @@ describe("finalScore", () => {
   it("formats to the one decimal place the rulebook quotes", () => {
     expect(formatScore(finalScore(4, 25))).toBe("160.0");
     expect(formatScore(finalScore(1, 18))).toBe("55.6");
-    expect(formatScore(null)).toBe("—");
+    expect(formatScore(null)).toBe("No score");
   });
 });

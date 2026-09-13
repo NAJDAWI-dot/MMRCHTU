@@ -119,6 +119,6 @@ export async function createUniqueResumeCode(
   }
   throw new Error(
     `Could not generate a unique resume code after ${attempts} attempts. ` +
-      `This should be effectively impossible — check whether the uniqueness check is misreporting.`,
+      `This should never happen. Check whether the uniqueness check is reporting wrongly.`,
   );
 }

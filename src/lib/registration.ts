@@ -41,7 +41,8 @@ export { IEEE_STATUS_OPTIONS, type IeeeStatus };
  * disclosed it, so no visit was ever counted under the earlier wording, and
  * nobody accepted a text that was untrue while it stood.
  */
-export const CONSENT_VERSION = "2026-09-07";
+// 2026-09-13: all four policies rewritten in plain first person; the terms themselves did not change.
+export const CONSENT_VERSION = "2026-09-13";
 
 // Status is constrained in the application rather than the database (see
 // prisma/schema.prisma) — this is the single source of truth for the valid

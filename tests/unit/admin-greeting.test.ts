@@ -68,7 +68,7 @@ describe("adminGreeting", () => {
   it("welcomes a brand new account", () => {
     const madeThisMorning = new Date(now.getTime() - 6 * 60 * 60 * 1000);
     expect(adminGreeting("bayan", null, madeThisMorning, now).detail).toBe(
-      "Welcome aboard — this is your first time here.",
+      "Welcome! This is your first time here.",
     );
   });
 

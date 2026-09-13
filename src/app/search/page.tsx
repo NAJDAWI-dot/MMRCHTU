@@ -72,7 +72,7 @@ export default async function SearchPage({
           ) : (
             <div className="mt-4 rounded-lg border border-ras-gray/20 bg-[var(--color-surface)] p-6 text-sm text-ras-gray dark:text-white/70">
               <p>
-                Try a single word — <em>footprint</em>, <em>runs</em>, <em>eligibility</em>.
+                Try a single word, such as <em>footprint</em>, <em>runs</em> or <em>eligibility</em>.
               </p>
               <p className="mt-3">
                 Still stuck?{" "}

@@ -76,7 +76,7 @@ export default async function AlbumPage({ params }: { params: { id: string } }) 
           <label className="flex items-center gap-2 text-sm sm:col-span-2">
             <input type="checkbox" name="isPublished" defaultChecked={album.isPublished} className="h-4 w-4" />
             <span className="font-medium text-ras-gray dark:text-white/80">
-              Published — visible on the public site
+              Published (visible on the public site)
             </span>
           </label>
           <div className="sm:col-span-2">
@@ -101,14 +101,14 @@ export default async function AlbumPage({ params }: { params: { id: string } }) 
               This deployment cannot see a Blob storage token
             </p>
             <p className="mt-1 text-sm text-ras-gray dark:text-white/70">
-              If you have already created the store, <strong>redeploy</strong> — Vercel captures
-              environment variables when a deployment is built, so a store created afterwards is
-              invisible to the deployment already running. Check it is connected to this project
+              If you have already created the store, <strong>redeploy</strong>. Vercel reads
+              environment variables when a deployment is built, so the deployment that is already
+              running can&apos;t see a store created after it. Check it is connected to this project
               too, under Storage → your store → Projects.
             </p>
             <p className="mt-1 text-sm text-ras-gray dark:text-white/70">
-              Try uploading anyway: this is only a check, and the upload itself will report what
-              really happened.
+              You can still try uploading. This is only a warning, and if the upload fails it will
+              tell you why.
             </p>
           </div>
         )}

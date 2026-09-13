@@ -91,7 +91,7 @@ export function Leaderboard({ mode }: { mode: GameMode }) {
         return;
       }
       localStorage.setItem(NAME_MEMORY_KEY, playerName);
-      setMessage(`Saved — you're #${data.rank} on the ${GAME_MODE_LABELS[mode]} board.`);
+      setMessage(`Saved! You're #${data.rank} on the ${GAME_MODE_LABELS[mode]} board.`);
       setPending(null);
       await load();
     } catch {
@@ -178,7 +178,7 @@ export function Leaderboard({ mode }: { mode: GameMode }) {
         <p className="mt-4 text-sm text-ras-gray dark:text-white/60">Loading scores…</p>
       ) : scores.length === 0 ? (
         <p className="mt-4 text-sm text-ras-gray dark:text-white/60">
-          No scores yet — play a round and be the first on the board.
+          No scores yet. Play a round and be the first on the board.
         </p>
       ) : (
         <ol className="mt-4 space-y-1">

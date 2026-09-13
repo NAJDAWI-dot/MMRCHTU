@@ -11,7 +11,7 @@ import { formatFils, formatPayerName, payerNameFromRow, paymentDelta } from "@/l
 import { rejectPayment, verifyPayment } from "../actions";
 
 export const metadata: Metadata = {
-  title: "Admin — Review payments",
+  title: "Admin | Review payments",
 };
 
 /**
@@ -158,7 +158,7 @@ export default async function ReviewPaymentsPage({
           role="alert"
           className="mt-4 rounded-md border border-ras-crimson/30 bg-ras-crimson/5 p-3 text-sm font-semibold text-accent"
         >
-          Say why it could not be matched — the team is shown this on their registration page.
+          Say why it couldn&apos;t be matched. The team will see this on their registration page.
         </p>
       ) : null}
 
@@ -189,7 +189,7 @@ export default async function ReviewPaymentsPage({
             </p>
           </div>
           <p className="text-xs text-ras-gray dark:text-white/50">
-            reported {team.paymentSubmittedAt?.toLocaleDateString() ?? "—"}
+            reported {team.paymentSubmittedAt?.toLocaleDateString() ?? "on an unknown date"}
           </p>
         </div>
 
@@ -198,18 +198,18 @@ export default async function ReviewPaymentsPage({
         <dl className="mt-5 grid gap-4 sm:grid-cols-3">
           <Fact label="Quoted">
             <span className="font-display text-2xl font-extrabold">
-              {team.feeDueFils !== null ? formatFils(team.feeDueFils) : "—"}
+              {team.feeDueFils !== null ? formatFils(team.feeDueFils) : "Not set"}
             </span>
           </Fact>
           <Fact label="Reported">
             <span
               className={`font-display text-2xl font-extrabold ${delta ? "text-accent" : ""}`}
             >
-              {team.paymentAmountFils !== null ? formatFils(team.paymentAmountFils) : "—"}
+              {team.paymentAmountFils !== null ? formatFils(team.paymentAmountFils) : "Not reported"}
             </span>
           </Fact>
           <Fact label="Reference">
-            <span className="break-all font-mono text-sm">{team.paymentReference ?? "—"}</span>
+            <span className="break-all font-mono text-sm">{team.paymentReference ?? "None"}</span>
           </Fact>
           {/* Full width under the figures rather than a fourth column: it is
               the line you read first in the statement to find the transfer at
@@ -242,7 +242,7 @@ export default async function ReviewPaymentsPage({
           />
         ) : (
           <p className="mt-4 rounded-md border border-ras-gray/25 p-3 text-sm text-ras-gray dark:text-white/60">
-            No screenshot was uploaded — there is only the reference above to go on.
+            No screenshot was uploaded, so you only have the reference above.
           </p>
         )}
       </Card>

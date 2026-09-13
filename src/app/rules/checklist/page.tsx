@@ -26,9 +26,9 @@ export default async function ChecklistPage() {
         Readiness checklist
       </h1>
       <p className="mt-3 text-ras-gray dark:text-white/70">
-        Every point below comes straight from the rulebook. Work through it with your mouse in
-        front of you — the ones marked <strong>Rule</strong> decide whether you can compete at
-        all, and the ones marked <strong>Advice</strong> decide how well.
+        Every point below comes from the rulebook. Go through it with your mouse in front of
+        you. Points marked <strong>Rule</strong> decide whether you can compete, and points
+        marked <strong>Advice</strong> help you do well.
       </p>
 
       <div className="mt-8">

@@ -6,7 +6,7 @@ import { createFaqEntry, updateFaqEntry, deleteFaqEntry, replyToQuestion, promot
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const metadata: Metadata = {
-  title: "Admin — FAQ",
+  title: "Admin | FAQ",
 };
 
 const inputClass =

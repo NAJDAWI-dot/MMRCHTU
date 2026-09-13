@@ -35,7 +35,7 @@ export function EarlyBirdNotice({ percent, cutoff }: { percent: number; cutoff: 
       className="rounded-md border border-ras-crimson/30 bg-ras-crimson/5 p-5 text-sm text-ras-gray dark:border-white/15 dark:bg-white/5 dark:text-white/70"
     >
       <p className="font-display text-base font-bold text-accent">
-        Early bird &mdash; {percent}% off
+        Early bird: {percent}% off
       </p>
       <p className="mt-2">
         Register before <strong className="font-semibold">{CUTOFF_FORMAT.format(cutoff)}</strong>{" "}

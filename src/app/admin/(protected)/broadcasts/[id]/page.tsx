@@ -13,7 +13,7 @@ import { AddContactsForm, ImportForm } from "../ListForms";
 import { EmailComposer, type ComposerDraft } from "../EmailComposer";
 
 export const metadata: Metadata = {
-  title: "Admin — Email List",
+  title: "Admin | Email List",
 };
 
 export default async function BroadcastListPage({ params }: { params: { id: string } }) {
@@ -147,7 +147,7 @@ export default async function BroadcastListPage({ params }: { params: { id: stri
             {list.contacts.map((contact) => (
               <li key={contact.id} className="flex items-center justify-between gap-4 py-2">
                 <span className="text-sm text-ras-gray dark:text-white/80">
-                  {contact.name ? `${contact.name} — ` : ""}
+                  {contact.name ? `${contact.name}, ` : ""}
                   {contact.email}
                   {contact.source === "REGISTRATION" ? (
                     <span className="ml-2 text-xs text-ras-gray/70 dark:text-white/50">

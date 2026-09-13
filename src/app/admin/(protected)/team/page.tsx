@@ -25,7 +25,7 @@ import {
 } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Admin — Team",
+  title: "Admin | Team",
 };
 
 /**
@@ -57,7 +57,7 @@ function DepartmentSelect({
 }) {
   return (
     <select name="departmentId" defaultValue={value ?? ""} className={FIELD} disabled={disabled}>
-      <option value="">— none —</option>
+      <option value="">No department</option>
       {departments.map((department) => (
         <option key={department.id} value={department.id}>
           {department.name}
@@ -155,7 +155,7 @@ function MemberRow({
                 note about what is missing and not anything resembling an error. */}
             {member.tribute.trim() ? null : (
               <p className="mt-1 text-xs text-ras-gray dark:text-white/50">
-                Nothing written yet — their card stays unclickable on the site.
+                Nothing written yet, so their card can&apos;t be opened on the site.
               </p>
             )}
           </div>
@@ -207,7 +207,7 @@ function MemberRow({
           </form>
         ) : (
           <span className="text-xs text-ras-gray dark:text-white/50">
-            Optional — without one they are given a stage of their own colour.
+            Optional. Without one, their card uses a background in their own colour.
           </span>
         )}
         <span className="flex-1" />
@@ -274,7 +274,7 @@ export default async function AdminTeamPage() {
         <p className="mt-4 rounded-md border border-ras-crimson/30 bg-ras-crimson/5 p-3 text-sm text-ras-gray dark:text-white/70">
           This deployment cannot see a photo storage token, so portrait uploads will probably
           fail. Everything else on this page works. If you have just created the Blob store,
-          redeploy — Vercel captures environment variables when a deployment is built.
+          redeploy. Vercel reads environment variables when a deployment is built.
         </p>
       ) : null}
 
@@ -282,7 +282,7 @@ export default async function AdminTeamPage() {
           does not exist yet, and that is the order somebody sets this up in. */}
       <Section
         title="Departments"
-        hint="Deleting one does not delete its people — they move to “Not in a department” until you reassign them."
+        hint="Deleting a department keeps its people. They move to “Not in a department” until you reassign them."
       >
         <div className="space-y-2">
           {roster.groups.map((group) => (
@@ -410,7 +410,7 @@ export default async function AdminTeamPage() {
       {roster.unassigned.length > 0 ? (
         <Section
           title="Not in a department"
-          hint="These people are on the committee but sit under no department — usually because one was deleted. They appear at the bottom of the public page until reassigned."
+          hint="These people are on the committee but have no department, usually because theirs was deleted. They appear at the bottom of the public page until you reassign them."
         >
           <ul className="space-y-3">
             {roster.unassigned.map((member) => (

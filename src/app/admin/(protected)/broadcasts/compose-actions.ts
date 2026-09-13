@@ -182,7 +182,7 @@ export async function saveDraft(formData: FormData): Promise<ComposerResult> {
 
   return {
     ok: true,
-    message: `Draft saved${form.compose.subject ? ` — "${form.compose.subject}"` : ""}.`,
+    message: `Draft saved${form.compose.subject ? `: "${form.compose.subject}"` : ""}.`,
     draftId,
   };
 }
@@ -220,7 +220,7 @@ export async function discardDraft(formData: FormData): Promise<ComposerResult> 
     select: { status: true, attachments: { select: { key: true } } },
   });
   if (!draft) return { ok: true, message: null };
-  if (draft.status === "SENT") return fail("That email has already been sent — it cannot be discarded.");
+  if (draft.status === "SENT") return fail("That email has already been sent, so it can't be discarded.");
 
   // The rows cascade; the files in the blob store do not, so they go by hand.
   for (const attachment of draft.attachments) {
@@ -315,7 +315,7 @@ export async function detachFile(formData: FormData): Promise<ComposerResult> {
   });
   if (!attachment) return { ok: true, message: null };
   if (attachment.broadcast.status === "SENT") {
-    return fail("That email has already been sent — its attachments are part of the record.");
+    return fail("That email has already been sent, so its attachments can't be removed.");
   }
 
   await prisma.broadcastAttachment.delete({ where: { id } });
@@ -352,9 +352,9 @@ export async function sendTest(formData: FormData): Promise<ComposerResult> {
   const to = String(formData.get("testEmail") ?? "").trim().toLowerCase();
 
   if (!isValidEmail(to)) return fail("Enter the address to send the test to.");
-  if (!form.compose.subject) return fail("Give the email a subject first — a test of a blank one proves nothing.");
+  if (!form.compose.subject) return fail("Add a subject before sending a test.");
   if (!renderRichText(form.compose.bodyHtml).hasContent) {
-    return fail("Write the message first — a test of an empty email proves nothing.");
+    return fail("Write the message before sending a test.");
   }
 
   // Saved before it is sent, so the test goes out with whatever the attachments
@@ -458,7 +458,7 @@ export async function beginSend(formData: FormData): Promise<SendProgress> {
   if (hasComposeErrors(errors)) {
     return progress({
       ok: false,
-      message: "This email is not ready to send — see the fields marked below.",
+      message: "This email isn't ready to send. Check the fields marked below.",
       errors,
     });
   }

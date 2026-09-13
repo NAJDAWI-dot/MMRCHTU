@@ -469,8 +469,8 @@ describe("the name on the account a fee came from", () => {
   });
 
   it("rejects a part with no letter in it", () => {
-    expect(validatePayerName({ ...complete, second: "-" }).second).toMatch(/does not look like/i);
-    expect(validatePayerName({ ...complete, second: "3" }).second).toMatch(/does not look like/i);
+    expect(validatePayerName({ ...complete, second: "-" }).second).toMatch(/doesn't look like/i);
+    expect(validatePayerName({ ...complete, second: "3" }).second).toMatch(/doesn't look like/i);
   });
 
   it("accepts Arabic, which is what most of these are typed in", () => {

@@ -36,7 +36,7 @@ const COMPETITION_DAY_FALLBACK: CompetitionDayConfig = {
 
 const REGISTER_FORM_FALLBACK: RegisterFormConfig = {
   id: SINGLETON_ID,
-  deadlineText: "Registration closes soon — check back for the exact date.",
+  deadlineText: "Registration closes soon. Check back for the exact date.",
   deadlineDate: null,
   feeInfoText: "35 JD (non-member) / 25 JD (IEEE member) / 15 JD (IEEE RAS member) per team.",
   isOpen: true,

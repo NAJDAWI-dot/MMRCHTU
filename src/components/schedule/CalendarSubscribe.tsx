@@ -52,8 +52,8 @@ export function CalendarSubscribe({ url }: { url: string }) {
         Keep this schedule in your calendar
       </p>
       <p className="mt-1 text-sm text-ras-gray dark:text-white/70">
-        Subscribe once and it stays current. If a time moves or a heat is added, your calendar
-        picks it up on its own — no need to come back for a new file.
+        Subscribe once and it stays up to date. If a time changes or a heat is added, your
+        calendar updates automatically, so you don&apos;t need to download a new file.
       </p>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -75,7 +75,7 @@ export function CalendarSubscribe({ url }: { url: string }) {
           change, so a screen reader would otherwise get no feedback at all. */}
       <p aria-live="polite" className="mt-2 min-h-[1.25rem] text-xs text-ras-gray dark:text-white/60">
         {copied === "copied" ? "Link copied." : null}
-        {copied === "failed" ? "Could not copy — select the address below instead." : null}
+        {copied === "failed" ? "Couldn't copy. Select the address below instead." : null}
       </p>
 
       <code className="mt-1 block overflow-x-auto whitespace-nowrap rounded-md bg-ras-purple/5 px-3 py-2 font-mono text-xs text-ras-gray dark:bg-white/5 dark:text-white/70">

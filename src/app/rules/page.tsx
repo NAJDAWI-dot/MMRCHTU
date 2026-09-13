@@ -17,9 +17,9 @@ export default async function RulesPage() {
         Rulebook
       </h1>
       <p className="mt-3 text-ras-gray dark:text-white/70">
-        The rules in full, following revision 1.1 of the official rulebook. The diagrams are
-        live — re-roll the maze, compare the two run types, work out what a run is worth, and
-        check your chassis against the footprint limit.
+        The full rules, based on revision 1.1 of the official rulebook. The diagrams are
+        interactive: generate a new maze, compare the two run types, work out your score, and
+        check your robot against the size limit.
       </p>
       <Link
         href="/rules/checklist"

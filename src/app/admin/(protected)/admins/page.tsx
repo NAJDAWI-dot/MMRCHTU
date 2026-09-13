@@ -7,7 +7,7 @@ import { CreateAdminForm } from "./CreateAdminForm";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const metadata: Metadata = {
-  title: "Admin — Admins",
+  title: "Admin | Admins",
 };
 
 export default async function AdminAdminsPage() {
@@ -53,8 +53,8 @@ export default async function AdminAdminsPage() {
         </h2>
         <p className="mt-2 max-w-prose text-sm text-ras-gray dark:text-white/70">
           Signing in leaves a session that lasts a week. If you have signed in on a shared or lost
-          device, this ends every one of them at once — including this browser, so you will be asked
-          to sign in again. It does not affect other admins.
+          device, this signs out all of them at once, including this browser, so you will need to
+          sign in again. It does not affect other admins.
         </p>
         <form action={signOutEverywhere} className="mt-3">
           <Button type="submit" variant="ghost" className="text-accent">

@@ -102,7 +102,7 @@ export function TeamCrest({ name, size = 84 }: { name: string; size?: number }) 
         {crest ? (
           <>
             <span className="font-semibold text-ras-purple dark:text-white">Your team crest.</span>{" "}
-            Generated from your name — no two teams get the same one.
+            Made from your team name, so every team gets a different one.
           </>
         ) : (
           "Your team crest appears here as you type."

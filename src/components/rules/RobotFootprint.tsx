@@ -41,8 +41,8 @@ export function RobotFootprint() {
       caption={
         <>
           The dashed square is the {RULES.maxFootprintCm}cm × {RULES.maxFootprintCm}cm limit; the
-          solid one is a single {RULES.cellSizeCm}cm cell. Measure your widest points — wheels,
-          sensors and bumpers included.
+          solid one is a single {RULES.cellSizeCm}cm cell. Measure at the widest points,
+          including wheels, sensors and bumpers.
         </>
       }
     >
@@ -165,7 +165,7 @@ export function RobotFootprint() {
                 <Verdict ok={check.withinFootprint} rule>
                   {check.withinFootprint
                     ? `Within the ${RULES.maxFootprintCm}cm footprint`
-                    : `Over the ${RULES.maxFootprintCm}cm footprint — not eligible`}
+                    : `Over the ${RULES.maxFootprintCm}cm footprint, so not eligible`}
                 </Verdict>
                 <Verdict ok={check.turnsInsideCell}>
                   {check.turnsInsideCell

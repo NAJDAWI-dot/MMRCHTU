@@ -152,7 +152,7 @@ export default async function CompetitionDayPage() {
               {nextUp ? nextUp.title : "The full schedule"}
             </h2>
             <p className="mt-1 text-sm text-ras-gray dark:text-white/70">
-              {nextUp ? `Next up — ${nextUp.when}.` : "Every key date in one place."}
+              {nextUp ? `Next up: ${nextUp.when}.` : "All the key dates in one place."}
             </p>
           </div>
           <Link

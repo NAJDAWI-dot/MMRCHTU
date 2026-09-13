@@ -324,7 +324,7 @@ export function finalScore(successfulRuns: number, officialTimeSeconds: number):
 
 /** The score as the rulebook writes it — one decimal place. */
 export function formatScore(score: number | null): string {
-  return score === null ? "—" : score.toFixed(1);
+  return score === null ? "No score" : score.toFixed(1);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -387,7 +387,7 @@ export const CHECKLIST: ChecklistItem[] = [
     group: "Eligibility",
     label: "We can present our design in five minutes",
     detail:
-      "Teams give a short talk on their mouse before the contest if the day allows time for it. Five minutes is the ceiling, not the target.",
+      "If there's time on the day, each team gives a short talk about its mouse before the contest. It can last up to five minutes.",
     severity: "advisory",
   },
   {
@@ -395,7 +395,7 @@ export const CHECKLIST: ChecklistItem[] = [
     group: "The robot",
     label: `It fits within ${RULES.maxFootprintCm}cm × ${RULES.maxFootprintCm}cm at any rotation`,
     detail:
-      "Measure the widest points, wheels, sensors and bumpers included. A mouse that unfolds or extends has to stay inside the limit expanded, not just parked.",
+      "Measure at the widest points, including wheels, sensors and bumpers. If your mouse unfolds or extends, it has to fit the limit when unfolded too.",
     severity: "disqualifying",
     help: { href: "/rules#footprint", label: "Check your dimensions" },
   },
@@ -404,14 +404,14 @@ export const CHECKLIST: ChecklistItem[] = [
     group: "The robot",
     label: "It runs entirely on its own power and its own logic",
     detail:
-      "Onboard battery, onboard processing. No remote control, no external computer, no wireless tether.",
+      "Onboard battery and onboard processing. No remote control, no external computer and no wireless link.",
     severity: "disqualifying",
   },
   {
     id: "no-combustion",
     group: "The robot",
     label: "Its power source involves no combustion",
-    detail: "An engine that burns anything is not permitted, whatever it burns.",
+    detail: "The mouse can't run on anything that burns fuel.",
     severity: "disqualifying",
   },
   {
@@ -419,7 +419,7 @@ export const CHECKLIST: ChecklistItem[] = [
     group: "The robot",
     label: "It leaves no part of itself behind in the maze",
     detail:
-      "Anything that falls off mid-run — a wheel, a cover, a screw — is a violation as well as a problem.",
+      "If anything falls off during a run, like a wheel, a cover or a screw, that breaks the rules.",
     severity: "disqualifying",
   },
   {
@@ -427,7 +427,7 @@ export const CHECKLIST: ChecklistItem[] = [
     group: "The robot",
     label: "It does not jump, climb, or damage the walls",
     detail:
-      "No jumping or flying over walls, and no scratching, cutting, burning, marking or destroying them. The maze has to survive every other team's runs as well as yours.",
+      "No jumping or flying over walls, and no scratching, cutting, burning, marking or damaging them. Other teams run on the same maze after you.",
     severity: "disqualifying",
   },
   {
@@ -435,7 +435,7 @@ export const CHECKLIST: ChecklistItem[] = [
     group: "The robot",
     label: `It can turn inside a ${RULES.cellSizeCm}cm cell`,
     detail:
-      "Not a rule, but a mouse that cannot turn in a cell cannot finish. The footprint limit is larger than a cell is wide.",
+      "This isn't a rule, but a mouse that can't turn inside a cell can't finish. The size limit is bigger than a cell.",
     severity: "advisory",
     help: { href: "/rules#footprint", label: "Check your turning circle" },
   },
@@ -444,7 +444,7 @@ export const CHECKLIST: ChecklistItem[] = [
     group: "On the day",
     label: "Our algorithm is not a wall-follower",
     detail:
-      "The centre is an island — its walls touch nothing else. A mouse that follows one continuous wall never reaches it and will loop until the clock runs out.",
+      "The centre is an island: its walls don't connect to the rest of the maze. A mouse that follows one wall never reaches it and loops until time runs out.",
     severity: "advisory",
     help: { href: "/rules#runs", label: "See how a run maps the maze" },
   },
@@ -453,16 +453,16 @@ export const CHECKLIST: ChecklistItem[] = [
     group: "On the day",
     label: `We have a plan for our ${RULES.matchMinutes} minutes`,
     detail:
-      "The clock does not stop between runs. Every adjustment, restart and repair comes out of the same window as the runs themselves.",
+      "The clock doesn't stop between runs. Adjustments, restarts and repairs all use up the same 8 minutes as your runs.",
     severity: "advisory",
-    help: { href: "/rules#scoring", label: "See what the clock is worth" },
+    help: { href: "/rules#scoring", label: "See how scoring works" },
   },
   {
     id: "score-shape",
     group: "On the day",
     label: "We know the score counts runs as well as speed",
     detail:
-      "Finishing more often and finishing faster both raise the score, so a single brilliant lap can lose to four steady ones.",
+      "Finishing more runs and finishing faster both raise your score, so one fast run can lose to four slower ones.",
     severity: "advisory",
     help: { href: "/rules#scoring", label: "Try the formula" },
   },
@@ -471,7 +471,7 @@ export const CHECKLIST: ChecklistItem[] = [
     group: "Paperwork",
     label: "We will be at the arena for our assigned slot",
     detail:
-      "Run order is drawn after check-in closes. A team that is not there when called forfeits its Phase 1 run, and forfeits the competition with it.",
+      "The running order is drawn after check-in closes. If your team isn't there when called, you lose your Phase 1 run and drop out of the competition.",
     severity: "disqualifying",
     help: { href: "/schedule", label: "Check the running order" },
   },
@@ -480,14 +480,14 @@ export const CHECKLIST: ChecklistItem[] = [
     group: "Paperwork",
     label: "Our source code is ready to hand to the judges",
     detail:
-      "Every team's code is collected and reviewed. Nothing about the maze layout may be loaded in after it is revealed — switch positions are the only thing you may change.",
+      "The judges collect and review every team's code. After the maze is revealed you can't load any information about it; you can only change switch positions.",
     severity: "disqualifying",
   },
   {
     id: "registered",
     group: "Paperwork",
     label: "The team is registered for MMRC 26",
-    detail: "Registration closes before competition day — check the schedule.",
+    detail: "Registration closes before competition day. Check the schedule for the date.",
     severity: "disqualifying",
     help: { href: "/register", label: "Register your team" },
   },
@@ -567,7 +567,7 @@ export function checklistReport(
   const summary = checklistSummary(answers, items);
   const lines = [
     "MMRC 26 readiness checklist",
-    `${summary.confirmed} of ${summary.total} confirmed — ${checklistVerdict(summary)}`,
+    `${summary.confirmed} of ${summary.total} confirmed. ${checklistVerdict(summary)}`,
     "",
   ];
 

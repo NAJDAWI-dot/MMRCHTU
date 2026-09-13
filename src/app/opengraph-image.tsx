@@ -13,7 +13,7 @@ import { OG_CONTENT_TYPE, OG_SIZE, OgCard } from "@/components/seo/OgCard";
 // Edge, not Node — see the note in OgCard, where the reason lives.
 export const runtime = "edge";
 
-export const alt = "MMRC 26 — the IEEE RAS HTU Micro Mouse Robot Competition";
+export const alt = "MMRC 26, the IEEE RAS HTU Micro Mouse Robot Competition";
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 

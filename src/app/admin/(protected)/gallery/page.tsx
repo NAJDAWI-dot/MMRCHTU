@@ -40,13 +40,12 @@ export default async function AdminGalleryPage() {
             <li>Connect it to this project (Storage → your store → Projects).</li>
             <li>
               <strong>Redeploy.</strong> Vercel captures environment variables when a deployment is
-              built, so a store created afterwards stays invisible to the deployment already running
-              — this is the step that is usually missed.
+              built, so the deployment already running can&apos;t see a store created after it. This
+              step is easy to miss.
             </li>
           </ol>
           <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
-            Uploading is not blocked by this notice. Try it and the error, if any, will say what
-            actually went wrong.
+            You can still upload. If it fails, the error message will tell you why.
           </p>
         </Card>
       )}

@@ -14,7 +14,7 @@ import { updateCompetitionDay } from "./actions";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const metadata: Metadata = {
-  title: "Admin — Competition Day",
+  title: "Admin | Competition Day",
 };
 
 const inputClass =
@@ -35,8 +35,8 @@ export default async function AdminCompetitionDayPage() {
             <Link href="/competition-day" className="font-semibold text-accent hover:underline">
               /competition-day
             </Link>{" "}
-            page. Write the details whenever you like — nothing is shown to visitors until you
-            set the status to Published.
+            page. Write the details whenever you like. Visitors see nothing until you set the
+            status to Published.
           </>
         }
       />
@@ -141,10 +141,9 @@ export default async function AdminCompetitionDayPage() {
                 className={inputClass}
               />
               <p className="mt-1 text-xs text-ras-gray dark:text-white/50">
-                Optional, and separate from the Date text above so that can stay
-                friendly (&ldquo;mid-April&rdquo;) while the clock has something exact. Set it and a
-                live countdown appears on the homepage and the competition day page; clear it and
-                the countdown disappears. Uses your own timezone.
+                Optional. The date text above can stay general (&ldquo;mid-April&rdquo;), and this
+                gives the countdown an exact time. Set it to show a countdown on the homepage and
+                the competition day page, or clear it to hide the countdown. Uses your timezone.
               </p>
             </div>
             <div>

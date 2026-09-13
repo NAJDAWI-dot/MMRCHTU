@@ -82,7 +82,7 @@ export function adminGreeting(
   // the first case, a months-old one is the second — and only the first has
   // anything worth saying.
   if (now.getTime() - createdAt.getTime() < NEW_ACCOUNT_WINDOW_MS) {
-    return { headline, detail: "Welcome aboard — this is your first time here." };
+    return { headline, detail: "Welcome! This is your first time here." };
   }
 
   return { headline, detail: null };

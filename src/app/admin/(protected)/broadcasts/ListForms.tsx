@@ -66,7 +66,7 @@ export function ImportForm({ listId, status }: { listId: string; status: string 
     <form action={action} className="mt-4 border-t border-ras-gray/20 pt-4">
       <input type="hidden" name="listId" value={listId} />
       <p className="text-xs text-ras-gray dark:text-white/60">
-        Pull every team member from registrations marked <strong>{status}</strong>. Safe to re-run — people already on
+        Pull every team member from registrations marked <strong>{status}</strong>. You can run this again; people already on
         the list are skipped.
       </p>
       <SubmitButton pendingLabel="Importing…" variant="ghost" className="mt-2 px-3 py-1 text-xs">

@@ -171,7 +171,7 @@ export function checkUpload(file: { name: string; type: string; size: number }):
     return `${file.type || "That file type"} is not an image we can show.`;
   }
   if (file.size > MAX_UPLOAD_BYTES) {
-    return `Too large at ${formatBytes(file.size)} — the limit is ${formatBytes(MAX_UPLOAD_BYTES)}.`;
+    return `Too large at ${formatBytes(file.size)}. The limit is ${formatBytes(MAX_UPLOAD_BYTES)}.`;
   }
   return null;
 }

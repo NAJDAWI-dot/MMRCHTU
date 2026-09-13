@@ -1113,7 +1113,7 @@ export function ClassicMaze() {
             Guide the mouse through the maze! Collect crumbs, grab <b>cheese</b> to overclock and chase the robots.
             <br />
             <br />
-            Arrow keys or WASD &mdash; swipe or use the on-screen pad on touch screens.
+            Use the arrow keys or WASD. On a touch screen, swipe or use the on-screen pad.
             <br />
             <b>Esc</b> or <b>P</b> to pause &middot; <b>⛶</b> for fullscreen.
           </p>
