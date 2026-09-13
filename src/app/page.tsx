@@ -101,7 +101,7 @@ export default async function HomePage() {
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-ras-gray dark:text-white/70">
           The 2026 Micro Mouse Robot Competition. Build a maze-solving robot, race the clock,
-          and play Pac Mouse — our maze game — while you wait for results.
+          and play our maze game, Pac Mouse, while you wait for results.
         </p>
         {/* The two calls to action go with their pages. Registration closing is
             a different thing entirely — that leaves the page up and explains

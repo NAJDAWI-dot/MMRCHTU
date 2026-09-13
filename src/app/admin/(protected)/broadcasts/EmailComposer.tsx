@@ -332,7 +332,7 @@ export function EmailComposer({
         {/* The one thing about cc here that is not what people expect. */}
         <p className="mt-2 text-xs text-ras-gray dark:text-white/60">
           Everyone on the list gets their own private copy. Anyone here gets{" "}
-          <strong>one</strong> copy of the same email — not one per contact.
+          <strong>one</strong> copy of the same email, not one per contact.
         </p>
         {ccList.error ? (
           <p role="alert" className="mt-1 text-xs text-accent">
@@ -409,7 +409,7 @@ export function EmailComposer({
             </Button>
           ) : (
             <p className="text-xs text-ras-gray dark:text-white/60">
-              Three is the most an email can carry before none of them is the one to press.
+              You can add up to three buttons.
             </p>
           )}
           {result?.errors?.buttons ? (
@@ -575,7 +575,7 @@ export function EmailComposer({
               ) : null}
             </div>
             <p className="mx-auto mt-3 max-w-[580px] text-xs text-ras-gray">
-              The MMRC header and footer wrap this. To see the real thing, send yourself a test.
+              The MMRC header and footer are added around this. Send yourself a test to see the final email.
             </p>
           </div>
         ) : null}

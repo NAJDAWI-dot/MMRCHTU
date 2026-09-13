@@ -15,8 +15,8 @@ export default async function NotFound() {
         This cell of the maze is empty
       </h1>
       <p className="mt-2 text-sm text-ras-gray dark:text-white/70">
-        The page you&apos;re looking for doesn&apos;t exist. While you are here, so is this mouse —
-        get it to the middle.
+        The page you&apos;re looking for doesn&apos;t exist. While you&apos;re here, try getting this mouse
+        to the middle.
       </p>
 
       <div className="mt-8">
@@ -30,7 +30,7 @@ export default async function NotFound() {
       */}
       <nav aria-label="Where to next" className="mt-10 border-t border-ras-gray/15 pt-6">
         <p className="text-xs uppercase tracking-widest text-ras-gray dark:text-white/60">
-          Or head somewhere real
+          Or go to another page
         </p>
         <ul className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-1">
           {[

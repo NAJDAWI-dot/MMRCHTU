@@ -121,7 +121,7 @@ describe("buttons in the email", () => {
       fireEvent.click(screen.getByRole("button", { name: "Add a button" }));
     }
     expect(screen.queryByRole("button", { name: "Add a button" })).toBeNull();
-    expect(screen.getByText(/none of them is the one to press/i)).toBeTruthy();
+    expect(screen.getByText(/up to three buttons/i)).toBeTruthy();
   });
 });
 

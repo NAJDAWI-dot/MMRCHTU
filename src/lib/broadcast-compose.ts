@@ -30,7 +30,7 @@ export const MAX_EXTRA_RECIPIENTS = 25;
 export const NAME_TOKEN = "{name}";
 
 export const DEFAULT_GREETING = `Hi ${NAME_TOKEN},`;
-export const DEFAULT_SIGN_OFF = "— IEEE RAS HTU Student Chapter";
+export const DEFAULT_SIGN_OFF = "IEEE RAS HTU Student Chapter";
 export const DEFAULT_FOOTER_NOTE =
   "You are receiving this because you are on an MMRC 26 mailing list.";
 
@@ -120,13 +120,13 @@ export function parseAddressList(raw: string | null | undefined, field: "Cc" | "
   if (invalid.length) {
     return {
       addresses: contacts.map((c) => c.email),
-      error: `${field}: not an email address — ${invalid.join(", ")}`,
+      error: `${field}: not a valid email address: ${invalid.join(", ")}`,
     };
   }
   if (contacts.length > MAX_EXTRA_RECIPIENTS) {
     return {
       addresses: contacts.slice(0, MAX_EXTRA_RECIPIENTS).map((c) => c.email),
-      error: `${field}: ${contacts.length} addresses. Up to ${MAX_EXTRA_RECIPIENTS} can be copied in — send to a list instead.`,
+      error: `${field}: ${contacts.length} addresses. Up to ${MAX_EXTRA_RECIPIENTS} can be copied in. Send to a list instead.`,
     };
   }
   return { addresses: contacts.map((c) => c.email) };
@@ -215,7 +215,7 @@ export function validateCompose(
   const subject = (input.subject ?? "").trim();
 
   if (!subject) {
-    errors.subject = "Give the email a subject — it is the first thing anyone reads.";
+    errors.subject = "Add a subject.";
   } else if (subject.length > MAX_SUBJECT_LENGTH) {
     errors.subject = `Subjects are cut off in most inboxes past ${MAX_SUBJECT_LENGTH} characters.`;
   }
@@ -233,7 +233,7 @@ export function validateCompose(
       break;
     }
     if (!href) {
-      errors.buttons = `"${label}" has no link — a button that goes nowhere is worse than no button.`;
+      errors.buttons = `"${label}" has no link. Add one or remove the button.`;
       break;
     }
     if (!safeHref(href)) {
@@ -249,7 +249,7 @@ export function validateCompose(
 
   if (context.contactCount === 0 && cc.addresses.length === 0 && bcc.addresses.length === 0) {
     errors.recipients =
-      "There is nobody to send to — this list has no contacts, and nobody is copied in.";
+      "There's nobody to send to. This list has no contacts and nobody is copied in.";
   }
 
   return errors;

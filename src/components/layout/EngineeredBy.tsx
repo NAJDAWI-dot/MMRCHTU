@@ -84,7 +84,7 @@ export function EngineeredBy() {
             name rather than a replacement for it, so voice control still
             reaches this link by what a person can actually see — which an
             aria-label saying something else would quietly break. */}
-        <span className="sr-only">— Hashem Najdawi on LinkedIn, opens in a new tab</span>
+        <span className="sr-only">, Hashem Najdawi on LinkedIn, opens in a new tab</span>
       </a>
     </div>
   );

@@ -13,7 +13,7 @@ import { MIN_EXPORT_TOKEN_LENGTH } from "@/lib/export-token";
 import { REGISTRATION_STATUSES } from "@/lib/registration-status";
 
 export const metadata: Metadata = {
-  title: "Admin — Registrations",
+  title: "Admin | Registrations",
 };
 
 // The same list the action validates against, so the dropdown cannot offer a
@@ -132,8 +132,8 @@ export default async function AdminRegistrationsPage({
             <ul className="mt-3 space-y-1 text-sm text-ras-gray dark:text-white/80">
               {reg.members.map((m) => (
                 <li key={m.id}>
-                  {m.order === 1 ? "Team Leader" : `Member ${m.order}`}: {m.firstName} {m.lastName} — {m.university},{" "}
-                  {m.major} — {m.ieeeStatus} ({m.ieeeMembershipId}) — {m.email} / {m.whatsapp}
+                  {m.order === 1 ? "Team Leader" : `Member ${m.order}`}: {m.firstName} {m.lastName} · {m.university},{" "}
+                  {m.major} · {m.ieeeStatus} ({m.ieeeMembershipId}) · {m.email} / {m.whatsapp}
                 </li>
               ))}
             </ul>

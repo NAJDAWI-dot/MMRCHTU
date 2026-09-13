@@ -54,7 +54,7 @@ export function TributeTrigger({
     >
       {children}
       {/* The name and role are already read out; this says what the button does. */}
-      <span className="sr-only"> — open their honourable mention</span>
+      <span className="sr-only">, open their honourable mention</span>
     </button>
   );
 }

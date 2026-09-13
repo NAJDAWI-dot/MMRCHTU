@@ -177,7 +177,7 @@ export function checkAttachment(
   context: { alreadyAttached: number; bytesAttached: number },
 ): string | null {
   if (context.alreadyAttached >= MAX_ATTACHMENTS) {
-    return `That is ${MAX_ATTACHMENTS} attachments already — remove one first.`;
+    return `You already have ${MAX_ATTACHMENTS} attachments. Remove one first.`;
   }
   if (file.size === 0) return `"${file.name}" is empty.`;
   if (file.size > MAX_ATTACHMENT_BYTES) {

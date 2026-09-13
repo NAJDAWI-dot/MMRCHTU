@@ -158,7 +158,7 @@ export function ReadinessChecklist({
           {confirmingReset ? "Tap again to clear" : "Clear"}
         </Button>
         <p className="text-sm text-ras-gray dark:text-white/60">
-          Saved on this device only — nothing is sent to the organisers.
+          Saved on this device only. Nothing is sent to the organisers.
         </p>
       </div>
     </div>

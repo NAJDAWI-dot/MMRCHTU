@@ -6,7 +6,7 @@ import { createEvent, updateEvent, deleteEvent } from "./actions";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const metadata: Metadata = {
-  title: "Admin — Schedule",
+  title: "Admin | Schedule",
 };
 
 function toLocalInputValue(date: Date | null): string {

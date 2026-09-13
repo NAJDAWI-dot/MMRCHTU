@@ -29,14 +29,14 @@ const cairo = Cairo({ subsets: ["arabic"], variable: "--font-arabic", display: "
 const bevan = Bevan({ subsets: ["latin"], weight: "400", variable: "--font-brand", display: "swap" });
 
 const DESCRIPTION =
-  "MMRC 26 is the IEEE RAS HTU Student Chapter's Micro Mouse Robot Competition — rules, schedule, registration, and the Pac Mouse game.";
+  "MMRC 26 is the IEEE RAS HTU Student Chapter's Micro Mouse Robot Competition. Find the rules, schedule and registration, and play the Pac Mouse game.";
 
 export const metadata: Metadata = {
   // Without this, Next cannot turn the generated Open Graph image into the
   // absolute URL that every social crawler requires, and warns at build time.
   metadataBase: new URL(siteOrigin()),
   title: {
-    default: "MMRC 26 — Micro Mouse Robot Competition",
+    default: "MMRC 26 | Micro Mouse Robot Competition",
     template: "%s | MMRC 26",
   },
   description: DESCRIPTION,
@@ -50,14 +50,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "MMRC 26",
-    title: "MMRC 26 — Micro Mouse Robot Competition",
+    title: "MMRC 26 | Micro Mouse Robot Competition",
     description: DESCRIPTION,
     url: "/",
     locale: "en",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MMRC 26 — Micro Mouse Robot Competition",
+    title: "MMRC 26 | Micro Mouse Robot Competition",
     description: DESCRIPTION,
   },
   alternates: { canonical: "/" },

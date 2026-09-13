@@ -45,7 +45,7 @@ export default async function RegisterPage({
               <span className="font-mono font-bold">{code}</span>.
             </p>
             <p className="mt-2">
-              Check it against your confirmation email — the reference is six characters. If it
+              Check it against your confirmation email. The reference is six characters long. If it
               still does not work, reply to that email and we will sort it out.
             </p>
           </div>

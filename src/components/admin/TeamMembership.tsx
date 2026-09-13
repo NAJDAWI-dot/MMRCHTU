@@ -57,7 +57,7 @@ export function TeamMembership({
                   says the field was left empty, which is a fact about the
                   registration rather than about this card. */}
               <span className="break-all font-mono text-ras-gray dark:text-white/80">
-                {member.ieeeMembershipId.trim() || "—"}
+                {member.ieeeMembershipId.trim() || "None"}
               </span>
             </li>
           ))}

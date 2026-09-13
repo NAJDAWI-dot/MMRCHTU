@@ -125,8 +125,8 @@ export default async function AdminDashboardPage() {
           /* Said plainly rather than rendered as an empty container. "Nothing
              here" is a result, and it deserves a sentence. */
           <p className="mt-3 rounded-lg border border-dashed border-ras-gray/25 p-4 text-sm text-ras-gray dark:border-white/15 dark:text-white/70">
-            Nothing is waiting. Every payment is checked, every question answered, and no team
-            is left pending.
+            You&apos;re all caught up. There are no payments to check, questions to answer or teams
+            waiting.
           </p>
         )}
       </section>

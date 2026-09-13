@@ -74,16 +74,16 @@ export function RunComparison({ variant }: { variant?: FigureVariant }) {
       caption={
         view === "search" ? (
           <>
-            The first run explores. It wanders, doubles back, and spends minutes off the same
-            clock as everything else — but every cell it steps on is a cell the next run can
-            plan a route through.
+            The first run explores. It wanders and doubles back, and it uses up time on the same
+            clock as your other runs. Every cell it visits is a cell the next run can plan a
+            route through.
           </>
         ) : (
           <>
             The speed run takes the best route through <strong>what the search found</strong> (in
-            crimson), not the best route through the maze (dashed). A cell the search never
-            visited is a cell your mouse does not know exists, however obvious the shortcut
-            looks from outside.
+            crimson), which may not be the best route through the whole maze (dashed). Your mouse
+            doesn&rsquo;t know about cells the search never visited, even if a shortcut looks
+            obvious to you.
           </>
         )
       }

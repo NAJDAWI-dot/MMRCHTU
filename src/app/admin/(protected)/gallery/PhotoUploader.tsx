@@ -114,7 +114,7 @@ export function PhotoUploader({ albumId, disabled }: { albumId: string; disabled
       );
       setErrors([
         ...result.errors,
-        ...(skipped > 0 ? [`${skipped} file(s) skipped — not a supported image type.`] : []),
+        ...(skipped > 0 ? [`${skipped} file(s) skipped because they aren't a supported image type.`] : []),
       ]);
       if (inputRef.current) inputRef.current.value = "";
     } catch (error) {

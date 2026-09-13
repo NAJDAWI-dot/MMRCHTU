@@ -48,10 +48,10 @@ export default async function SchedulePage() {
           <div className="mt-8 rounded-lg border border-ras-gray/20 bg-[var(--color-surface)] p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <p className="font-display text-lg font-bold text-ras-purple dark:text-white">
-                {focus ? focus.title : "That is the lot"}
+                {focus ? focus.title : "That's everything"}
               </p>
               <p className="text-sm font-medium text-accent">
-                {focus ? focus.when : "Every date has passed"}
+                {focus ? focus.when : "All dates have passed"}
               </p>
             </div>
             <div

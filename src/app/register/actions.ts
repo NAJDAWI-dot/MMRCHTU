@@ -246,7 +246,7 @@ export async function completeRegistration(
     return {
       status: "error",
       teamErrors,
-      errors: { form: "Some of your team details need fixing — go back and check them." },
+      errors: { form: "Some of your team details need fixing. Go back and check them." },
     };
   }
 

@@ -87,7 +87,7 @@ export default async function AnalyticsPage() {
     <div>
       <AdminPageHeader
         title="Analytics"
-        subtitle="Everything below is counted live from the database. These numbers are admin-only — the public site no longer shows any of them."
+        subtitle="These numbers come live from the database. Only admins can see them; the public site doesn't show them."
       />
 
       <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -114,7 +114,7 @@ export default async function AnalyticsPage() {
       <section className="mt-6 grid items-start gap-4 lg:grid-cols-2">
         <Panel
           title="Registrations over time"
-          description={`Last ${TREND_DAYS} days — ${trendTotal} of ${teamCount} total landed in this window.`}
+          description={`Last ${TREND_DAYS} days: ${trendTotal} of ${teamCount} registrations came in during this period.`}
         >
           <DayChart data={trend} />
         </Panel>
@@ -192,8 +192,8 @@ export default async function AnalyticsPage() {
       {teamCount === 0 && (
         <Card className="mt-6">
           <p className="text-sm text-ras-gray dark:text-white/70">
-            No registrations yet, so most panels above are empty. They fill in on their own as
-            teams sign up — nothing here needs setting up.
+            No registrations yet, so most panels above are empty. They fill in automatically as
+            teams sign up, and there&apos;s nothing to set up.
           </p>
         </Card>
       )}

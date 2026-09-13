@@ -19,7 +19,7 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   title: "The Committee",
   description:
-    "The IEEE RAS HTU students who organise MMRC 26 — the chair, the co-chair, and every department behind the competition.",
+    "Meet the IEEE RAS HTU students who organise MMRC 26: the chair, the co-chair and every department behind the competition.",
 };
 
 /**
@@ -275,8 +275,8 @@ export default async function TeamPage() {
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-ras-gray dark:text-white/70">
             MMRC 26 is built by students. These are the people who write the rules, run the desk,
-            judge the runs and keep the mazes standing — and who will be somewhere in the room on
-            the day if you need them.
+            judge the runs and look after the mazes. You&apos;ll find them at the venue on the day if you
+            need anything.
           </p>
 
           {/*

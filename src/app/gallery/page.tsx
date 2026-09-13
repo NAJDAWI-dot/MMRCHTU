@@ -12,7 +12,7 @@ export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Gallery",
-  description: "Photos from MMRC 26 — the Micro Mouse Robot Competition and the build-up to it.",
+  description: "Photos from MMRC 26, the Micro Mouse Robot Competition, and the lead-up to it.",
 };
 
 export default async function GalleryPage() {

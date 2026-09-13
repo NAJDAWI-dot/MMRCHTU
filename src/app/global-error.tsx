@@ -43,9 +43,9 @@ export default function GlobalError({
           color: "#57565B",
         }}
       >
-        <h1 style={{ margin: 0, fontSize: "1.5rem", color: "#5F2167" }}>MMRC 26 is having a moment</h1>
+        <h1 style={{ margin: 0, fontSize: "1.5rem", color: "#5F2167" }}>Something went wrong</h1>
         <p style={{ margin: 0, maxWidth: "32rem" }}>
-          The site failed to load. This is almost always temporary — please try again.
+          The site didn&apos;t load. This is usually temporary, so please try again.
         </p>
         <button
           type="button"

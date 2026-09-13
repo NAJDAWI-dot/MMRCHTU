@@ -126,7 +126,7 @@ describe("analytics page", () => {
   });
 
   it("says the numbers are admin-only", () => {
-    expect(screen.getByText(/public site no longer shows any of them/i)).toBeTruthy();
+    expect(screen.getByText(/public site doesn't show them/i)).toBeTruthy();
   });
 });
 

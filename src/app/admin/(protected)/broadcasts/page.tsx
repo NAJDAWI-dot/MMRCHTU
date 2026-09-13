@@ -8,7 +8,7 @@ import { createBroadcastList } from "./actions";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const metadata: Metadata = {
-  title: "Admin — Email Lists",
+  title: "Admin | Email Lists",
 };
 
 const FIELD =
@@ -88,7 +88,7 @@ export default async function AdminBroadcastsPage() {
       <div className="mt-6 space-y-4">
         {lists.length === 0 ? (
           <p className="text-sm text-ras-gray dark:text-white/60">
-            No lists yet — create your first one above.
+            No lists yet. Create your first one above.
           </p>
         ) : null}
 
@@ -126,7 +126,7 @@ export default async function AdminBroadcastsPage() {
                   {open ? (
                     <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-ras-purple/10 px-3 py-1 text-xs font-medium text-ras-purple dark:bg-white/10 dark:text-white">
                       {open.status === "SENDING" ? "Sending now" : "Draft in progress"}
-                      {open.subject ? ` — ${open.subject}` : ""}
+                      {open.subject ? `: ${open.subject}` : ""}
                     </p>
                   ) : null}
                 </div>

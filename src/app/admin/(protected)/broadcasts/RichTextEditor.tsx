@@ -57,7 +57,7 @@ const TOOLS: readonly (ToolbarButton | "divider")[] = [
   {
     command: "insertUnorderedList",
     label: "Bulleted list",
-    glyph: <span aria-hidden="true">•—</span>,
+    glyph: <span aria-hidden="true">•≡</span>,
     stateful: true,
   },
   {

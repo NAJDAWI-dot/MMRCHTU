@@ -158,7 +158,7 @@ function baseEmailHtml(preheader: string, bodyHtml: string, siteUrl: string): st
             <tr>
               <td style="padding:22px 32px; background-color:${SURFACE}; border-top:1px solid ${BORDER}; font-size:12px; line-height:1.6; color:${GRAY};">
                 <div style="font-weight:700; color:${PURPLE_DEEP};">Maze Solver Robot Competition 2026</div>
-                <div style="margin-top:3px;">IEEE Robotics &amp; Automation Society &mdash; HTU Student Chapter</div>
+                <div style="margin-top:3px;">IEEE Robotics &amp; Automation Society, HTU Student Chapter</div>
                 <div style="margin-top:10px;">
                   <a href="${siteUrl}/schedule" style="color:${CRIMSON}; text-decoration:none; font-weight:600;">Schedule</a>
                   <span style="color:${BORDER};"> &nbsp;|&nbsp; </span>
@@ -280,7 +280,7 @@ export interface FaqNotificationData {
 }
 
 export function faqNotificationEmail(data: FaqNotificationData): { subject: string; html: string; text: string } {
-  const subject = "New FAQ question submitted — MMRC 26";
+  const subject = "New FAQ question submitted | MMRC 26";
   const html = baseEmailHtml(
     "A new question was submitted on the FAQ page.",
     `
@@ -329,7 +329,7 @@ export interface RegistrationConfirmationData {
 export function registrationConfirmationEmail(
   data: RegistrationConfirmationData,
 ): { subject: string; html: string; text: string } {
-  const subject = `You're registered for MMRC 26 — ${data.teamName}`;
+  const subject = `You're registered for MMRC 26: ${data.teamName}`;
 
   const memberRows = data.members
     .map(
@@ -354,7 +354,7 @@ export function registrationConfirmationEmail(
     : "";
 
   const html = baseEmailHtml(
-    `${data.teamName} is registered — we are checking your payment now.`,
+    `${data.teamName} is registered, and we're checking your payment now.`,
     `
       ${heading("You&apos;re registered! 🐭")}
       <p style="margin:0 0 20px; color:${GRAY};">
@@ -390,8 +390,8 @@ export function registrationConfirmationEmail(
       </div>
 
       <p style="margin:0 0 8px; color:${GRAY};">
-        <strong>What happens next?</strong> Checking a CliQ transfer against our account is done by
-        hand, so it takes <strong>${VERIFICATION_WINDOW_TEXT}</strong> — longer over a weekend or a
+        <strong>What happens next?</strong> We check CliQ transfers against our account by hand,
+        so it takes <strong>${VERIFICATION_WINDOW_TEXT}</strong>, or longer over a weekend or a
         public holiday. We will email you as soon as it is confirmed. You do not need to send
         anything else in the meantime.
       </p>
@@ -404,12 +404,12 @@ export function registrationConfirmationEmail(
   );
 
   const memberLines = data.members
-    .map((m) => `${m.order}. ${m.firstName} ${m.lastName}${m.order === 1 ? " (Team Leader)" : ""} — ${m.university}, ${m.major}`)
+    .map((m) => `${m.order}. ${m.firstName} ${m.lastName}${m.order === 1 ? " (Team Leader)" : ""}, ${m.university}, ${m.major}`)
     .join("\n");
   const discountLine = data.earlyBirdApplied
     ? `\nEarly bird discount: -${formatFils(data.feeDiscountFils)}`
     : "";
-  const text = `You're registered for MMRC 26!\n\nTeam: ${data.teamName}\n\n${memberLines}\n\nRegistration fee: ${formatFils(data.feeBaseFils)}${discountLine}\nTotal: ${formatFils(data.feeDueFils)}\n\nYour reference: ${data.resumeCode}\nQuote this if you need to ask us anything about your registration.\n\nWhat happens next: checking a CliQ transfer against our account is done by hand, so it takes ${VERIFICATION_WINDOW_TEXT} — longer over a weekend or a public holiday. We will email you as soon as it is confirmed. You do not need to send anything else.\n\nCheck your status: ${statusUrl}`;
+  const text = `You're registered for MMRC 26!\n\nTeam: ${data.teamName}\n\n${memberLines}\n\nRegistration fee: ${formatFils(data.feeBaseFils)}${discountLine}\nTotal: ${formatFils(data.feeDueFils)}\n\nYour reference: ${data.resumeCode}\nQuote this if you need to ask us anything about your registration.\n\nWhat happens next: we check CliQ transfers against our account by hand, so it takes ${VERIFICATION_WINDOW_TEXT}, or longer over a weekend or a public holiday. We will email you as soon as it is confirmed. You do not need to send anything else.\n\nCheck your status: ${statusUrl}`;
 
   return { subject, html, text };
 }

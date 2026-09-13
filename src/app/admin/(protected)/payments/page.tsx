@@ -25,7 +25,7 @@ import { updatePaymentConfig, verifyPayment } from "./actions";
 import { PaymentRowForm } from "./PaymentRowForm";
 
 export const metadata: Metadata = {
-  title: "Admin — Payments",
+  title: "Admin | Payments",
 };
 
 const inputClass =
@@ -124,8 +124,8 @@ export default async function AdminPaymentsPage({
   const configSummary = configured
     ? `On · ${config.cliqAlias} · ${priceSummary} JD${earlyBirdRunning ? ` · early bird ${config.earlyBirdPercent}%` : ""}`
     : config.paymentEnabled
-      ? "On, but no CliQ alias is set — teams still see no payment details"
-      : "Off — teams see no payment details";
+      ? "On, but no CliQ alias is set, so teams still see no payment details"
+      : "Off: teams see no payment details";
 
   return (
     <div>
@@ -167,7 +167,7 @@ export default async function AdminPaymentsPage({
         <Card className="mt-2">
           <p className="text-xs text-ras-gray dark:text-white/70">
           Teams see nothing on the payment stage until this is switched on <em>and</em> an alias is
-          entered — a blank alias would send transfers nowhere.
+          entered, because without an alias teams have nowhere to send the money.
         </p>
 
         <form action={updatePaymentConfig} className="mt-4 grid gap-4">
@@ -246,13 +246,13 @@ export default async function AdminPaymentsPage({
               Early bird discount
             </legend>
             <p className="text-xs text-ras-gray dark:text-white/70">
-              A percentage off every tier, which stops on its own once the cutoff passes — you do not
-              have to remember to switch it off. Untick the box to end it sooner. Teams already
+              A percentage off every tier. It ends automatically when the cutoff passes, so you don&apos;t
+              have to switch it off. Untick the box to end it sooner. Teams already
               registered keep the price they were quoted.
             </p>
             <p className="mt-2 text-xs font-semibold text-ras-purple dark:text-white">
               {earlyBirdRunning
-                ? `Running now — ${config.earlyBirdPercent}% off until ${config.earlyBirdCutoff?.toLocaleString()}.`
+                ? `Running now: ${config.earlyBirdPercent}% off until ${config.earlyBirdCutoff?.toLocaleString()}.`
                 : "Not running."}
             </p>
 
@@ -378,7 +378,7 @@ export default async function AdminPaymentsPage({
                 <div className="flex justify-between gap-3">
                   <dt className="text-ras-gray dark:text-white/60">Quoted</dt>
                   <dd className="font-semibold text-ras-purple dark:text-white">
-                    {reg.feeDueFils !== null ? formatFils(reg.feeDueFils) : "—"}
+                    {reg.feeDueFils !== null ? formatFils(reg.feeDueFils) : "Not set"}
                     {reg.feeDiscountFils ? (
                       <span className="ml-1 font-normal text-ras-gray dark:text-white/50">
                         (early bird &minus;{formatFils(reg.feeDiscountFils)})
@@ -389,7 +389,7 @@ export default async function AdminPaymentsPage({
                 <div className="flex justify-between gap-3">
                   <dt className="text-ras-gray dark:text-white/60">Reported</dt>
                   <dd className={delta ? "font-bold text-accent" : "text-ras-gray dark:text-white/80"}>
-                    {reg.paymentAmountFils !== null ? formatFils(reg.paymentAmountFils) : "—"}
+                    {reg.paymentAmountFils !== null ? formatFils(reg.paymentAmountFils) : "Not reported"}
                     {delta ? (
                       <span className="ml-1 font-normal">
                         ({formatFils(delta.fils)} {delta.direction})
@@ -400,7 +400,7 @@ export default async function AdminPaymentsPage({
                 <div className="flex justify-between gap-3">
                   <dt className="text-ras-gray dark:text-white/60">Reference</dt>
                   <dd className="font-mono text-ras-gray dark:text-white/80">
-                    {reg.paymentReference ?? "—"}
+                    {reg.paymentReference ?? "None"}
                   </dd>
                 </div>
                 {/* Beside the reference, because the two do the same job: the
@@ -451,8 +451,8 @@ export default async function AdminPaymentsPage({
                 <p role="alert" className="mt-2 text-xs font-semibold text-accent">
                   Reported amount is {formatFils(delta.fils)}{" "}
                   {delta.direction === "short" ? "short of" : "over"} the{" "}
-                  {reg.feeDueFils !== null ? formatFils(reg.feeDueFils) : "quoted fee"} quoted —
-                  check before verifying.
+                  {reg.feeDueFils !== null ? formatFils(reg.feeDueFils) : "quoted fee"} quoted.
+                  Check before verifying.
                 </p>
               ) : null}
 

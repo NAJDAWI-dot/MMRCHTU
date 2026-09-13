@@ -17,9 +17,9 @@ export class StorageNotConfiguredError extends Error {
   constructor() {
     super(
       `Photo storage is not reachable: this deployment cannot see ${TOKEN_ENV}. ` +
-        `If you have just created the Blob store, redeploy — Vercel captures ` +
-        `environment variables when a deployment is built, so a store created ` +
-        `afterwards is invisible to the deployment already running.`,
+        `If you have just created the Blob store, redeploy. Vercel reads ` +
+        `environment variables when a deployment is built, so the deployment ` +
+        `already running can't see a store created after it.`,
     );
     this.name = "StorageNotConfiguredError";
   }

@@ -64,9 +64,9 @@ export function MazeAnatomy({ variant }: { variant?: FigureVariant }) {
       }
       caption={
         <>
-          Every maze is different, but the geography never is: {RULES.mazeGrid}×{RULES.mazeGrid}{" "}
-          cells, one start corner, and the goal room dead centre. The competition maze is not
-          published beforehand — this is a fresh one each time you press the button.
+          Every maze has a different layout but the same shape: {RULES.mazeGrid}×{RULES.mazeGrid}{" "}
+          cells, a start in one corner and the goal in the centre. The competition maze stays
+          secret until the day. Press the button for a new random maze.
         </>
       }
     >

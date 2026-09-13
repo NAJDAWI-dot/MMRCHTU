@@ -465,7 +465,7 @@ function PaymentStep({ fee, cliq, errors, onBack }: PaymentStepProps) {
           role="status"
           className="rounded-md border border-ras-gray/20 bg-ras-gray/5 p-4 text-sm text-ras-gray dark:text-white/70"
         >
-          Payment details are not published yet. Please check back shortly — your team is not
+          Payment details are not published yet. Please check back soon. Your team isn&apos;t
           registered until the fee is paid.
         </p>
       )}
@@ -510,9 +510,9 @@ function PaymentStep({ fee, cliq, errors, onBack }: PaymentStepProps) {
               Name on the account you paid from
             </legend>
             <p className="text-xs text-ras-gray dark:text-white/70">
-              All four parts, exactly as the bank holds them. It does not have to be one of your
-              team — a parent&apos;s or a friend&apos;s account is fine, we just need the name we
-              will see against the transfer.
+              All four parts, exactly as the bank holds them. It doesn&apos;t have to belong to someone on your
+              team. A parent&apos;s or friend&apos;s account is fine; we just need the name that
+              will appear on the transfer.
             </p>
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
               {PAYER_NAME_FIELDS.map((field) => (

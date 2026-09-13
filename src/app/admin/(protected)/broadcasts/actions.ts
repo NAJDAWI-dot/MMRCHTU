@@ -131,7 +131,7 @@ export async function importFromRegistrations(_prev: ActionState, formData: Form
 
   const status = KIND_IMPORT_STATUS[parseListKind(list.kind)];
   if (!status) {
-    return { message: "Custom lists have no registration status to import from — add people manually.", ok: false };
+    return { message: "Custom lists can't import from registrations. Add people manually.", ok: false };
   }
 
   const registrations = await prisma.registration.findMany({

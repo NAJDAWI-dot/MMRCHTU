@@ -18,7 +18,7 @@ export function AskQuestionForm() {
         role="status"
         className="rounded-md border border-ras-purple/30 bg-ras-purple/5 p-4 text-sm text-ras-purple dark:text-white"
       >
-        Thanks — your question has been sent to the organizers.
+        Thanks, your question has been sent to the organizers.
       </div>
     );
   }

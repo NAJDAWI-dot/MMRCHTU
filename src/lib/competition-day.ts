@@ -15,7 +15,7 @@ export const COMPETITION_DAY_STATUS_LABELS: Record<CompetitionDayStatus, string>
 
 export const COMPETITION_DAY_STATUS_HINTS: Record<CompetitionDayStatus, string> = {
   HIDDEN: "The page returns “not found” and its link is removed from the site menu.",
-  COMING_SOON: "The page is live but shows only the holding message — the details below stay private.",
+  COMING_SOON: "The page is live but only shows the coming soon message. The details below stay private.",
   PUBLISHED: "The page shows the date, venue, and details below.",
 };
 

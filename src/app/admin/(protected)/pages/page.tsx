@@ -9,7 +9,7 @@ import { setPageHidden } from "./actions";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export const metadata: Metadata = {
-  title: "Admin — Pages",
+  title: "Admin | Pages",
 };
 
 /**
@@ -58,7 +58,7 @@ export default async function AdminPagesPage() {
         subtitle={
           <span className="block max-w-2xl">
             Hiding a page takes it out of the site menu and makes it return &ldquo;not found&rdquo;
-            to visitors, along with everything underneath it. Nothing is deleted — un-hiding puts
+            to visitors, along with everything underneath it. Nothing is deleted, and un-hiding puts
             the page back exactly as it was. While you are signed in here you can still open a
             hidden page directly by its address, so you can check it before showing it to anyone.
           </span>
@@ -128,8 +128,8 @@ export default async function AdminPagesPage() {
       </div>
 
       <p className="mt-6 max-w-2xl text-xs text-ras-gray dark:text-white/60">
-        The homepage is not on this list on purpose: hiding it would leave visitors on a
-        &ldquo;not found&rdquo; page with no menu to get anywhere else.
+        The homepage isn&rsquo;t listed because hiding it would leave visitors on a
+        &ldquo;not found&rdquo; page with no menu.
       </p>
     </div>
   );

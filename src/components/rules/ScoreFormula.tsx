@@ -82,10 +82,9 @@ export function ScoreFormula({ variant }: { variant?: FigureVariant }) {
       title="What a run is worth"
       caption={
         <>
-          Both numbers matter, which is the point of the formula. Finishing more often raises
-          the score just as finishing faster does, so the ranking is not simply{" "}
-          <strong>who was quickest</strong>. The rulebook&rsquo;s own example is pinned on
-          screen: four runs at 25 seconds beats one run at 18.
+          Your score goes up when you finish more runs and when you finish faster, so the fastest
+          mouse doesn&rsquo;t always win. Team A and Team B below are the rulebook&rsquo;s example:
+          four runs at 25 seconds beats one run at 18.
         </>
       }
     >

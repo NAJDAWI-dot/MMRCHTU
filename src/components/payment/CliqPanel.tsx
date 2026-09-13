@@ -57,7 +57,7 @@ export function CliqPanel({ config, feeInfoText }: { config: CliqDetails; feeInf
       ) : null}
 
       <p className="mt-4 text-xs text-ras-gray dark:text-white/60">
-        You can register first and pay afterwards — send us the reference when you have it. Your
+        You can register now and pay later. Send us the reference when you have it. Your
         place is only final once we have matched the payment.
       </p>
     </section>
