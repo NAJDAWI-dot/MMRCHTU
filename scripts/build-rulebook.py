@@ -1,5 +1,5 @@
 """
-Turns the official rulebook PDF into the assets the /rules flip-book reads.
+Turns the official rulebook PDF into the assets the /rules/book flip-book reads.
 
     py scripts/build-rulebook.py "path/to/Official Rulebook.pdf"
 

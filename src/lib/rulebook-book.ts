@@ -1,5 +1,5 @@
 /**
- * The running order of the /rules flip-book.
+ * The running order of the /rules/book flip-book.
  *
  * The official PDF's pages are the book; the site's interactive diagrams are
  * bound in beside the rule each one illustrates. Pure data and arithmetic, so
