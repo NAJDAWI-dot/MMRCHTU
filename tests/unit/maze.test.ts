@@ -210,6 +210,90 @@ describe("generateMaze", () => {
   });
 });
 
+describe("the goal room", () => {
+  /** Openings from the 2x2 centre room into the rest of the maze. */
+  function entrances(maze: Maze): number {
+    const g0 = maze.size / 2 - 1;
+    const g1 = maze.size / 2;
+    const inGoal = (x: number, y: number) => (x === g0 || x === g1) && (y === g0 || y === g1);
+    const steps = [
+      [0, -1],
+      [1, 0],
+      [0, 1],
+      [-1, 0],
+    ] as const;
+    let open = 0;
+    for (const x of [g0, g1]) {
+      for (const y of [g0, g1]) {
+        steps.forEach(([dx, dy], wall) => {
+          if (inGoal(x + dx, y + dy)) return;
+          if (!maze.cells[y * maze.size + x]![wall]) open++;
+        });
+      }
+    }
+    return open;
+  }
+
+  /** Cells reachable from the bottom-left corner. */
+  function reachable(maze: Maze): number {
+    const steps = [
+      [0, -1],
+      [1, 0],
+      [0, 1],
+      [-1, 0],
+    ] as const;
+    const start = (maze.size - 1) * maze.size;
+    const seen = new Set([start]);
+    const queue = [start];
+    while (queue.length) {
+      const i = queue.pop()!;
+      const x = i % maze.size;
+      const y = Math.floor(i / maze.size);
+      steps.forEach(([dx, dy], wall) => {
+        if (maze.cells[i]![wall]) return;
+        const next = (y + dy) * maze.size + (x + dx);
+        if (seen.has(next)) return;
+        seen.add(next);
+        queue.push(next);
+      });
+    }
+    return seen.size;
+  }
+
+  it("has exactly one entrance, at every size and braid", () => {
+    for (const size of [4, 6, 8, 10, 16]) {
+      for (const braid of [0, 0.1, 0.18, 0.35]) {
+        for (let seed = 0; seed < 60; seed++) {
+          const maze = generateMaze(size, mulberry32(seed), braid);
+          expect(entrances(maze), `size ${size}, braid ${braid}, seed ${seed}`).toBe(1);
+        }
+      }
+    }
+  });
+
+  it("keeps its interior open, so it stays one room", () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const maze = generateMaze(10, mulberry32(seed), 0.18);
+      const at = (x: number, y: number) => maze.cells[y * maze.size + x]!;
+      expect(at(4, 4)[1]).toBe(false);
+      expect(at(4, 4)[2]).toBe(false);
+      expect(at(5, 5)[0]).toBe(false);
+      expect(at(5, 5)[3]).toBe(false);
+    }
+  });
+
+  it("leaves every cell of the maze reachable", () => {
+    for (const size of [4, 6, 8, 10, 16]) {
+      for (const braid of [0, 0.18]) {
+        for (let seed = 0; seed < 60; seed++) {
+          const maze = generateMaze(size, mulberry32(seed), braid);
+          expect(reachable(maze), `size ${size}, braid ${braid}, seed ${seed}`).toBe(size * size);
+        }
+      }
+    }
+  });
+});
+
 describe("braiding", () => {
   /** How many of the four walls around each cell are open, across the grid. */
   const openings = (maze: ReturnType<typeof generateMaze>) =>

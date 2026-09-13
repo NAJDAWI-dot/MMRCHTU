@@ -211,7 +211,7 @@ describe("the lesson the run figure teaches", () => {
     }
   });
 
-  it("shows a real cost in most braided mazes", () => {
+  it("shows a real cost in a good share of braided mazes", () => {
     let costly = 0;
     for (let i = 0; i < 120; i++) {
       const maze = generateMaze(RULES.mazeGrid, Math.random, DIAGRAM_BRAID);
@@ -220,9 +220,11 @@ describe("the lesson the run figure teaches", () => {
       assertWalkable(maze, cmp.optimal);
       if (cmp.cellsLost > 0) costly++;
     }
-    // Measured at ~76% over 300 mazes at the 10x10 grid; the bound is loose
-    // enough not to be flaky and tight enough to catch the diagram going inert.
-    expect(costly).toBeGreaterThan(60);
+    // Measured at ~42% over 600 mazes at the 10x10 grid once the goal got its
+    // single entrance (every route now funnels through one door, so fewer
+    // mazes leave a shortcut to miss). The bound is loose enough not to be
+    // flaky and tight enough to catch the diagram going inert.
+    expect(costly).toBeGreaterThan(30);
   });
 });
 
