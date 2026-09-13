@@ -254,7 +254,7 @@ export function WidgetPage({
 
   return (
     <TemplatePage manifest={manifest} badge={badge} load={load}>
-      <p className="book-kicker">Interactive companion &middot; {section}</p>
+      <p className="book-kicker">Interactive page &middot; {section}</p>
       <h2 className="book-title">{title}</h2>
       <div ref={noFlip} data-no-flip className="mt-3">
         {/* Mounted only once the page is near, so five random mazes are not
@@ -273,8 +273,8 @@ export function InsideBackCover({ manifest, load }: { manifest: ClientManifest; 
       <p className="book-kicker">MMRC26 &middot; Official Contest Manual</p>
       <h2 className="book-title">Keep the rulebook with you</h2>
       <p className="mt-3 font-serif text-[15px] leading-relaxed text-neutral-800">
-        The PDF is the official document. The interactive pages in this book are companions to it:
-        where the two ever differ, the PDF is what the judges rule by.
+        The PDF is the official rulebook. The interactive pages help explain it, but if they ever
+        disagree, the judges follow the PDF.
       </p>
       <div ref={noFlip} data-no-flip className="mt-5 flex flex-col items-start gap-3">
         <a
@@ -298,8 +298,8 @@ export function InsideBackCover({ manifest, load }: { manifest: ClientManifest; 
         </a>
       </div>
       <p className="mt-6 font-serif text-[13px] italic leading-relaxed text-neutral-600">
-        Official rulebook updates are sent to your registered email. Check it routinely before
-        competition day.
+        We send rulebook updates to the email address you registered with, so keep an eye on it
+        before competition day.
       </p>
     </TemplatePage>
   );

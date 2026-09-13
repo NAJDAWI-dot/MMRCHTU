@@ -26,10 +26,10 @@ export default function RulebookBookPage() {
           3D Rulebook
         </h1>
         <p className="mt-2 text-sm text-ras-gray sm:text-base dark:text-white/70">
-          The Official Rulebook &amp; Contest Manual, page for page. The pages marked with an{" "}
-          <strong className="text-ras-purple dark:text-white">A</strong> are interactive: re-roll a
-          maze, race a search run against a speed run, check your chassis and work out what a run is
-          worth.
+          The Official Rulebook &amp; Contest Manual, page by page. Pages marked with an{" "}
+          <strong className="text-ras-purple dark:text-white">A</strong> are interactive: try a new
+          maze, compare a search run with a speed run, check your robot&apos;s size and work out your
+          score.
         </p>
       </div>
 

@@ -28,8 +28,8 @@ export function RulebookBookBanner() {
           Flip through the 3D Rulebook
         </h2>
         <p className="book-banner-lede">
-          The official manual page for page, as a book you can turn &mdash; with interactive pages
-          beside the rules on the maze, runs, robot size and scoring.
+          The official manual, page by page, in a book you can flip through. Interactive pages sit
+          next to the rules on the maze, runs, robot size and scoring.
         </p>
         <div className="book-banner-actions">
           <Link href="/rules/book" className="book-banner-primary">
