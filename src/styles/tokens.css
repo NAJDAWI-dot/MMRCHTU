@@ -57,3 +57,18 @@
   --color-bg-translucent: rgb(23 17 26 / 0.72);
   --color-surface-translucent: rgb(36 28 40 / 0.72);
 }
+
+/*
+  The flip-book's pages are paper in either theme (see darkMode in
+  tailwind.config.ts), so the tokens go back to the light values inside them.
+*/
+.dark .book-light {
+  --color-bg: #ffffff;
+  --color-fg: #1a1a1a;
+  --color-surface: #f7f5f8;
+  --color-border: #e3dde5;
+  --color-accent-rgb: 134 38 51;
+  --color-bg-translucent: rgb(255 255 255 / 0.72);
+  --color-surface-translucent: rgb(247 245 248 / 0.72);
+  color-scheme: light;
+}

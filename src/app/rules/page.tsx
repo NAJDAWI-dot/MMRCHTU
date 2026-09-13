@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { loadRulebook } from "@/lib/mdx";
+import { RulebookBookBanner } from "@/components/rulebook/RulebookBookBanner";
 
 export const metadata: Metadata = {
   title: "Rules",
@@ -13,6 +14,8 @@ export default async function RulesPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">
+      <RulebookBookBanner />
+
       <h1 className="font-display text-3xl font-extrabold text-ras-purple dark:text-white">
         Rulebook
       </h1>

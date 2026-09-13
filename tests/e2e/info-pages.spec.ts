@@ -13,7 +13,8 @@ test.describe("info pages", () => {
     await goto(page, "/");
     await page.getByRole("link", { name: "Rules", exact: true }).first().click();
     await expect(page).toHaveURL(/\/rules$/);
-    await expect(page.getByRole("heading", { name: "Rulebook" })).toBeVisible();
+    // Exact: the 3D rulebook banner above it has "Rulebook" in its heading too.
+    await expect(page.getByRole("heading", { name: "Rulebook", exact: true })).toBeVisible();
 
     await goto(page, "/schedule");
     await expect(page.getByRole("heading", { name: "Schedule" })).toBeVisible();

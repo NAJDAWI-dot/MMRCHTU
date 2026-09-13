@@ -5,7 +5,15 @@ export default {
     "./src/**/*.{ts,tsx,mdx}",
     "./content/**/*.mdx",
   ],
-  darkMode: "class",
+  /*
+    Class-based dark mode, except inside `.book-light`. The rulebook's pages are
+    printed paper in both themes, and the diagrams bound into them carry dark:
+    variants written for the site's dark cards — white ink that would vanish on
+    the page. Opting a subtree out here keeps those components unchanged.
+    Same `:is(.dark *)` shape Tailwind's "class" strategy generates, so
+    specificity everywhere else is what it was.
+  */
+  darkMode: ["variant", "&:is(.dark *):not(.book-light *)"],
   theme: {
     extend: {
       colors: {

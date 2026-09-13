@@ -14,6 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "// rulebook:build": "Re-renders public/rulebook/ from the official PDF for the /rules/book flip-book. Needs Python with PyMuPDF and Pillow; the output is committed, so deploys never run it. Pass the PDF path after --.",
+    "rulebook:build": "py scripts/build-rulebook.py",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "postinstall": "prisma generate"
@@ -27,6 +29,7 @@
     "@react-email/render": "^2.1.0",
     "@vercel/blob": "^2.8.0",
     "next": "^14.2.15",
+    "page-flip": "^2.0.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "resend": "^6.18.0"

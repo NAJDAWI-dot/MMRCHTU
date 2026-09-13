@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { RULES, finalScore, formatScore } from "@/lib/rules";
-import { Figure, Stat } from "@/components/rules/Figure";
+import { Figure, type FigureVariant, Stat } from "@/components/rules/Figure";
 
 /**
  * The score formula, made playable.
@@ -29,7 +29,7 @@ const REFERENCES = [
 const MAX_RUNS = 12;
 const MAX_SECONDS = 120;
 
-export function ScoreFormula() {
+export function ScoreFormula({ variant }: { variant?: FigureVariant }) {
   const [runs, setRuns] = useState(3);
   const [seconds, setSeconds] = useState(30);
   const runsId = useId();
@@ -77,6 +77,7 @@ export function ScoreFormula() {
 
   return (
     <Figure
+      variant={variant}
       id="scoring"
       title="What a run is worth"
       caption={

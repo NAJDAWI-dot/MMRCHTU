@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { RULES, footprintCheck } from "@/lib/rules";
-import { Figure, Stat } from "@/components/rules/Figure";
+import { Figure, type FigureVariant, Stat } from "@/components/rules/Figure";
 
 /**
  * The footprint rule, made checkable.
@@ -22,7 +22,7 @@ import { Figure, Stat } from "@/components/rules/Figure";
 const FIELD = 30;
 const centred = (size: number) => (FIELD - size) / 2;
 
-export function RobotFootprint() {
+export function RobotFootprint({ variant }: { variant?: FigureVariant }) {
   const [width, setWidth] = useState("10");
   const [length, setLength] = useState("12");
   const widthId = useId();
@@ -36,6 +36,7 @@ export function RobotFootprint() {
 
   return (
     <Figure
+      variant={variant}
       id="footprint"
       title="Will your mouse fit?"
       caption={
