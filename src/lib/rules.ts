@@ -70,6 +70,10 @@ export const RULES = {
  * five at 16x16 managed it only three times in five here. Measured over 300
  * mazes at each setting, 18% restores it to about three in four while leaving
  * the grid clearly maze-shaped.
+ *
+ * Since the goal room got its single entrance, every route funnels through one
+ * door and the rate is about two in five. Raising the braid levels off near
+ * half, at the cost of a much more open maze, so it stays at 18%.
  */
 export const DIAGRAM_BRAID = 0.18;
 

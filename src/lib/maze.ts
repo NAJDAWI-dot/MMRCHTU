@@ -8,7 +8,7 @@
  *
  * What it follows from the competition rules: a square grid, mice starting in
  * the corners, and a goal that is the 2x2 block at the centre with its interior
- * walls removed.
+ * walls removed and a single entrance.
  *
  * A fresh maze is drawn on every visit rather than baked at build time, so no
  * two visitors see the same one. Generation is well under a millisecond at
@@ -186,6 +186,64 @@ export function generateMaze(size: number, rand: Rand = Math.random, braid = 0):
   walls[idx(G0, G1)]![0] = false;
   walls[idx(G1, G0)]![2] = false;
   walls[idx(G1, G1)]![0] = false;
+
+  // The goal room has exactly one entrance, as the competition maze does.
+  // First every wall around the room goes up.
+  const inGoal = (x: number, y: number) => (x === G0 || x === G1) && (y === G0 || y === G1);
+  const doors: Array<{ cell: Cell; dir: (typeof DIRS)[number] }> = [];
+  for (const g of GOAL) {
+    for (const dir of DIRS) {
+      if (inGoal(g.x + dir.dx, g.y + dir.dy)) continue;
+      doors.push({ cell: g, dir });
+      walls[idx(g.x, g.y)]![dir.wall] = true;
+      walls[idx(g.x + dir.dx, g.y + dir.dy)]![dir.opp] = true;
+    }
+  }
+
+  // Closing the room can cut off cells that were only reachable through it.
+  // Knock down walls outside the room until every other cell joins up again.
+  const reached = new Set<number>();
+  const flood = (from: Cell) => {
+    const queue = [from];
+    reached.add(idx(from.x, from.y));
+    while (queue.length) {
+      const cur = queue.pop()!;
+      for (const d of DIRS) {
+        if (walls[idx(cur.x, cur.y)]![d.wall]) continue;
+        const nx = cur.x + d.dx;
+        const ny = cur.y + d.dy;
+        if (inGoal(nx, ny) || reached.has(idx(nx, ny))) continue;
+        reached.add(idx(nx, ny));
+        queue.push({ x: nx, y: ny });
+      }
+    }
+  };
+  flood({ x: 0, y: H - 1 });
+  while (reached.size < W * H - GOAL.length) {
+    const options: Array<{ from: Cell; dir: (typeof DIRS)[number] }> = [];
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (!reached.has(idx(x, y))) continue;
+        for (const dir of DIRS) {
+          const nx = x + dir.dx;
+          const ny = y + dir.dy;
+          if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+          if (inGoal(nx, ny) || reached.has(idx(nx, ny))) continue;
+          options.push({ from: { x, y }, dir });
+        }
+      }
+    }
+    const pick = options[Math.floor(rand() * options.length)]!;
+    const to = { x: pick.from.x + pick.dir.dx, y: pick.from.y + pick.dir.dy };
+    walls[idx(pick.from.x, pick.from.y)]![pick.dir.wall] = false;
+    walls[idx(to.x, to.y)]![pick.dir.opp] = false;
+    flood(to);
+  }
+
+  // Then one wall comes down again: the only way in.
+  const door = doors[Math.floor(rand() * doors.length)]!;
+  walls[idx(door.cell.x, door.cell.y)]![door.dir.wall] = false;
+  walls[idx(door.cell.x + door.dir.dx, door.cell.y + door.dir.dy)]![door.dir.opp] = false;
 
   /** Shortest cell-by-cell route from a starting cell into the goal room. */
   const bfsTo = (start: Cell): Cell[] => {
