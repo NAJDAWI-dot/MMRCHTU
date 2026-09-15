@@ -28,6 +28,8 @@ import { paymentScreenshotKey } from "@/lib/payment-proof";
 import { SNIFF_BYTES, checkUpload, sniffImageType } from "@/lib/gallery";
 import { StorageNotConfiguredError, removePhoto, storePhoto } from "@/lib/photo-storage";
 import { createRateLimiter, clientKey } from "@/lib/rate-limit";
+import { prisma } from "@/lib/prisma";
+import { normaliseReferralCode, referralCodeError } from "@/lib/referral";
 
 /** Shown when an admin has closed registration, on either step. */
 const CLOSED_MESSAGE =
@@ -53,6 +55,20 @@ function readPayerName(formData: FormData): PayerName {
     parts[field.part] = String(formData.get(field.field) ?? "");
   }
   return parts;
+}
+
+/**
+ * The referral code from the form, and the ambassador it belongs to (active or
+ * not). No query when the box is empty, which is most registrations.
+ */
+async function lookUpReferral(formData: FormData) {
+  const code = normaliseReferralCode(String(formData.get("referralCode") ?? ""));
+  if (!code) return { code, ambassador: null };
+  const ambassador = await prisma.ambassador.findUnique({
+    where: { code },
+    select: { id: true, status: true },
+  });
+  return { code, ambassador };
 }
 
 function readTeam(formData: FormData) {
@@ -155,6 +171,9 @@ export async function checkTeamDetails(
   const input = readTeam(formData);
 
   const errors = validateRegistration(input);
+  const referral = await lookUpReferral(formData);
+  const referralProblem = referralCodeError(referral.code, referral.ambassador);
+  if (referralProblem) errors.referralCode = referralProblem;
   if (hasFieldErrors(errors)) {
     return { status: "error", errors };
   }
@@ -319,10 +338,18 @@ export async function completeRegistration(
   // the store with nothing pointing at it. Cleaning up on the way out keeps the
   // bucket in step with the table; the removal is best-effort by design, and
   // must not replace the real error with a storage one.
+  // Step one already refused a bad code. If the ambassador was paused in the
+  // minutes since, the team has paid by now, so the registration goes through
+  // and simply counts for nobody rather than being turned away.
+  const referral = await lookUpReferral(formData);
+  const ambassadorId =
+    referral.ambassador && referral.ambassador.status === "ACTIVE" ? referral.ambassador.id : null;
+
   let registration;
   try {
     registration = await createRegistration({
       ...team,
+      referral: { code: referral.code, ambassadorId },
       payment: {
         reference,
         amount,

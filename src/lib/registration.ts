@@ -87,6 +87,12 @@ export interface RegistrationInput {
   motivation: string;
   members: TeamMemberInput[];
   payment: RegistrationPaymentInput;
+  /**
+   * The ambassador referral code as typed (normalised), and the ambassador it
+   * resolved to. The id is null when the box was empty or the code was not an
+   * active one, in which case the registration counts for nobody.
+   */
+  referral?: { code: string; ambassadorId: string | null };
 }
 
 /**
@@ -120,6 +126,8 @@ export interface FieldErrors {
   technicalExperience?: string;
   motivation?: string;
   consentAccepted?: string;
+  /** Set by the register actions after looking the code up, never by validateRegistration. */
+  referralCode?: string;
   members?: (TeamMemberFieldErrors | undefined)[];
 }
 
@@ -271,6 +279,8 @@ export async function createRegistration(input: RegistrationInput) {
         payerSecondName: payer.second,
         payerThirdName: payer.third,
         payerLastName: payer.last,
+        referralCode: input.referral?.code ?? "",
+        ambassadorId: input.referral?.ambassadorId ?? null,
         members: {
           create: input.members.map((member, i) => ({
             order: i + 1,

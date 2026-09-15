@@ -25,9 +25,18 @@ export type AdminIconName =
   | "payments"
   | "email"
   | "admins"
+  | "ambassadors"
   | "team";
 
 const PATHS: Record<AdminIconName, ReactNode> = {
+  ambassadors: (
+    <>
+      {/* A megaphone: someone spreading the word. */}
+      <path d="M3.5 10v4a1 1 0 0 0 1 1H7l7 4.5V4.5L7 9H4.5a1 1 0 0 0-1 1z" />
+      <path d="M17.5 9a4 4 0 0 1 0 6" />
+      <path d="M8 15l1.2 4.5" />
+    </>
+  ),
   team: (
     <>
       {/* Two people, the taller one in front: a committee rather than a crowd. */}

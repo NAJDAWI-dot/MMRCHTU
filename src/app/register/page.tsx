@@ -6,6 +6,7 @@ import { PAYMENT_STATUS_BLURB, formatFils, isPaymentStatus } from "@/lib/payment
 import { VERIFICATION_WINDOW_TEXT } from "@/lib/payment-proof";
 import { normaliseResumeCode } from "@/lib/registration-code";
 import { prisma } from "@/lib/prisma";
+import { normaliseReferralCode } from "@/lib/referral";
 
 // A status lookup reads one registration row, so this cannot be cached
 // wholesale. Without a code it is only configuration.
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
 export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams: { code?: string };
+  searchParams: { code?: string; ref?: string };
 }) {
   // Payment configuration is not read here on purpose. It reaches the form with
   // the response to Next, so that step one's page source says nothing about how
@@ -93,7 +94,10 @@ export default async function RegisterPage({
   return (
     <Shell heading="Register your team" subheading={config.deadlineText}>
       {config.isOpen ? (
-        <RegisterForm feeInfoText={config.feeInfoText} />
+        <RegisterForm
+          feeInfoText={config.feeInfoText}
+          initialReferralCode={normaliseReferralCode(searchParams.ref ?? "").slice(0, 20)}
+        />
       ) : (
         <div
           role="status"
