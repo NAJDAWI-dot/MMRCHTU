@@ -53,9 +53,11 @@ const DRAFT_DEBOUNCE_MS = 400;
 
 interface RegisterFormProps {
   feeInfoText: string;
+  /** From a /register?ref=CODE link an ambassador shared. */
+  initialReferralCode?: string;
 }
 
-export function RegisterForm({ feeInfoText }: RegisterFormProps) {
+export function RegisterForm({ feeInfoText, initialReferralCode = "" }: RegisterFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [step, setStep] = useState<1 | 2>(1);
   const [memberCount, setMemberCount] = useState(1);
@@ -164,6 +166,9 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
   useEffect(() => {
     if (!draft || !formRef.current) return;
     for (const [name, value] of Object.entries(draft)) {
+      // An old draft with an empty box must not wipe the code a referral link
+      // just filled in.
+      if (name === "referralCode" && !value) continue;
       const found = formRef.current.elements.namedItem(name);
       if (!found) continue;
       const list = found instanceof RadioNodeList ? Array.from(found) : [found];
@@ -329,6 +334,23 @@ export function RegisterForm({ feeInfoText }: RegisterFormProps) {
           error={errors?.motivation}
           textarea
         />
+
+        {/* On its own surface, like the member boxes: this spot sits over the
+            darker part of the page artwork, where a bare label and error lose
+            contrast. */}
+        <div className="rounded-lg border border-ras-gray/20 bg-[var(--color-surface)] p-4">
+          <Field
+            id="referralCode"
+            name="referralCode"
+            label="Referral code (optional)"
+            hint="If an MMRC ambassador from your university sent you, enter their code."
+            error={errors?.referralCode}
+            defaultValue={initialReferralCode}
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
 
         <div>
           <label className="flex min-h-[44px] cursor-pointer items-start gap-3 text-sm text-ras-gray dark:text-white/80">
@@ -730,6 +752,9 @@ interface FieldProps {
   type?: string;
   autoComplete?: string;
   inputMode?: "text" | "decimal" | "numeric";
+  defaultValue?: string;
+  autoCapitalize?: string;
+  spellCheck?: boolean;
   textarea?: boolean;
 }
 

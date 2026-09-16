@@ -115,6 +115,7 @@ export interface TeamRowSource {
   consentVersion: string | null;
   consentAcceptedAt: Date | null;
   createdAt: Date;
+  referralCode?: string;
 }
 
 /**
@@ -174,6 +175,8 @@ export const TEAM_HEADERS: readonly string[] = [
   "Consent version",
   "Consent accepted",
   "Registered at",
+  // Last, so adding it moved no column an existing sheet query is bound to.
+  "Referral code",
 ];
 
 /**
@@ -238,6 +241,7 @@ export function teamRow(
     registration.consentVersion,
     registration.consentAcceptedAt,
     registration.createdAt,
+    registration.referralCode || null,
   ];
 }
 

@@ -120,10 +120,35 @@ model Registration {
   /// unique constraint.
   resumeCode String? @unique
 
+  /// The ambassador referral code the team typed, normalised. Kept as text as
+  /// well as the link below, so removing an ambassador still leaves a record of
+  /// which code a team came in on. Blank when no code was given.
+  referralCode String      @default("")
+  /// Set only when the code belonged to an active ambassador at the moment of
+  /// registering. This is what the Ambassadors tab counts.
+  ambassadorId String?
+  ambassador   Ambassador? @relation(fields: [ambassadorId], references: [id], onDelete: SetNull)
+
   members TeamMember[]
 
   @@index([status])
   @@index([paymentStatus])
+  @@index([ambassadorId])
+}
+
+// A university ambassador and their referral code. `status` is ACTIVE or
+// PAUSED (see src/lib/referral.ts). A paused code is refused on the register
+// form but keeps the registrations it already brought in.
+model Ambassador {
+  id         String   @id @default(cuid())
+  name       String
+  university String   @default("")
+  code       String   @unique
+  status     String   @default("ACTIVE")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  registrations Registration[]
 }
 
 model TeamMember {

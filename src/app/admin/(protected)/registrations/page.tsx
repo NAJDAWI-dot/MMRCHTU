@@ -48,7 +48,10 @@ export default async function AdminRegistrationsPage({
   const [registrations, total, paid, awaiting] = await Promise.all([
     prisma.registration.findMany({
       where,
-      include: { members: { orderBy: { order: "asc" } } },
+      include: {
+        members: { orderBy: { order: "asc" } },
+        ambassador: { select: { name: true } },
+      },
       orderBy: { createdAt: "desc" },
     }),
     prisma.registration.count(),
@@ -144,6 +147,12 @@ export default async function AdminRegistrationsPage({
             <p className="mt-1 text-xs text-ras-gray dark:text-white/60">
               <strong>Motivation:</strong> {reg.motivation}
             </p>
+            {reg.referralCode ? (
+              <p className="mt-1 text-xs text-ras-gray dark:text-white/60">
+                <strong>Referral:</strong> <span className="font-mono">{reg.referralCode}</span>
+                {reg.ambassador ? ` (${reg.ambassador.name})` : " (counts for nobody)"}
+              </p>
+            ) : null}
 
             {/* Read-only here on purpose: payments are decided under Payments,
                 where the quoted fee and the screenshot are side by side. */}

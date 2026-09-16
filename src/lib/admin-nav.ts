@@ -58,6 +58,12 @@ export const ADMIN_LINKS: AdminLink[] = [
     keywords: "teams entries members",
   },
   {
+    href: "/admin/ambassadors",
+    label: "Ambassadors",
+    icon: "ambassadors",
+    keywords: "referral codes universities signups",
+  },
+  {
     href: "/admin/payments",
     label: "Payments",
     icon: "payments",
