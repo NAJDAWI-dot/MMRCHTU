@@ -122,6 +122,22 @@ export function MazeExplainer() {
     const observer = new IntersectionObserver(
       (entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) return;
+
+        /*
+          Asked again here, rather than trusted from `reduced` above.
+
+          Both effects mount in the same commit, so this one first runs with
+          `reduced` still false — its initial value, because the server has no
+          media queries to render from. If the explainer is already on screen
+          at that moment, the observer fires immediately and starts a loop the
+          visitor asked not to see, and the re-render that follows is too late
+          to stop it: `startedRef` is set by then.
+        */
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          observer.disconnect();
+          return;
+        }
+
         startedRef.current = true;
         originRef.current = performance.now();
         setPlaying(true);

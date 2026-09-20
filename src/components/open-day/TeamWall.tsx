@@ -6,8 +6,6 @@ import { teamCountLabel, wallSummary } from "@/lib/open-day";
 export interface WallTeam {
   id: string;
   name: string;
-  /** Where the team leader studies. Empty when the entry predates the field. */
-  university: string;
 }
 
 /**
@@ -17,6 +15,10 @@ export interface WallTeam {
  * nobody remembers. Forty different mazes with forty names under them is the
  * same fact as a picture, and it happens to be a picture only this competition
  * can make, since the crest generator is already how a team gets its mark.
+ *
+ * A team name and nothing else. The university each leader studies at was here
+ * at first, and it is not the wall's to publish: a team chooses its name, and
+ * did not choose to have where its members study read off a screen in a hall.
  *
  * Rendered on the server, with no JavaScript: crests are a pure function of a
  * team name, so a hundred of them are a hundred bits of markup rather than a
@@ -64,11 +66,6 @@ export function TeamWall({ teams, total }: { teams: WallTeam[]; total: number })
               <span className="mt-1 w-full truncate text-[11px] font-semibold leading-tight text-ras-purple dark:text-white">
                 {team.name}
               </span>
-              {team.university && (
-                <span className="w-full truncate text-[10px] leading-tight text-ras-gray dark:text-white/55">
-                  {team.university}
-                </span>
-              )}
             </li>
           );
         })}
