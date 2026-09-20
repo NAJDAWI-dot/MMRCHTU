@@ -5,6 +5,7 @@ import {
   MAX_NAME_LENGTH,
   isGameMode,
   parseLeaderboardSort,
+  parseScoreEvent,
   sanitisePlayerName,
 } from "@/lib/leaderboard";
 import { clientKey, createRateLimiter } from "@/lib/rate-limit";
@@ -37,6 +38,10 @@ export async function GET(request: NextRequest) {
 
   const sort = parseLeaderboardSort(request.nextUrl.searchParams.get("sort"));
 
+  // Unrecognised events fall back to the public board, so a mistyped link
+  // shows the real leaderboard rather than an empty one that reads as broken.
+  const event = parseScoreEvent(request.nextUrl.searchParams.get("event"));
+
   /*
     Sector first, then score, then who got there first.
 
@@ -50,13 +55,13 @@ export async function GET(request: NextRequest) {
       : ([{ score: "desc" }, { createdAt: "asc" }] as const);
 
   const scores = await prisma.gameScore.findMany({
-    where: { mode },
+    where: { mode, event },
     orderBy: [...orderBy],
     take: TOP_N,
     select: { id: true, playerName: true, score: true, level: true, createdAt: true },
   });
 
-  return NextResponse.json({ mode, sort, scores });
+  return NextResponse.json({ mode, sort, event, scores });
 }
 
 export async function POST(request: NextRequest) {
@@ -80,6 +85,7 @@ export async function POST(request: NextRequest) {
   const score = Number(body.score);
   const level = Number(body.level ?? 1);
   const mode = String(body.mode ?? "classic");
+  const event = parseScoreEvent(body.event);
 
   if (!playerName) {
     return NextResponse.json({ error: `Enter a name (1-${MAX_NAME_LENGTH} characters).` }, { status: 400 });
@@ -95,13 +101,17 @@ export async function POST(request: NextRequest) {
   }
 
   const entry = await prisma.gameScore.create({
-    data: { playerName, score, level, mode },
+    data: { playerName, score, level, mode, event },
     select: { id: true, playerName: true, score: true, level: true, createdAt: true },
   });
 
   // Rank is 1-based and counts strictly higher scores, so ties share the rank
   // of the first player to reach that score.
-  const better = await prisma.gameScore.count({ where: { mode, score: { gt: score } } });
+  // Ranked within its own board: a visitor at the stand is told where they
+  // stand among the day's players, not among every score the site has taken.
+  const better = await prisma.gameScore.count({
+    where: { mode, event, score: { gt: score } },
+  });
 
   return NextResponse.json({ entry, rank: better + 1 }, { status: 201 });
 }

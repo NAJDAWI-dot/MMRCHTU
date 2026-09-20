@@ -9,6 +9,7 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { getEarlyBirdState } from "@/lib/early-bird-server";
 
 const LINKS = [
+  { href: "/open-day", label: "Open Day" },
   { href: "/game", label: "Pac Mouse" },
   { href: "/rules", label: "Rules" },
   { href: "/schedule", label: "Schedule" },

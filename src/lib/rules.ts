@@ -217,6 +217,46 @@ export function searchRun(maze: Maze, start: Cell = startCell(maze)): SearchRun 
 }
 
 /**
+ * The same first run, as every step the mouse takes rather than every cell it
+ * finds.
+ *
+ * `searchRun` answers "what did it learn"; this answers "where was it, moment
+ * by moment", which is what a drawing of the run needs. The difference is the
+ * backtracking: a line drawn through `visited` teleports across the maze every
+ * time the walk dead-ends and unwinds, because the cells it retreats through
+ * were found earlier and are not listed a second time.
+ *
+ * Same traversal as `searchRun`, so the two describe one run and not two.
+ */
+export function searchWalk(maze: Maze, start: Cell = startCell(maze)): Cell[] {
+  const seen = new Set([key(maze, start)]);
+  const walk: Cell[] = [start];
+  const stack: Cell[] = [start];
+
+  if (isGoal(maze, start)) return walk;
+
+  while (stack.length) {
+    const cur = stack[stack.length - 1]!;
+    const next = openNeighbours(maze, cur).find((n) => !seen.has(key(maze, n)));
+
+    if (!next) {
+      stack.pop();
+      // The retreat is drawn rather than skipped. What a search costs is the
+      // whole point of the picture, and the cost is mostly the walking back.
+      if (stack.length) walk.push(stack[stack.length - 1]!);
+      continue;
+    }
+
+    seen.add(key(maze, next));
+    walk.push(next);
+    stack.push(next);
+    if (isGoal(maze, next)) return walk;
+  }
+
+  return walk;
+}
+
+/**
  * Shortest route from `start` into the goal room.
  *
  * `allowed`, when given, restricts the search to cells the mouse already knows

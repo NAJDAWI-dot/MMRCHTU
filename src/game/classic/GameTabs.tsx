@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ClassicMaze } from "./ClassicMaze";
 import { FirstPerson } from "./FirstPerson";
 import { Leaderboard } from "./Leaderboard";
-import type { GameMode } from "@/lib/leaderboard";
+import type { GameMode, ScoreEvent } from "@/lib/leaderboard";
 
 type Tab = GameMode;
 
@@ -13,7 +13,22 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "fp", label: "👁️ First-Person" },
 ];
 
-export function GameTabs() {
+/**
+ * Both game modes and the board under them.
+ *
+ * The board props are passed straight through: /game leaves them alone and
+ * gets the public all-time board, and the open day page names its own so the
+ * same two games feed a board scoped to the day.
+ */
+export function GameTabs({
+  event = "",
+  live = false,
+  boardLabel,
+}: {
+  event?: ScoreEvent;
+  live?: boolean;
+  boardLabel?: string;
+} = {}) {
   const [tab, setTab] = useState<Tab>("classic");
 
   return (
@@ -43,7 +58,7 @@ export function GameTabs() {
         {tab === "classic" ? <ClassicMaze /> : <FirstPerson />}
         {/* Keyed on tab so switching modes remounts the board for that mode
             and discards any unsaved run from the mode just left. */}
-        <Leaderboard key={tab} mode={tab} />
+        <Leaderboard key={tab} mode={tab} event={event} live={live} boardLabel={boardLabel} />
       </div>
     </div>
   );

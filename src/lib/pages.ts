@@ -30,6 +30,12 @@ export interface ManagedPage {
  * the menu it controls rather than as an unrelated list.
  */
 export const MANAGED_PAGES: readonly ManagedPage[] = [
+  {
+    href: "/open-day",
+    label: "Open Day",
+    covers:
+      "The stand page: the explainer, the crest maker, the wall of teams and the open day board. Switch it off the day after.",
+  },
   { href: "/game", label: "Pac Mouse", covers: "The game and its leaderboard." },
   { href: "/rules", label: "Rules", covers: "The rulebook and the readiness checklist under it." },
   { href: "/schedule", label: "Schedule", covers: "The published run of dates." },

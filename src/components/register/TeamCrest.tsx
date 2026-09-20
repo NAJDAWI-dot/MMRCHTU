@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { CELL, MAZE_GOLD } from "@/lib/maze";
 import { crestFor } from "@/lib/crest";
+import { CrestMaze } from "@/components/brand/CrestMaze";
 
 /**
  * A team's crest, generated from its name while they type it.
@@ -14,8 +14,9 @@ import { crestFor } from "@/lib/crest";
  * the same crest when they come back — and demonstrably not the same as
  * anybody else's.
  *
- * The geometry and the hash live in `@/lib/crest` and are tested there. This
- * file is only presentation.
+ * The geometry and the hash live in `@/lib/crest` and are tested there, and
+ * the drawing itself is `CrestMaze`, shared with the wall of crests on the
+ * open day page. This file is the field-side arrangement and nothing else.
  */
 
 export function TeamCrest({ name, size = 84 }: { name: string; size?: number }) {
@@ -23,7 +24,6 @@ export function TeamCrest({ name, size = 84 }: { name: string; size?: number }) 
   // hundred operations — but memoised so React re-rendering the form for an
   // unrelated reason does not redraw a maze that has not changed.
   const crest = useMemo(() => crestFor(name), [name]);
-  const span = crest ? crest.size * CELL : 0;
 
   return (
     <div className="flex items-center gap-3">
@@ -32,59 +32,12 @@ export function TeamCrest({ name, size = 84 }: { name: string; size?: number }) 
         style={{ width: size + 16, height: size + 16 }}
       >
         {crest ? (
-          <svg
-            viewBox={crest.viewBox}
-            width={size}
-            height={size}
-            role="img"
-            aria-label={`Generated crest for ${name.trim()}`}
+          <CrestMaze
+            maze={crest}
+            size={size}
+            label={`Generated crest for ${name.trim()}`}
             className="crest-in"
-          >
-            {/* The goal block first, so the walls draw over its edges. */}
-            <rect
-              x={crest.goal.x + 2}
-              y={crest.goal.y + 2}
-              width={crest.goal.size - 4}
-              height={crest.goal.size - 4}
-              rx={3}
-              fill={MAZE_GOLD}
-              fillOpacity={0.2}
-              stroke={MAZE_GOLD}
-              strokeWidth={2}
-            />
-            {/* The way in, kept faint: the crest is a picture, not a puzzle to
-                be solved at 84 pixels. */}
-            <path
-              d={crest.routes[0]!.solution}
-              fill="none"
-              strokeWidth={3}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              stroke={MAZE_GOLD}
-              strokeOpacity={0.45}
-            />
-            {crest.walls.map((d, i) => (
-              <path
-                key={i}
-                d={d}
-                fill="none"
-                strokeWidth={2.4}
-                strokeLinecap="round"
-                className="stroke-ras-purple dark:stroke-white/85"
-              />
-            ))}
-            {/* Encloses the crest, so it reads as a badge rather than as a
-                fragment of a larger maze that has been cropped. */}
-            <rect
-              x={0}
-              y={0}
-              width={span}
-              height={span}
-              fill="none"
-              strokeWidth={2.4}
-              className="stroke-ras-purple dark:stroke-white/85"
-            />
-          </svg>
+          />
         ) : (
           <div
             aria-hidden="true"

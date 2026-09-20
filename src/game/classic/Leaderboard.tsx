@@ -12,9 +12,17 @@ import {
   type GameOverDetail,
   type LeaderboardEntry,
   type LeaderboardSort,
+  type ScoreEvent,
 } from "@/lib/leaderboard";
 
 const NAME_MEMORY_KEY = "pacMousePlayerName";
+
+/**
+ * Ten seconds. Fast enough that a board on a screen at a stand feels live to
+ * somebody watching a friend play, slow enough that a hall full of phones on
+ * the same page is a trickle of queries rather than a flood.
+ */
+const LIVE_REFRESH_MS = 10_000;
 
 /**
  * Top scores for one game mode, plus the "enter your name" form that appears
@@ -23,8 +31,28 @@ const NAME_MEMORY_KEY = "pacMousePlayerName";
  * The canvas games are imperative and own their own state, so they announce the
  * end of a run by dispatching a `pacmouse:gameover` CustomEvent on window
  * rather than being rewired to lift score into React.
+ *
+ * `event` picks which board a run is saved to and read from. The default is
+ * the public all-time board; the open day page passes its own, so a stand
+ * ranks the people standing at it against each other.
  */
-export function Leaderboard({ mode }: { mode: GameMode }) {
+export function Leaderboard({
+  mode,
+  // Aliased: both handlers below bind their own `event`, and a prop of that
+  // name would be shadowed inside them — silently, since JSON.stringify would
+  // happily serialise a form event.
+  event: board = "",
+  live = false,
+  boardLabel,
+}: {
+  mode: GameMode;
+  event?: ScoreEvent;
+  /** Poll for other people's scores. For a board being watched at a stand. */
+  live?: boolean;
+  /** Names the board in the heading and in the confirmation after a save. */
+  boardLabel?: string;
+}) {
+  const label = boardLabel ?? GAME_MODE_LABELS[mode];
   const [scores, setScores] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<GameOverDetail | null>(null);
@@ -35,7 +63,10 @@ export function Leaderboard({ mode }: { mode: GameMode }) {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/game/scores?mode=${mode}&sort=${sort}`, { cache: "no-store" });
+      const res = await fetch(
+        `/api/game/scores?mode=${mode}&sort=${sort}&event=${encodeURIComponent(board)}`,
+        { cache: "no-store" },
+      );
       if (!res.ok) throw new Error("Failed to load scores.");
       const data = (await res.json()) as { scores: LeaderboardEntry[] };
       setScores(data.scores);
@@ -46,11 +77,35 @@ export function Leaderboard({ mode }: { mode: GameMode }) {
     } finally {
       setLoading(false);
     }
-  }, [mode, sort]);
+  }, [mode, sort, board]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  /*
+    A live board reloads itself, because at a stand it is being watched by
+    people who are not the one playing — the score that matters to them is
+    somebody else's, and nobody is going to pull to refresh.
+
+    Paused while the tab is hidden: a phone in a pocket polling all afternoon
+    is a flat battery and a pile of queries for nothing. Hiding and showing the
+    tab loads once immediately, so a board comes back current rather than
+    showing the state it was left in until the next tick.
+  */
+  useEffect(() => {
+    if (!live) return;
+
+    const tick = () => {
+      if (!document.hidden) void load();
+    };
+    const timer = window.setInterval(tick, LIVE_REFRESH_MS);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [live, load]);
 
   useEffect(() => {
     setName(localStorage.getItem(NAME_MEMORY_KEY) ?? "");
@@ -83,7 +138,13 @@ export function Leaderboard({ mode }: { mode: GameMode }) {
       const res = await fetch("/api/game/scores", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playerName, score: pending.score, level: pending.level, mode }),
+        body: JSON.stringify({
+          playerName,
+          score: pending.score,
+          level: pending.level,
+          mode,
+          event: board,
+        }),
       });
       const data = (await res.json()) as { rank?: number; error?: string };
       if (!res.ok) {
@@ -91,7 +152,7 @@ export function Leaderboard({ mode }: { mode: GameMode }) {
         return;
       }
       localStorage.setItem(NAME_MEMORY_KEY, playerName);
-      setMessage(`Saved! You're #${data.rank} on the ${GAME_MODE_LABELS[mode]} board.`);
+      setMessage(`Saved! You're #${data.rank} on the ${label} board.`);
       setPending(null);
       await load();
     } catch {
@@ -103,13 +164,19 @@ export function Leaderboard({ mode }: { mode: GameMode }) {
 
   return (
     <section
-      aria-label={`${GAME_MODE_LABELS[mode]} leaderboard`}
+      aria-label={`${label} leaderboard`}
       data-testid="leaderboard"
       className="mx-auto mt-8 w-full max-w-[700px] rounded-lg border border-ras-purple/30 bg-[var(--color-surface)] p-5"
     >
       <h2 className="font-display text-lg font-bold uppercase tracking-widest text-ras-purple dark:text-white">
-        {GAME_MODE_LABELS[mode]} leaderboard
+        {label} leaderboard
       </h2>
+
+      {live && (
+        <p className="mt-1 text-xs text-ras-gray dark:text-white/60">
+          Updates on its own every few seconds. Leave it open on the screen.
+        </p>
+      )}
 
       {pending && (
         <form onSubmit={handleSubmit} className="mt-4 rounded-md bg-ras-purple/10 p-4 dark:bg-white/10">

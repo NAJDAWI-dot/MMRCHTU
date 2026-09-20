@@ -387,7 +387,18 @@ model GameScore {
   mode       String   @default("classic")
   createdAt  DateTime @default(now())
 
+  /// Which board a run belongs to. Empty string for the public board on
+  /// /game; a slug like "open-day" for a board that only counts runs played
+  /// at one event, so a stand at a university ranks its own visitors against
+  /// each other rather than against months of accumulated scores.
+  ///
+  /// The allowed values live in src/lib/leaderboard.ts (SCORE_EVENTS) rather
+  /// than in an enum here, for the same reason the statuses elsewhere are
+  /// plain strings: adding next year's event should not need a migration.
+  event      String   @default("")
+
   @@index([mode, score])
+  @@index([event, mode, score])
 }
 
 // Singleton row (id is always "singleton") holding admin-editable copy and

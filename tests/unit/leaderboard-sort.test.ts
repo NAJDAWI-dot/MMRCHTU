@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   LEADERBOARD_SORTS,
   LEADERBOARD_SORT_LABELS,
+  OPEN_DAY_EVENT,
   isLeaderboardSort,
+  isScoreEvent,
   parseLeaderboardSort,
+  parseScoreEvent,
 } from "@/lib/leaderboard";
 
 /**
@@ -35,5 +38,30 @@ describe("leaderboard sort", () => {
     for (const sort of LEADERBOARD_SORTS) {
       expect(LEADERBOARD_SORT_LABELS[sort].length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("parseScoreEvent", () => {
+  it("accepts the boards the site actually has", () => {
+    expect(parseScoreEvent("")).toBe("");
+    expect(parseScoreEvent(OPEN_DAY_EVENT)).toBe("open-day");
+  });
+
+  it("falls back to the public board for anything else", () => {
+    // The value arrives from a query string and from a request body, so this
+    // is what stops an invented board from collecting scores of its own, and
+    // what makes a mistyped link show the real leaderboard rather than an
+    // empty one that reads as broken.
+    expect(parseScoreEvent("open_day")).toBe("");
+    expect(parseScoreEvent("OPEN-DAY")).toBe("");
+    expect(parseScoreEvent("../../etc")).toBe("");
+    expect(parseScoreEvent(null)).toBe("");
+    expect(parseScoreEvent(7)).toBe("");
+    expect(parseScoreEvent(undefined)).toBe("");
+  });
+
+  it("knows an event when it sees one", () => {
+    expect(isScoreEvent("open-day")).toBe(true);
+    expect(isScoreEvent("nope")).toBe(false);
   });
 });
