@@ -79,6 +79,7 @@ export default async function OpenDayPage({
         startsAt={day.startsAt.toISOString()}
         endsAt={day.endsAt.toISOString()}
         location={openDay.location}
+        mapUrl={openDay.mapUrl}
       />
     );
   }
@@ -140,6 +141,7 @@ export default async function OpenDayPage({
             startsAt={day.startsAt.toISOString()}
             endsAt={day.endsAt.toISOString()}
             location={openDay.location}
+            mapUrl={openDay.mapUrl}
           />
         ) : null}
 

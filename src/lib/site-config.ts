@@ -48,6 +48,7 @@ const OPEN_DAY_FALLBACK: OpenDayConfig = {
   startsAt: null,
   endsAt: null,
   location: "",
+  mapUrl: "",
   showOnHome: true,
   // Shut until the day, which is the state the page was asked to be in and
   // the safe one: a stand page opening itself early is worse than one an

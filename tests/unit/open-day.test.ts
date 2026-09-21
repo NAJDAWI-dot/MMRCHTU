@@ -4,6 +4,7 @@ import { crestFor } from "@/lib/crest";
 import { DIAGRAM_BRAID, RULES, compareRuns, searchWalk, startCell } from "@/lib/rules";
 import {
   CARD_NAME_MAX,
+  MAP_URL_MAX,
   CREST_CARD,
   EXPLAINER_LENGTH_MS,
   EXPLAINER_TIMELINE,
@@ -25,6 +26,7 @@ import {
   openDayPhase,
   openDaySlides,
   openDayWindow,
+  parseMapUrl,
   parseMoment,
   resolveOpenDayWindow,
   toAmmanDateTimeLocal,
@@ -461,5 +463,44 @@ describe("shutting the page until the day", () => {
     const open = openDaySlides({ phase: "during", location: "", locked: false });
     expect(open.every((slide) => slide.linked)).toBe(true);
     expect(open.every((slide) => slide.href.startsWith("/open-day"))).toBe(true);
+  });
+});
+
+describe("the map link", () => {
+  it("keeps a real maps link as it was pasted", () => {
+    const url = "https://maps.app.goo.gl/fqZ1EXhQVCpFUGqD6";
+    expect(parseMapUrl(url)).toBe(url);
+    expect(parseMapUrl("http://example.org/a?b=c")).toBe("http://example.org/a?b=c");
+  });
+
+  it("forgives a link copied without its https", () => {
+    // What you get copying an address off a phone.
+    expect(parseMapUrl("maps.app.goo.gl/fqZ1E")).toBe("https://maps.app.goo.gl/fqZ1E");
+  });
+
+  it("refuses anything that is not http or https", () => {
+    // This value ends up in an href on a public page. An admin is not the
+    // threat; a stolen admin session is.
+    for (const bad of [
+      "javascript:alert(1)",
+      "JavaScript:alert(1)",
+      "data:text/html,<script>x</script>",
+      "vbscript:msgbox(1)",
+      "file:///etc/passwd",
+    ]) {
+      expect(parseMapUrl(bad)).toBe("");
+    }
+  });
+
+  it("treats nothing, and nonsense, as nothing", () => {
+    expect(parseMapUrl("")).toBe("");
+    expect(parseMapUrl("   ")).toBe("");
+    expect(parseMapUrl(null)).toBe("");
+    expect(parseMapUrl(undefined)).toBe("");
+    expect(parseMapUrl("building 23C")).toBe("");
+  });
+
+  it("refuses one long enough to be a payload rather than a link", () => {
+    expect(parseMapUrl(`https://example.org/${"a".repeat(MAP_URL_MAX)}`)).toBe("");
   });
 });

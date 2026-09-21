@@ -20,10 +20,12 @@ export function OpenDayHolding({
   startsAt,
   endsAt,
   location,
+  mapUrl,
 }: {
   startsAt: string;
   endsAt: string;
   location: string;
+  mapUrl: string;
 }) {
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:py-24">
@@ -38,7 +40,12 @@ export function OpenDayHolding({
         own to take away, the teams already entered, and a Pac Mouse board for the day.
       </p>
 
-      <OpenDayCountdown startsAt={startsAt} endsAt={endsAt} location={location} />
+      <OpenDayCountdown
+        startsAt={startsAt}
+        endsAt={endsAt}
+        location={location}
+        mapUrl={mapUrl}
+      />
 
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Link
