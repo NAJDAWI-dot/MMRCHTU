@@ -387,7 +387,18 @@ model GameScore {
   mode       String   @default("classic")
   createdAt  DateTime @default(now())
 
+  /// Which board a run belongs to. Empty string for the public board on
+  /// /game; a slug like "open-day" for a board that only counts runs played
+  /// at one event, so a stand at a university ranks its own visitors against
+  /// each other rather than against months of accumulated scores.
+  ///
+  /// The allowed values live in src/lib/leaderboard.ts (SCORE_EVENTS) rather
+  /// than in an enum here, for the same reason the statuses elsewhere are
+  /// plain strings: adding next year's event should not need a migration.
+  event      String   @default("")
+
   @@index([mode, score])
+  @@index([event, mode, score])
 }
 
 // Singleton row (id is always "singleton") holding admin-editable copy and
@@ -418,6 +429,44 @@ model CompetitionDayConfig {
   // while the clock still has something exact to run against. Optional, so the
   // countdown simply does not appear until a date is set.
   eventDate DateTime?
+
+  updatedAt DateTime @updatedAt
+}
+
+// The open day stand: when it runs, where it is, and where its clock appears.
+//
+// Its own row rather than fields on CompetitionDayConfig, which describes the
+// competition itself. They are two different events months apart, with two
+// different pages and two different clocks, and folding them together would
+// mean an admin editing the competition to move a stand.
+model OpenDayConfig {
+  id String @id @default("singleton")
+
+  // The master switch for the clock. Off takes it off the open day page and
+  // takes the slider off the homepage; the open day page itself stays up,
+  // which is the Pages tab's job rather than this one's.
+  enabled Boolean @default(true)
+
+  // Both optional, the same arrangement as CompetitionDayConfig.eventDate: no
+  // date set simply means the page falls back to the dates in the code rather
+  // than counting down to nothing.
+  startsAt DateTime?
+  endsAt   DateTime?
+
+  // Where the stand is, shown under the clock. Plain text rendered as React
+  // children, never as markup, so an admin cannot inject anything.
+  location String @default("")
+
+  // Whether the slider rides at the top of the homepage. It takes itself down
+  // once the day is over whatever this says, since a homepage advertising
+  // yesterday is worse than one saying nothing.
+  showOnHome Boolean @default(true)
+
+  // Keeps the open day page shut until the countdown reaches zero. Visitors
+  // who follow the link get the clock and nothing else; the crests, the wall
+  // and the board open when the doors do. Signed-in admins are let through,
+  // so the page can be checked before the day rather than on it.
+  lockUntilOpen Boolean @default(true)
 
   updatedAt DateTime @updatedAt
 }

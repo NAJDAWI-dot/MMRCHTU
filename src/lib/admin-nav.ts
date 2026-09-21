@@ -36,6 +36,12 @@ export const ADMIN_LINKS: AdminLink[] = [
     icon: "competition",
     keywords: "venue running order",
   },
+  {
+    href: "/admin/open-day",
+    label: "Open Day",
+    icon: "openDay",
+    keywords: "stand countdown clock slider homepage location venue",
+  },
   { href: "/admin/faq", label: "FAQ", icon: "faq", keywords: "questions answers" },
   { href: "/admin/gallery", label: "Gallery", icon: "gallery", keywords: "photos albums pictures" },
   {

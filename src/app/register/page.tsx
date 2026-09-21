@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams: { code?: string; ref?: string };
+  searchParams: { code?: string; ref?: string; team?: string };
 }) {
   // Payment configuration is not read here on purpose. It reaches the form with
   // the response to Next, so that step one's page source says nothing about how
@@ -97,6 +97,7 @@ export default async function RegisterPage({
         <RegisterForm
           feeInfoText={config.feeInfoText}
           initialReferralCode={normaliseReferralCode(searchParams.ref ?? "").slice(0, 20)}
+          initialTeamName={(searchParams.team ?? "").trim().slice(0, 60)}
         />
       ) : (
         <div

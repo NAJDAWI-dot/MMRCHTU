@@ -55,9 +55,18 @@ interface RegisterFormProps {
   feeInfoText: string;
   /** From a /register?ref=CODE link an ambassador shared. */
   initialReferralCode?: string;
+  /**
+   * From a /register?team=NAME link. The open day page sends one, so somebody
+   * who has just watched their crest appear does not type the name again.
+   */
+  initialTeamName?: string;
 }
 
-export function RegisterForm({ feeInfoText, initialReferralCode = "" }: RegisterFormProps) {
+export function RegisterForm({
+  feeInfoText,
+  initialReferralCode = "",
+  initialTeamName = "",
+}: RegisterFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [step, setStep] = useState<1 | 2>(1);
   const [memberCount, setMemberCount] = useState(1);
@@ -80,7 +89,7 @@ export function RegisterForm({ feeInfoText, initialReferralCode = "" }: Register
    * input handler and again after a draft is restored, which between them
    * cover every way the field's value can change.
    */
-  const [teamName, setTeamName] = useState("");
+  const [teamName, setTeamName] = useState(initialTeamName);
   const [draftSaved, setDraftSaved] = useState(false);
   const debounceRef = useRef<number | undefined>(undefined);
 
@@ -166,9 +175,9 @@ export function RegisterForm({ feeInfoText, initialReferralCode = "" }: Register
   useEffect(() => {
     if (!draft || !formRef.current) return;
     for (const [name, value] of Object.entries(draft)) {
-      // An old draft with an empty box must not wipe the code a referral link
-      // just filled in.
-      if (name === "referralCode" && !value) continue;
+      // An old draft with an empty box must not wipe what a link just filled
+      // in, which is either the referral code or the team name.
+      if ((name === "referralCode" || name === "teamName") && !value) continue;
       const found = formRef.current.elements.namedItem(name);
       if (!found) continue;
       const list = found instanceof RadioNodeList ? Array.from(found) : [found];
@@ -283,6 +292,7 @@ export function RegisterForm({ feeInfoText, initialReferralCode = "" }: Register
             name="teamName"
             label="Team name"
             error={errors?.teamName}
+            defaultValue={initialTeamName}
             autoComplete="organization"
           />
           <TeamCrest name={teamName} />

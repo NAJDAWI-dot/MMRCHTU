@@ -2,7 +2,8 @@ import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { parseStatus } from "@/lib/competition-day";
 import { absoluteUrl } from "@/lib/site-url";
-import { getCompetitionDayConfig } from "@/lib/site-config";
+import { getCompetitionDayConfig, getOpenDayConfig } from "@/lib/site-config";
+import { openDayLocked, openDayPhase, resolveOpenDayWindow } from "@/lib/open-day";
 import { LEGAL_PAGES } from "@/lib/mdx";
 
 /**
@@ -20,13 +21,19 @@ export const revalidate = 3600;
  * the shape of the admin area in a public file.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [albums, config] = await Promise.all([
+  const [albums, config, openDay] = await Promise.all([
     prisma.galleryAlbum.findMany({
       where: { isPublished: true, photos: { some: {} } },
       select: { slug: true, updatedAt: true },
     }),
     getCompetitionDayConfig(),
+    getOpenDayConfig(),
   ]);
+
+  // Left out while the stand page is shut. What is there then is a clock, and
+  // a search result pointing at it would arrive long after the day it counts
+  // to. It lists itself the moment the doors open.
+  const openDayShut = openDayLocked(openDay, openDayPhase(resolveOpenDayWindow(openDay)));
 
   const now = new Date();
 
@@ -40,6 +47,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absoluteUrl("/faq"), lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: absoluteUrl("/game"), lastModified: now, changeFrequency: "monthly", priority: 0.5 },
   ];
+
+  if (!openDayShut) {
+    entries.push({
+      url: absoluteUrl("/open-day"),
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.6,
+    });
+  }
 
   // Listed rather than left out: a visitor deciding whether to pay a fee is
   // entitled to find the refund policy through a search engine, not only

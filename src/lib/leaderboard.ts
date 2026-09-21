@@ -13,6 +13,36 @@ export const GAME_MODE_LABELS: Record<GameMode, string> = {
 
 export const MAX_NAME_LENGTH = 16;
 
+/**
+ * The boards a run can land on.
+ *
+ * The empty string is the public all-time board on /game. Anything else is an
+ * event board: runs played at one event, ranked against each other only. A
+ * stand at a university open day wants the person who just played to see their
+ * name near the top, which they never will on a board holding every score the
+ * site has taken since it launched.
+ *
+ * A closed list, because the value arrives from a query string and from a
+ * request body. Without it, anyone could invent a board and park scores on it,
+ * and a typo in a link would silently produce an empty leaderboard that looks
+ * broken rather than falling back to the real one.
+ */
+export const SCORE_EVENTS = ["", "open-day"] as const;
+
+export type ScoreEvent = (typeof SCORE_EVENTS)[number];
+
+/** The IEEE RAS HTU stand: one day, one board. */
+export const OPEN_DAY_EVENT = "open-day" satisfies ScoreEvent;
+
+export function isScoreEvent(value: unknown): value is ScoreEvent {
+  return typeof value === "string" && (SCORE_EVENTS as readonly string[]).includes(value);
+}
+
+/** Anything unrecognised falls back to the public board rather than erroring. */
+export function parseScoreEvent(value: unknown): ScoreEvent {
+  return isScoreEvent(value) ? value : "";
+}
+
 export function isGameMode(value: string): value is GameMode {
   return (GAME_MODES as readonly string[]).includes(value);
 }
