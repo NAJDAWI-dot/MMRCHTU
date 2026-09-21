@@ -16,6 +16,12 @@ import {
   escapeXml,
   explainerFrameAt,
   explainerShowsSpeedRun,
+  nextOpenDayBoundary,
+  openDayClock,
+  openDayDateLabel,
+  openDayPhase,
+  openDayWindow,
+  parseMoment,
   teachingMaze,
   teachingRatio,
   teamCountLabel,
@@ -224,5 +230,90 @@ describe("choosing a maze for the explainer", () => {
     // on it and must return it rather than spinning or returning nothing.
     const fixed = teachingMaze(() => 0.5, 6);
     expect(fixed.size).toBe(RULES.mazeGrid);
+  });
+});
+
+describe("the open day window", () => {
+  const START = "2026-09-30T10:00:00+03:00";
+  const END = "2026-09-30T16:00:00+03:00";
+  const env = { OPEN_DAY_STARTS_AT: START, OPEN_DAY_ENDS_AT: END };
+
+  it("takes the dates from the environment", () => {
+    const day = openDayWindow(env);
+    expect(day.startsAt.toISOString()).toBe("2026-09-30T07:00:00.000Z");
+    expect(day.endsAt.toISOString()).toBe("2026-09-30T13:00:00.000Z");
+  });
+
+  it("falls back to the dates in the code when nothing is set", () => {
+    const day = openDayWindow({});
+    expect(day.endsAt.getTime()).toBeGreaterThan(day.startsAt.getTime());
+  });
+
+  it("ignores a value that is not a date rather than counting to NaN", () => {
+    const day = openDayWindow({ OPEN_DAY_STARTS_AT: "next thursday-ish" });
+    expect(Number.isNaN(day.startsAt.getTime())).toBe(false);
+    expect(day.startsAt.getTime()).toBe(new Date(openDayWindow({}).startsAt).getTime());
+  });
+
+  it("gives the stand a working day when the end does not follow the start", () => {
+    // The mistake this guards against is a start moved in a dashboard and an
+    // end left where it was, which reads as a day that finished before it
+    // began and would show the page as over.
+    const day = openDayWindow({
+      OPEN_DAY_STARTS_AT: "2026-11-05T10:00:00+03:00",
+      OPEN_DAY_ENDS_AT: END,
+    });
+    expect(day.endsAt.getTime() - day.startsAt.getTime()).toBe(6 * 60 * 60 * 1000);
+  });
+
+  it("parses a moment, or takes the fallback", () => {
+    expect(parseMoment(START, END).toISOString()).toBe("2026-09-30T07:00:00.000Z");
+    expect(parseMoment("  ", END).toISOString()).toBe("2026-09-30T13:00:00.000Z");
+    expect(parseMoment(null, END).toISOString()).toBe("2026-09-30T13:00:00.000Z");
+    expect(parseMoment(undefined, END).toISOString()).toBe("2026-09-30T13:00:00.000Z");
+  });
+});
+
+describe("what the open day page is counting to", () => {
+  const day = openDayWindow({
+    OPEN_DAY_STARTS_AT: "2026-09-30T10:00:00+03:00",
+    OPEN_DAY_ENDS_AT: "2026-09-30T16:00:00+03:00",
+  });
+  const at = (iso: string) => new Date(iso);
+
+  it("counts to the doors before they open", () => {
+    expect(openDayPhase(day, at("2026-09-24T12:00:00+03:00"))).toBe("before");
+    expect(nextOpenDayBoundary(day, at("2026-09-24T12:00:00+03:00"))).toEqual(day.startsAt);
+  });
+
+  it("switches to closing time on the second the stand opens", () => {
+    expect(openDayPhase(day, at("2026-09-30T09:59:59+03:00"))).toBe("before");
+    expect(openDayPhase(day, at("2026-09-30T10:00:00+03:00"))).toBe("during");
+    expect(nextOpenDayBoundary(day, at("2026-09-30T10:00:00+03:00"))).toEqual(day.endsAt);
+  });
+
+  it("is over once the stand shuts, and stops counting", () => {
+    expect(openDayPhase(day, at("2026-09-30T15:59:59+03:00"))).toBe("during");
+    expect(openDayPhase(day, at("2026-09-30T16:00:00+03:00"))).toBe("after");
+    expect(nextOpenDayBoundary(day, at("2026-10-02T09:00:00+03:00"))).toBeNull();
+  });
+
+  it("reads the clock in Amman whatever zone the reader is in", () => {
+    // The same instant, formatted for a hall in Jordan. A phone still set to
+    // London must not be told the stand opens at seven in the morning.
+    expect(openDayClock(day.startsAt)).toBe("10:00");
+    expect(openDayClock(day.endsAt)).toBe("16:00");
+  });
+
+  it("says the date the way somebody would say it out loud", () => {
+    expect(openDayDateLabel(day)).toBe("Wednesday 30 September, 10:00 to 16:00");
+  });
+
+  it("names both days when the window somehow spans two", () => {
+    const spread = openDayWindow({
+      OPEN_DAY_STARTS_AT: "2026-09-30T22:00:00+03:00",
+      OPEN_DAY_ENDS_AT: "2026-10-01T02:00:00+03:00",
+    });
+    expect(openDayDateLabel(spread)).toBe("Wednesday 30 September 22:00 to Thursday 1 October 02:00");
   });
 });

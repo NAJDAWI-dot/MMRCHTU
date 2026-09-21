@@ -144,6 +144,27 @@ export const EARLY_BIRD_SUBJECT: CountdownSubject = {
 };
 
 /**
+ * The two ends of the open day, which the stand page counts between.
+ *
+ * Two subjects and not one, because the clock on that page is pointed at a
+ * different moment before the doors open and after: first at the start, then
+ * at the hour the stand packs up. The wording has to follow it, or a visitor
+ * reading with a screen reader at noon is told how long until an event they
+ * are already standing in.
+ */
+export const OPEN_DAY_SUBJECT: CountdownSubject = {
+  until: "the open day stand opens",
+  arrived: "The open day stand is open.",
+  arrivedLabel: "We are open",
+};
+
+export const OPEN_DAY_END_SUBJECT: CountdownSubject = {
+  until: "the stand packs up",
+  arrived: "The stand has packed up for the day.",
+  arrivedLabel: "That is us done",
+};
+
+/**
  * A single sentence for screen readers and for reduced-motion visitors.
  *
  * A row of ticking digits is meaningless read aloud one at a time, and an

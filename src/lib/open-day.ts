@@ -280,3 +280,119 @@ export function teachingMaze(rand: Rand = Math.random, attempts = TEACHING_ATTEM
 
   return best;
 }
+
+/* -------------------------------------------------------------- the day itself */
+
+/**
+ * When the stand is open.
+ *
+ * Amman is UTC+3 the year round, since Jordan stopped changing its clocks in
+ * 2022, so the offset is written into the constant rather than left to
+ * whatever zone the machine happens to boot in. Vercel runs in UTC, and a time
+ * typed without an offset would count down to the wrong hour by three.
+ *
+ * Two ways to move the day. `OPEN_DAY_STARTS_AT` and `OPEN_DAY_ENDS_AT` in the
+ * environment win wherever they are set, which changes the date without a
+ * deploy; with neither set these are it, and editing them is a one-line commit.
+ */
+export const OPEN_DAY_DEFAULT_START = "2026-09-30T10:00:00+03:00";
+export const OPEN_DAY_DEFAULT_END = "2026-09-30T16:00:00+03:00";
+
+/** Where the clock is read, whatever zone the server or the phone is in. */
+export const OPEN_DAY_TIME_ZONE = "Asia/Amman";
+
+/** How long the stand runs for when the end time is missing or nonsense. */
+export const OPEN_DAY_FALLBACK_LENGTH_MS = 6 * 60 * 60 * 1000;
+
+export interface OpenDayWindow {
+  startsAt: Date;
+  endsAt: Date;
+}
+
+/** Before the doors open, while the stand is running, and after it packs up. */
+export type OpenDayPhase = "before" | "during" | "after";
+
+/** A date from a string, falling back when the string is missing or junk. */
+export function parseMoment(value: string | null | undefined, fallback: string): Date {
+  const parsed = new Date(String(value ?? "").trim());
+  return Number.isNaN(parsed.getTime()) ? new Date(fallback) : parsed;
+}
+
+/**
+ * The window the page counts against.
+ *
+ * An end that does not come after its start is treated as no end at all and
+ * replaced with a working day: a mistyped value in a dashboard should cost the
+ * page its closing time, not put it into the finished state while fifty people
+ * are standing at the stand.
+ */
+export function openDayWindow(
+  env: Record<string, string | undefined> = process.env,
+): OpenDayWindow {
+  const startsAt = parseMoment(env.OPEN_DAY_STARTS_AT, OPEN_DAY_DEFAULT_START);
+  const endsAt = parseMoment(env.OPEN_DAY_ENDS_AT, OPEN_DAY_DEFAULT_END);
+
+  if (endsAt.getTime() <= startsAt.getTime()) {
+    return { startsAt, endsAt: new Date(startsAt.getTime() + OPEN_DAY_FALLBACK_LENGTH_MS) };
+  }
+
+  return { startsAt, endsAt };
+}
+
+export function openDayPhase(day: OpenDayWindow, now: Date = new Date()): OpenDayPhase {
+  if (now.getTime() < day.startsAt.getTime()) return "before";
+  if (now.getTime() < day.endsAt.getTime()) return "during";
+  return "after";
+}
+
+/**
+ * The next moment the page has something different to say, or null when it has
+ * said its last thing.
+ *
+ * The page is open on a phone for minutes at a time, and one of those minutes
+ * is the one where the doors open. Without this the visitor watching the clock
+ * hit zero keeps watching it sit at zero.
+ */
+export function nextOpenDayBoundary(day: OpenDayWindow, now: Date = new Date()): Date | null {
+  const phase = openDayPhase(day, now);
+  if (phase === "before") return day.startsAt;
+  if (phase === "during") return day.endsAt;
+  return null;
+}
+
+const OPEN_DAY_DATE_FORMAT = new Intl.DateTimeFormat("en-GB", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: OPEN_DAY_TIME_ZONE,
+});
+
+const OPEN_DAY_TIME_FORMAT = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+  timeZone: OPEN_DAY_TIME_ZONE,
+});
+
+/** "16:00", in Amman, wherever the reader is. */
+export function openDayClock(moment: Date): string {
+  return OPEN_DAY_TIME_FORMAT.format(moment);
+}
+
+/**
+ * "Wednesday 30 September, 10:00 to 16:00".
+ *
+ * Fixed to Amman rather than to the visitor's own zone. The date is a fact
+ * about a hall in Jordan, and a phone still set to another country would
+ * otherwise be told the stand opens at a time nobody there would recognise.
+ */
+export function openDayDateLabel(day: OpenDayWindow): string {
+  const startDay = OPEN_DAY_DATE_FORMAT.format(day.startsAt);
+  const endDay = OPEN_DAY_DATE_FORMAT.format(day.endsAt);
+  const from = openDayClock(day.startsAt);
+  const to = openDayClock(day.endsAt);
+
+  return startDay === endDay
+    ? `${startDay}, ${from} to ${to}`
+    : `${startDay} ${from} to ${endDay} ${to}`;
+}

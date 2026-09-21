@@ -4,9 +4,10 @@ import { GameTabs } from "@/game/classic/GameTabs";
 import { MouseMark } from "@/components/brand/MouseMark";
 import { MazeExplainer } from "@/components/open-day/MazeExplainer";
 import { CrestStudio } from "@/components/open-day/CrestStudio";
+import { OpenDayCountdown } from "@/components/open-day/OpenDayCountdown";
 import { TeamWall, type WallTeam } from "@/components/open-day/TeamWall";
 import { OPEN_DAY_EVENT } from "@/lib/leaderboard";
-import { WALL_LIMIT } from "@/lib/open-day";
+import { WALL_LIMIT, openDayWindow } from "@/lib/open-day";
 import { normaliseReferralCode } from "@/lib/referral";
 import { prisma } from "@/lib/prisma";
 
@@ -61,6 +62,11 @@ export default async function OpenDayPage({
 
   const registerHref = referral ? `/register?ref=${encodeURIComponent(referral)}` : "/register";
 
+  // Read per request rather than at module load, which is what lets the date be
+  // moved by an environment variable without a rebuild. The page is already
+  // force-dynamic for the wall and the board, so this costs nothing.
+  const day = openDayWindow();
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
       <header>
@@ -76,7 +82,15 @@ export default async function OpenDayPage({
           here, none of which takes longer than a minute.
         </p>
 
-        <nav aria-label="On this page" className="mt-5 flex flex-wrap gap-2">
+        {/*
+          The clock lives here and nowhere else on the site. The competition
+          has its own countdown on the homepage, and a second one beside it
+          would turn two deadlines into noise: one is a robot competition
+          months away, this one is a stand in a hall for an afternoon.
+        */}
+        <OpenDayCountdown startsAt={day.startsAt.toISOString()} endsAt={day.endsAt.toISOString()} />
+
+        <nav aria-label="On this page" className="mt-8 flex flex-wrap gap-2">
           {[
             { href: "#what", label: "What is this" },
             { href: "#crest", label: "Get your crest" },
