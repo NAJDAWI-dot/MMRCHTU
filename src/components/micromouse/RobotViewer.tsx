@@ -200,6 +200,12 @@ export function RobotViewer() {
             pick a part to read what it is for.
           </p>
         )}
+        {/* Attached to the model, because this is the thing most likely to be
+            mistaken for a specification. */}
+        <p className="mt-3 border-t border-ras-purple/15 pt-3 text-xs text-ras-gray dark:border-white/10 dark:text-white/55">
+          One way of building a mouse, not the way. Nothing here is required by the rules: build
+          yours however you like, as long as the rulebook is happy with it.
+        </p>
       </div>
     </div>
   );

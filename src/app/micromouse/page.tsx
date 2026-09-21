@@ -61,6 +61,31 @@ export default async function MicromousePage() {
         </Link>
       </div>
 
+      {/*
+        Ahead of the guide rather than at the foot of it.
+
+        The page is specific on purpose, down to part numbers and a robot drawn
+        at real size, and specific reads as prescribed. A team that turns up
+        with four sensors and a different microcontroller has not broken
+        anything, and should not find that out only if they scroll to the end.
+      */}
+      <aside className="mt-8 rounded-2xl border border-ras-crimson/30 bg-[var(--color-surface)] p-4 shadow-sm sm:p-5 dark:border-[#ff9b9b]/30">
+        <h2 className="font-display text-base font-extrabold text-ras-crimson dark:text-[#ff9b9b]">
+          This is an example, not a specification
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-ras-gray dark:text-white/75">
+          The rulebook is the only thing you have to follow. Everything on this page is one way of
+          building a mouse that satisfies it, and it is a sensible first build rather than the
+          fastest or the only one. Use different motors, a different number of sensors, a different
+          microcontroller or a different algorithm, and you are still competing exactly as
+          intended. Where this page and the{" "}
+          <Link href="/rules" className="font-semibold text-accent hover:underline">
+            rulebook
+          </Link>{" "}
+          disagree, the rulebook wins.
+        </p>
+      </aside>
+
       <div className="prose prose-headings:font-display prose-headings:text-ras-purple dark:prose-invert dark:prose-headings:text-white mt-10 max-w-none">
         <Guide />
       </div>
