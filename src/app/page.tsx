@@ -117,6 +117,7 @@ export default async function HomePage() {
           startsAt={openDayWindow.startsAt.toISOString()}
           endsAt={openDayWindow.endsAt.toISOString()}
           location={openDay.location}
+          mapUrl={openDay.mapUrl}
           initialPhase={openDayState}
           locked={openDayShut}
         />

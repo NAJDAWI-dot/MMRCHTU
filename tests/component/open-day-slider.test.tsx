@@ -46,6 +46,7 @@ const show = (props: Partial<Parameters<typeof OpenDaySlider>[0]> = {}) =>
       startsAt={new Date(Date.now() + 48 * HOUR).toISOString()}
       endsAt={new Date(Date.now() + 54 * HOUR).toISOString()}
       location=""
+      mapUrl=""
       initialPhase="before"
       locked={false}
       {...props}
@@ -140,6 +141,23 @@ describe("the open day slider", () => {
 
     expect(screen.getByText(/happening now/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /HTU Main Hall/ })).toBeInTheDocument();
+  });
+
+  it("offers the map as a link rather than as a line of URL", () => {
+    show({ location: "HTU Main Hall", mapUrl: "https://maps.example/xyz" });
+    const map = screen.getByRole("link", { name: /find it on the map/i });
+    expect(map).toHaveAttribute("href", "https://maps.example/xyz");
+    // A new tab, and never handing the opener to whatever is at the other end.
+    expect(map).toHaveAttribute("rel", expect.stringContaining("noopener"));
+    // The URL itself never appears as text.
+    expect(screen.queryByText(/maps\.example/)).toBeNull();
+  });
+
+  it("keeps the map link even while the page is shut", () => {
+    // It points at a map, not at the page nobody can open yet.
+    show({ mapUrl: "https://maps.example/xyz", locked: true });
+    expect(screen.getByRole("link", { name: /find it on the map/i })).toBeInTheDocument();
+    expect(screen.queryAllByRole("link", { hidden: true }).filter((a) => (a.getAttribute("href") ?? "").startsWith("/"))).toHaveLength(0);
   });
 
   it("carries no buttons while the page it points at is shut", () => {

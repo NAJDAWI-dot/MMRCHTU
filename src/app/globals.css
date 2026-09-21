@@ -1339,31 +1339,6 @@ header:has([data-mobile-nav-open]) {
 }
 
 /*
-  The homepage's open day band is dark purple in both themes, so the clock
-  riding on it has to use the light-on-dark ramp even while the rest of the
-  site is in its light theme.
-
-  Two selectors again, and for the same reason the pair above needs two: the
-  dark-theme rule is a two-class selector, so a two-class selector here would
-  only outrank it by source order in one of the two themes. The transparent
-  fill is set in its own @supports block rather than here, because a `color`
-  declared at this specificity outside one would paint over the gradient in
-  every browser that can clip a background to text.
-*/
-.open-day-band .countdown-digit,
-.dark .open-day-band .countdown-digit {
-  color: #f0b4ff;
-  background-image: linear-gradient(115deg, #cf95e8 0%, #ff6f9c 52%, #ffb45f 100%);
-}
-
-@supports (background-clip: text) or (-webkit-background-clip: text) {
-  .open-day-band .countdown-digit,
-  .dark .open-day-band .countdown-digit {
-    color: transparent;
-  }
-}
-
-/*
   The slider's progress hairline. Driven by an animation rather than by a
   timer writing a width sixty times a second: the browser runs it off the main
   thread, and removing the class is all it takes to stop it dead when the

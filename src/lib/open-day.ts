@@ -604,3 +604,36 @@ export function openDayLocked(
 ): boolean {
   return config.lockUntilOpen && phase === "before";
 }
+
+/* ------------------------------------------------------------- the map link */
+
+/** Long enough for a shortened maps link with room to spare, and no more. */
+export const MAP_URL_MAX = 500;
+
+/**
+ * An admin's map link, or nothing.
+ *
+ * This value ends up in an href on a public page, so it is checked rather
+ * than trusted: only http and https survive, which is what keeps a
+ * `javascript:` URL out of a link the whole site can click. An admin is not
+ * the threat here, a stolen admin session is.
+ *
+ * A bare host is allowed through with https put in front of it, because
+ * "maps.app.goo.gl/xyz" is what you get copying from a phone, and silently
+ * dropping it would look like the field is broken.
+ */
+export function parseMapUrl(value: string | null | undefined): string {
+  let raw = String(value ?? "").trim();
+  if (!raw || raw.length > MAP_URL_MAX) return "";
+
+  if (!raw.includes("://") && /^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(raw)) {
+    raw = `https://${raw}`;
+  }
+
+  try {
+    const url = new URL(raw);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : "";
+  } catch {
+    return "";
+  }
+}

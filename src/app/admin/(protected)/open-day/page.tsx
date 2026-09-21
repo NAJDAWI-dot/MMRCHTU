@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getOpenDayConfig } from "@/lib/site-config";
 import {
+  MAP_URL_MAX,
   openDayDateLabel,
   openDayLocked,
   openDayPhase,
@@ -72,6 +73,16 @@ export default async function AdminOpenDayPage() {
           {openDayDateLabel(day)}
           {config.location ? ` · ${config.location}` : ""}
         </p>
+        {config.mapUrl ? (
+          <a
+            href={config.mapUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 inline-block text-xs font-semibold text-accent hover:underline"
+          >
+            Check the map link
+          </a>
+        ) : null}
         {usingDefaults ? (
           <p className={hintClass}>
             These are the dates written into the code, because nothing has been saved here yet.
@@ -132,7 +143,28 @@ export default async function AdminOpenDayPage() {
             />
             <p className={hintClass}>
               Shown under the clock on the open day page and on the homepage slider. Leave it
-              empty and neither mentions a place.
+              empty and neither mentions a place. Keep it to the place itself; the map link goes
+              below.
+            </p>
+          </div>
+
+          <div className="mt-4">
+            <label className={labelClass} htmlFor="mapUrl">
+              Map link (optional)
+            </label>
+            <input
+              id="mapUrl"
+              name="mapUrl"
+              type="url"
+              inputMode="url"
+              placeholder="https://maps.app.goo.gl/..."
+              defaultValue={config.mapUrl}
+              className={inputClass}
+              maxLength={MAP_URL_MAX}
+            />
+            <p className={hintClass}>
+              Becomes a “Find it on the map” link beside the location. Paste the whole link; a
+              link that is not http or https is dropped rather than shown.
             </p>
           </div>
         </Card>

@@ -39,11 +39,20 @@ export function OpenDayCountdown({
   startsAt,
   endsAt,
   location = "",
+  mapUrl = "",
 }: {
   startsAt: string;
   endsAt: string;
   /** Where the stand is, as an admin typed it. Empty means say nothing. */
   location?: string;
+  /**
+   * A map for that place, as its own link.
+   *
+   * Kept out of the location text on purpose: pasted in there it printed as a
+   * line of raw URL in the middle of a sentence, and it was not clickable.
+   * Already checked to be http or https by the time it arrives here.
+   */
+  mapUrl?: string;
 }) {
   // ISO strings across the boundary rather than Dates, so the identity of this
   // object is stable across renders and the effect below is not re-armed on
@@ -142,6 +151,20 @@ export function OpenDayCountdown({
             ? "Everything below is still here, and registration is still open."
             : dateLabel}
       </p>
+
+      {mapUrl ? (
+        <p>
+          <a
+            href={mapUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="-mx-2 mt-1 inline-flex min-h-[44px] items-center gap-1 rounded-md px-2 text-sm font-semibold text-accent hover:underline"
+          >
+            Find it on the map
+            <span aria-hidden="true">↗</span>
+          </a>
+        </p>
+      ) : null}
     </div>
   );
 }

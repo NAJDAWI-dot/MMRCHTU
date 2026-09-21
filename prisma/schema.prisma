@@ -457,6 +457,12 @@ model OpenDayConfig {
   // children, never as markup, so an admin cannot inject anything.
   location String @default("")
 
+  // A map link for that place, kept out of the text above it. Pasted into the
+  // location, a maps URL printed as forty characters of raw link in the middle
+  // of a sentence on the homepage. Validated to http or https before it is
+  // stored, so what ends up in an href cannot be a javascript: URL.
+  mapUrl String @default("")
+
   // Whether the slider rides at the top of the homepage. It takes itself down
   // once the day is over whatever this says, since a homepage advertising
   // yesterday is worse than one saying nothing.

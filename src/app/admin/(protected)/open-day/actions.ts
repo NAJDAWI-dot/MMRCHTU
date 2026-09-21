@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { fromAmmanDateTimeLocal } from "@/lib/open-day";
+import { fromAmmanDateTimeLocal, parseMapUrl } from "@/lib/open-day";
 
 /**
  * Saving the open day.
@@ -24,6 +24,9 @@ export async function updateOpenDay(formData: FormData) {
     // Trimmed and capped: this goes on the homepage of the site, and a venue
     // is a line, not an essay.
     location: String(formData.get("location") ?? "").trim().slice(0, 120),
+    // Anything that is not an http or https link is stored as nothing rather
+    // than kept and rendered: see parseMapUrl.
+    mapUrl: parseMapUrl(String(formData.get("mapUrl") ?? "")),
   };
 
   await prisma.openDayConfig.upsert({
