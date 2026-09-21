@@ -150,11 +150,18 @@ export function goalCells(maze: Maze): Cell[] {
 /** Where a mouse starts: the corner the generator carves from. */
 export const startCell = (maze: Maze): Cell => ({ x: 0, y: maze.size - 1 });
 
-const isGoal = (maze: Maze, c: Cell) =>
+/** Exported for the build guide, which floods the same grid from the centre. */
+export const isGoal = (maze: Maze, c: Cell) =>
   goalCells(maze).some((g) => g.x === c.x && g.y === c.y);
 
-/** Neighbours reachable from a cell — i.e. not behind a wall, not off-grid. */
-function openNeighbours(maze: Maze, c: Cell): Cell[] {
+/**
+ * Neighbours reachable from a cell — i.e. not behind a wall, not off-grid.
+ *
+ * Exported for the same reason as `isGoal`: the build guide walks this grid
+ * too, and a second copy of "which slot is which wall" is exactly the bug that
+ * produces a route passing through a wall.
+ */
+export function openNeighbours(maze: Maze, c: Cell): Cell[] {
   const walls = maze.cells[key(maze, c)]!;
   const out: Cell[] = [];
   for (const d of DIRS) {

@@ -14,6 +14,7 @@ const LINKS = [
   { href: "/open-day", label: "Open Day" },
   { href: "/game", label: "Pac Mouse" },
   { href: "/rules", label: "Rules" },
+  { href: "/micromouse", label: "Micro Mouse" },
   { href: "/schedule", label: "Schedule" },
   { href: "/competition-day", label: "Competition Day" },
   { href: "/gallery", label: "Gallery" },

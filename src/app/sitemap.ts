@@ -42,6 +42,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absoluteUrl("/rules"), lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: absoluteUrl("/rules/book"), lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: absoluteUrl("/rules/checklist"), lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: absoluteUrl("/micromouse"), lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: absoluteUrl("/schedule"), lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: absoluteUrl("/register"), lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: absoluteUrl("/faq"), lastModified: now, changeFrequency: "monthly", priority: 0.7 },
