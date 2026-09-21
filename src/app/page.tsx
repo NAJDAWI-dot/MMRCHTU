@@ -2,12 +2,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { CountdownPanel } from "@/components/brand/CountdownPanel";
 import { FeatureCard } from "@/components/home/FeatureCard";
+import { OpenDaySlider } from "@/components/home/OpenDaySlider";
 import { EarlyBirdBadge } from "@/components/promo/EarlyBirdBadge";
 import { parseStatus } from "@/lib/competition-day";
 
 import { shouldShowCountdown } from "@/lib/countdown";
 import { hiddenPageHrefs } from "@/lib/page-visibility";
-import { getCompetitionDayConfig } from "@/lib/site-config";
+import { openDayPhase, resolveOpenDayWindow } from "@/lib/open-day";
+import { getCompetitionDayConfig, getOpenDayConfig } from "@/lib/site-config";
 import { getEarlyBirdState } from "@/lib/early-bird-server";
 
 // The countdown reads a live config row, so this page cannot be baked at
@@ -66,10 +68,11 @@ const FEATURE_CARDS = [
 ] as const;
 
 export default async function HomePage() {
-  const [config, hidden, earlyBird] = await Promise.all([
+  const [config, hidden, earlyBird, openDay] = await Promise.all([
     getCompetitionDayConfig(),
     hiddenPageHrefs(),
     getEarlyBirdState(),
+    getOpenDayConfig(),
   ]);
 
   /*
@@ -89,69 +92,95 @@ export default async function HomePage() {
   const showCountdown = shouldShowCountdown(config.eventDate);
   const cards = FEATURE_CARDS.filter((card) => !hidden.has(card.href));
 
+  /*
+    The band at the top, and the four things that have to be true for it.
+
+    Three are an admin's decisions: the clock is on, it is wanted here, and the
+    open day page has not been switched off on the Pages tab — a band leading
+    to a page nobody can open is worse than no band. The fourth is the calendar.
+    Decided here rather than inside the component so that a finished open day
+    costs the homepage nothing at all, not even the JavaScript to work out that
+    it has nothing to say.
+  */
+  const openDayWindow = resolveOpenDayWindow(openDay);
+  const openDayState = openDayPhase(openDayWindow);
+  const showOpenDay =
+    openDay.enabled && openDay.showOnHome && !hidden.has("/open-day") && openDayState !== "after";
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-16">
-
-      <section className="text-center">
-        <p className="font-mono text-sm uppercase tracking-widest text-accent">
-          IEEE RAS HTU Student Chapter presents
-        </p>
-        <h1 className="mt-3 font-display text-5xl font-extrabold text-ras-purple dark:text-white">
-          MMRC 26
-        </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-lg text-ras-gray dark:text-white/70">
-          The 2026 Micro Mouse Robot Competition. Build a maze-solving robot, race the clock,
-          and play our maze game, Pac Mouse, while you wait for results.
-        </p>
-        {/* The two calls to action go with their pages. Registration closing is
-            a different thing entirely — that leaves the page up and explains
-            itself, so it is not checked here. */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-          {!hidden.has("/register") ? (
-            // The wrapper is what the badge hangs from. It cannot go on the
-            // Button itself: that renders as its child here, so the class would
-            // land on the <Link> and the pill would be positioned against the
-            // text rather than the button around it.
-            <span className="relative inline-block">
-              <Button asChild size="lg">
-                <Link href="/register">Register your team</Link>
-              </Button>
-              {earlyBird.active ? <EarlyBirdBadge /> : null}
-            </span>
-          ) : null}
-          {!hidden.has("/game") ? (
-            <Button variant="ghost" asChild size="lg">
-              <Link href="/game">Play Pac Mouse</Link>
-            </Button>
-          ) : null}
-        </div>
-
-        {showCountdown && config.eventDate ? (
-          <div className="mt-14">
-            <CountdownPanel
-              target={config.eventDate}
-              meta={[config.dateText, config.venue].filter(Boolean).join(" · ")}
-              detailsHref={dayPageVisible ? "/competition-day" : null}
-              earlyBird={earlyBird}
-            />
-          </div>
-        ) : null}
-      </section>
-
-      {/*
-        Nothing at all rather than an empty row, on the off chance an admin
-        hides every one of them.
-
-        Two up on a tablet, four across on a wide screen: three columns with
-        four cards left the last one stranded on a row of its own.
-      */}
-      {cards.length > 0 ? (
-        <section className="stagger mt-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {cards.map((card, i) => (
-            <FeatureCard key={card.href} card={card} accent={card.accent} seed={i + 1} />
-          ))}
-        </section>
+    <>
+      {showOpenDay ? (
+        <OpenDaySlider
+          startsAt={openDayWindow.startsAt.toISOString()}
+          endsAt={openDayWindow.endsAt.toISOString()}
+          location={openDay.location}
+          initialPhase={openDayState}
+        />
       ) : null}
-    </div>
+
+      <div className="mx-auto max-w-6xl px-4 py-16">
+
+        <section className="text-center">
+          <p className="font-mono text-sm uppercase tracking-widest text-accent">
+            IEEE RAS HTU Student Chapter presents
+          </p>
+          <h1 className="mt-3 font-display text-5xl font-extrabold text-ras-purple dark:text-white">
+            MMRC 26
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-ras-gray dark:text-white/70">
+            The 2026 Micro Mouse Robot Competition. Build a maze-solving robot, race the clock,
+            and play our maze game, Pac Mouse, while you wait for results.
+          </p>
+          {/* The two calls to action go with their pages. Registration closing is
+              a different thing entirely — that leaves the page up and explains
+              itself, so it is not checked here. */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            {!hidden.has("/register") ? (
+              // The wrapper is what the badge hangs from. It cannot go on the
+              // Button itself: that renders as its child here, so the class would
+              // land on the <Link> and the pill would be positioned against the
+              // text rather than the button around it.
+              <span className="relative inline-block">
+                <Button asChild size="lg">
+                  <Link href="/register">Register your team</Link>
+                </Button>
+                {earlyBird.active ? <EarlyBirdBadge /> : null}
+              </span>
+            ) : null}
+            {!hidden.has("/game") ? (
+              <Button variant="ghost" asChild size="lg">
+                <Link href="/game">Play Pac Mouse</Link>
+              </Button>
+            ) : null}
+          </div>
+
+          {showCountdown && config.eventDate ? (
+            <div className="mt-14">
+              <CountdownPanel
+                target={config.eventDate}
+                meta={[config.dateText, config.venue].filter(Boolean).join(" · ")}
+                detailsHref={dayPageVisible ? "/competition-day" : null}
+                earlyBird={earlyBird}
+              />
+            </div>
+          ) : null}
+        </section>
+
+        {/*
+          Nothing at all rather than an empty row, on the off chance an admin
+          hides every one of them.
+
+          Two up on a tablet, four across on a wide screen: three columns with
+          four cards left the last one stranded on a row of its own.
+        */}
+        {cards.length > 0 ? (
+          <section className="stagger mt-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {cards.map((card, i) => (
+              <FeatureCard key={card.href} card={card} accent={card.accent} seed={i + 1} />
+            ))}
+          </section>
+        ) : null}
+      </div>
+    </>
   );
 }

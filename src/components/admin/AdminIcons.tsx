@@ -17,6 +17,7 @@ export type AdminIconName =
   | "analytics"
   | "schedule"
   | "competition"
+  | "openDay"
   | "faq"
   | "gallery"
   | "pages"
@@ -66,6 +67,14 @@ const PATHS: Record<AdminIconName, ReactNode> = {
     <>
       <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
       <path d="M8 2.5v4M16 2.5v4M3.5 10h17" />
+    </>
+  ),
+  openDay: (
+    <>
+      {/* A stand with its awning up. */}
+      <path d="M3 9.5 5.2 4h13.6L21 9.5" />
+      <path d="M4.8 9.5V20h14.4V9.5" />
+      <path d="M9.6 20v-5.2h4.8V20" />
     </>
   ),
   competition: (

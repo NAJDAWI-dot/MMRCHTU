@@ -396,3 +396,170 @@ export function openDayDateLabel(day: OpenDayWindow): string {
     ? `${startDay}, ${from} to ${to}`
     : `${startDay} ${from} to ${endDay} ${to}`;
 }
+
+/* --------------------------------------------------------- the admin's copy */
+
+/** The shape the page needs from the config row, and nothing more. */
+export interface OpenDayDates {
+  startsAt: Date | null;
+  endsAt: Date | null;
+}
+
+/**
+ * The window to count against, preferring what an admin has saved.
+ *
+ * Three sources, in order: the row an admin edits, the environment, and the
+ * constants above. A row with one field filled and not the other still works,
+ * which matters because an admin who has just moved the date has not yet
+ * moved the closing time.
+ */
+export function resolveOpenDayWindow(
+  dates: OpenDayDates,
+  env: Record<string, string | undefined> = process.env,
+): OpenDayWindow {
+  const fallback = openDayWindow(env);
+  const startsAt = dates.startsAt ?? fallback.startsAt;
+  const endsAt = dates.endsAt ?? fallback.endsAt;
+
+  if (endsAt.getTime() <= startsAt.getTime()) {
+    return { startsAt, endsAt: new Date(startsAt.getTime() + OPEN_DAY_FALLBACK_LENGTH_MS) };
+  }
+
+  return { startsAt, endsAt };
+}
+
+const AMMAN_PARTS = new Intl.DateTimeFormat("en-GB", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+  timeZone: OPEN_DAY_TIME_ZONE,
+});
+
+/**
+ * A date as a `datetime-local` input wants it, read in Amman.
+ *
+ * Not in the server's own zone, which is the trap the competition day form
+ * fell into: that form is rendered on the server, so "local" there means
+ * whatever Vercel is running in, which is UTC. An admin in Amman opens the
+ * form and finds the time they saved has moved back three hours, and saving
+ * again moves it three more.
+ */
+export function toAmmanDateTimeLocal(date: Date | null | undefined): string {
+  if (!date || Number.isNaN(date.getTime())) return "";
+
+  const parts = Object.fromEntries(
+    AMMAN_PARTS.formatToParts(date).map((part) => [part.type, part.value]),
+  );
+
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
+const DATE_TIME_LOCAL = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
+/**
+ * The same conversion back, reading what an admin typed as Amman time.
+ *
+ * The offset is appended rather than inferred, for the same reason it is
+ * written into the constants at the top of this file: Jordan holds +03:00 the
+ * year round, and a string without one is read as the server's zone.
+ *
+ * Anything that is not exactly what the input produces is null. A half-typed
+ * date should leave the clock where it was, not move the open day to the year
+ * 202.
+ */
+export function fromAmmanDateTimeLocal(value: string | null | undefined): Date | null {
+  const raw = String(value ?? "").trim();
+  if (!DATE_TIME_LOCAL.test(raw)) return null;
+
+  const date = new Date(`${raw}:00+03:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/* ------------------------------------------------------------- the slider */
+
+export type OpenDaySlideKind = "clock" | "crest" | "play";
+
+export interface OpenDaySlide {
+  kind: OpenDaySlideKind;
+  eyebrow: string;
+  title: string;
+  body: string;
+  href: string;
+  cta: string;
+}
+
+/** How long each slide holds before the next one comes round. */
+export const SLIDE_INTERVAL_MS = 6_500;
+
+/**
+ * What the homepage slider says, given where the day is.
+ *
+ * Three slides and no more. This sits above the hero on the site's front page,
+ * where it is competing with the competition itself for attention, and a
+ * carousel long enough that nobody sees the end of it is just a way of hiding
+ * things. The clock leads, because the date is the fact with a deadline on it.
+ */
+export function openDaySlides({
+  phase,
+  location,
+}: {
+  phase: OpenDayPhase;
+  location: string;
+}): OpenDaySlide[] {
+  const where = location.trim();
+
+  return [
+    {
+      kind: "clock",
+      eyebrow: phase === "during" ? "Happening now" : "Open day",
+      // The place belongs in the heading while the stand is open, since by
+      // then the only question left is where to walk. Before the day it is a
+      // detail under a date, which is what the body line is for.
+      title:
+        phase === "during"
+          ? where
+            ? `Find us at ${where}`
+            : "Find us at the stand"
+          : "IEEE RAS HTU at the open day",
+      body:
+        phase === "during"
+          ? "Four things to do at the stand, and none of them takes longer than a minute."
+          : where
+            ? `Come and find us at ${where}. Four things to do, none of them longer than a minute.`
+            : "Come and find the stand. Four things to do, none of them longer than a minute.",
+      href: "/open-day",
+      cta: phase === "during" ? "What is on" : "See what is on",
+    },
+    {
+      kind: "crest",
+      eyebrow: "At the stand",
+      title: "Get your team crest",
+      body: "Type a team name and take away the maze that belongs to it. Yours to keep, whether or not you enter.",
+      href: "/open-day#crest",
+      cta: "Make one",
+    },
+    {
+      kind: "play",
+      eyebrow: "At the stand",
+      title: "Play Pac Mouse",
+      body: "A leaderboard for the day only, so you are playing the people standing next to you.",
+      href: "/open-day#play",
+      cta: "See the board",
+    },
+  ];
+}
+
+/**
+ * The slide after this one, wrapping in both directions.
+ *
+ * A carousel that stops at the end is a carousel somebody leaves on slide
+ * three, and the modulo has to handle a negative step because the dots and the
+ * keyboard can both walk backwards off the front.
+ */
+export function nextSlideIndex(current: number, total: number, step = 1): number {
+  if (total <= 0) return 0;
+  return (((current + step) % total) + total) % total;
+}

@@ -16,12 +16,17 @@ import {
   escapeXml,
   explainerFrameAt,
   explainerShowsSpeedRun,
+  fromAmmanDateTimeLocal,
   nextOpenDayBoundary,
+  nextSlideIndex,
   openDayClock,
   openDayDateLabel,
   openDayPhase,
+  openDaySlides,
   openDayWindow,
   parseMoment,
+  resolveOpenDayWindow,
+  toAmmanDateTimeLocal,
   teachingMaze,
   teachingRatio,
   teamCountLabel,
@@ -315,5 +320,105 @@ describe("what the open day page is counting to", () => {
       OPEN_DAY_ENDS_AT: "2026-10-01T02:00:00+03:00",
     });
     expect(openDayDateLabel(spread)).toBe("Wednesday 30 September 22:00 to Thursday 1 October 02:00");
+  });
+});
+
+describe("the dates an admin saves", () => {
+  const saved = {
+    startsAt: new Date("2026-11-12T09:30:00+03:00"),
+    endsAt: new Date("2026-11-12T15:00:00+03:00"),
+  };
+
+  it("prefers the saved dates over the ones in the code", () => {
+    const day = resolveOpenDayWindow(saved, {});
+    expect(day.startsAt).toEqual(saved.startsAt);
+    expect(day.endsAt).toEqual(saved.endsAt);
+  });
+
+  it("falls back field by field, so half-finished edits still count down", () => {
+    const fallback = openDayWindow({});
+    const day = resolveOpenDayWindow({ startsAt: saved.startsAt, endsAt: null }, {});
+    expect(day.startsAt).toEqual(saved.startsAt);
+    // The saved start is months past the fallback end, which would read as a
+    // day that finished before it began, so the stand gets a working day.
+    expect(day.endsAt.getTime() - day.startsAt.getTime()).toBe(6 * 60 * 60 * 1000);
+    expect(fallback.startsAt.getTime()).toBeLessThan(saved.startsAt.getTime());
+  });
+
+  it("uses the code's dates when nothing has been saved at all", () => {
+    expect(resolveOpenDayWindow({ startsAt: null, endsAt: null }, {})).toEqual(openDayWindow({}));
+  });
+
+  it("shows an admin their own timezone, not the server's", () => {
+    // The trap: this runs on the server, where "local" is UTC on Vercel. An
+    // admin in Amman who saved 10:00 must be shown 10:00 when they come back.
+    expect(toAmmanDateTimeLocal(new Date("2026-09-30T10:00:00+03:00"))).toBe("2026-09-30T10:00");
+    expect(toAmmanDateTimeLocal(new Date("2026-09-30T23:30:00+03:00"))).toBe("2026-09-30T23:30");
+    expect(toAmmanDateTimeLocal(null)).toBe("");
+  });
+
+  it("reads what an admin typed as Amman time", () => {
+    expect(fromAmmanDateTimeLocal("2026-09-30T10:00")?.toISOString()).toBe(
+      "2026-09-30T07:00:00.000Z",
+    );
+  });
+
+  it("goes out and back without moving", () => {
+    const typed = "2026-11-12T09:30";
+    expect(toAmmanDateTimeLocal(fromAmmanDateTimeLocal(typed))).toBe(typed);
+  });
+
+  it("refuses anything that is not a whole date and time", () => {
+    for (const bad of ["", "   ", "2026-09-30", "30/09/2026 10:00", "2026-09-30T10", "tomorrow"]) {
+      expect(fromAmmanDateTimeLocal(bad)).toBeNull();
+    }
+    expect(fromAmmanDateTimeLocal(null)).toBeNull();
+  });
+});
+
+describe("the homepage slider", () => {
+  it("leads with the clock and offers three things", () => {
+    const slides = openDaySlides({ phase: "before", location: "" });
+    expect(slides.map((s) => s.kind)).toEqual(["clock", "crest", "play"]);
+    expect(slides.every((s) => s.href.startsWith("/open-day"))).toBe(true);
+    expect(slides.every((s) => s.cta.length > 0 && s.title.length > 0)).toBe(true);
+  });
+
+  it("changes what it says once the stand is open", () => {
+    const before = openDaySlides({ phase: "before", location: "" })[0]!;
+    const during = openDaySlides({ phase: "during", location: "" })[0]!;
+    expect(before.eyebrow).toBe("Open day");
+    expect(during.eyebrow).toBe("Happening now");
+    expect(during.title).not.toBe(before.title);
+  });
+
+  it("names the place when there is one, and says nothing about it when there is not", () => {
+    // On the day the place is the heading, since where to walk is the only
+    // question left. Before it, it is a detail under a date.
+    const open = openDaySlides({ phase: "during", location: "HTU Main Hall" })[0]!;
+    expect(open.title).toContain("HTU Main Hall");
+    const soon = openDaySlides({ phase: "before", location: "HTU Main Hall" })[0]!;
+    expect(soon.body).toContain("HTU Main Hall");
+
+    // And it is never said twice in the same slide.
+    for (const slide of [open, soon]) {
+      expect(`${slide.title} ${slide.body}`.match(/HTU Main Hall/g)).toHaveLength(1);
+    }
+
+    const without = openDaySlides({ phase: "during", location: "   " })[0]!;
+    expect(without.title).toBe("Find us at the stand");
+    expect(without.body).not.toContain("undefined");
+  });
+
+  it("wraps in both directions", () => {
+    expect(nextSlideIndex(0, 3)).toBe(1);
+    expect(nextSlideIndex(2, 3)).toBe(0);
+    expect(nextSlideIndex(0, 3, -1)).toBe(2);
+    expect(nextSlideIndex(1, 3, -1)).toBe(0);
+  });
+
+  it("does not divide by an empty carousel", () => {
+    expect(nextSlideIndex(0, 0)).toBe(0);
+    expect(nextSlideIndex(3, 0, -1)).toBe(0);
   });
 });

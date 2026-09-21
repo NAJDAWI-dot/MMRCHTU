@@ -433,6 +433,38 @@ model CompetitionDayConfig {
   updatedAt DateTime @updatedAt
 }
 
+// The open day stand: when it runs, where it is, and where its clock appears.
+//
+// Its own row rather than fields on CompetitionDayConfig, which describes the
+// competition itself. They are two different events months apart, with two
+// different pages and two different clocks, and folding them together would
+// mean an admin editing the competition to move a stand.
+model OpenDayConfig {
+  id String @id @default("singleton")
+
+  // The master switch for the clock. Off takes it off the open day page and
+  // takes the slider off the homepage; the open day page itself stays up,
+  // which is the Pages tab's job rather than this one's.
+  enabled Boolean @default(true)
+
+  // Both optional, the same arrangement as CompetitionDayConfig.eventDate: no
+  // date set simply means the page falls back to the dates in the code rather
+  // than counting down to nothing.
+  startsAt DateTime?
+  endsAt   DateTime?
+
+  // Where the stand is, shown under the clock. Plain text rendered as React
+  // children, never as markup, so an admin cannot inject anything.
+  location String @default("")
+
+  // Whether the slider rides at the top of the homepage. It takes itself down
+  // once the day is over whatever this says, since a homepage advertising
+  // yesterday is worse than one saying nothing.
+  showOnHome Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+}
+
 // A set of photos from one event — "MMRC 26 Finals", "Build Workshop". Albums
 // rather than one flat stream so each year's competition stays its own recap
 // instead of silting up a single endless feed.

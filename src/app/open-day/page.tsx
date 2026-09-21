@@ -7,9 +7,10 @@ import { CrestStudio } from "@/components/open-day/CrestStudio";
 import { OpenDayCountdown } from "@/components/open-day/OpenDayCountdown";
 import { TeamWall, type WallTeam } from "@/components/open-day/TeamWall";
 import { OPEN_DAY_EVENT } from "@/lib/leaderboard";
-import { WALL_LIMIT, openDayWindow } from "@/lib/open-day";
+import { WALL_LIMIT, resolveOpenDayWindow } from "@/lib/open-day";
 import { normaliseReferralCode } from "@/lib/referral";
 import { prisma } from "@/lib/prisma";
+import { getOpenDayConfig } from "@/lib/site-config";
 
 /**
  * The page behind the QR code on the stand.
@@ -45,7 +46,8 @@ export default async function OpenDayPage({
   // ambassador's code still counts for them after a detour through the crest.
   const referral = normaliseReferralCode(searchParams.ref ?? "").slice(0, 20);
 
-  const [rows, total] = await Promise.all([
+  const [openDay, rows, total] = await Promise.all([
+    getOpenDayConfig(),
     prisma.registration.findMany({
       // A cancelled entry is not a team that is coming, and its name on the
       // wall would be a promise the day cannot keep.
@@ -62,10 +64,11 @@ export default async function OpenDayPage({
 
   const registerHref = referral ? `/register?ref=${encodeURIComponent(referral)}` : "/register";
 
-  // Read per request rather than at module load, which is what lets the date be
-  // moved by an environment variable without a rebuild. The page is already
-  // force-dynamic for the wall and the board, so this costs nothing.
-  const day = openDayWindow();
+  // The admin's dates where there are any, the ones in the code otherwise. Read
+  // per request, which is what lets a date saved in the admin show up here
+  // without a rebuild; the page is already force-dynamic for the wall and the
+  // board, so it costs nothing.
+  const day = resolveOpenDayWindow(openDay);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
@@ -88,9 +91,18 @@ export default async function OpenDayPage({
           would turn two deadlines into noise: one is a robot competition
           months away, this one is a stand in a hall for an afternoon.
         */}
-        <OpenDayCountdown startsAt={day.startsAt.toISOString()} endsAt={day.endsAt.toISOString()} />
+        {openDay.enabled ? (
+          <OpenDayCountdown
+            startsAt={day.startsAt.toISOString()}
+            endsAt={day.endsAt.toISOString()}
+            location={openDay.location}
+          />
+        ) : null}
 
-        <nav aria-label="On this page" className="mt-8 flex flex-wrap gap-2">
+        <nav
+          aria-label="On this page"
+          className={`flex flex-wrap gap-2 ${openDay.enabled ? "mt-8" : "mt-5"}`}
+        >
           {[
             { href: "#what", label: "What is this" },
             { href: "#crest", label: "Get your crest" },

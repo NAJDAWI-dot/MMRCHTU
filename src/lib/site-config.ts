@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import type { CompetitionDayConfig, PaymentConfig, RegisterFormConfig } from "@prisma/client";
+import type {
+  CompetitionDayConfig,
+  OpenDayConfig,
+  PaymentConfig,
+  RegisterFormConfig,
+} from "@prisma/client";
 
 /**
  * Read access to the admin-editable singleton config rows.
@@ -31,6 +36,19 @@ const COMPETITION_DAY_FALLBACK: CompetitionDayConfig = {
   venue: "",
   details: "",
   eventDate: null,
+  updatedAt: NEVER_SAVED,
+};
+
+const OPEN_DAY_FALLBACK: OpenDayConfig = {
+  id: SINGLETON_ID,
+  // On, with no dates of its own: until an admin opens the tab, the open day
+  // page counts to the dates written into src/lib/open-day.ts, which is what
+  // it did before this row existed.
+  enabled: true,
+  startsAt: null,
+  endsAt: null,
+  location: "",
+  showOnHome: true,
   updatedAt: NEVER_SAVED,
 };
 
@@ -72,6 +90,11 @@ export async function getCompetitionDayConfig(): Promise<CompetitionDayConfig> {
 export async function getRegisterFormConfig(): Promise<RegisterFormConfig> {
   const row = await prisma.registerFormConfig.findUnique({ where: { id: SINGLETON_ID } });
   return row ?? REGISTER_FORM_FALLBACK;
+}
+
+export async function getOpenDayConfig(): Promise<OpenDayConfig> {
+  const row = await prisma.openDayConfig.findUnique({ where: { id: SINGLETON_ID } });
+  return row ?? OPEN_DAY_FALLBACK;
 }
 
 export async function getPaymentConfig(): Promise<PaymentConfig> {

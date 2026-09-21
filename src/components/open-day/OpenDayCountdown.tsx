@@ -35,7 +35,16 @@ import {
 // matters, and each load arms the clock again.
 const MAX_TIMEOUT_MS = 2 ** 31 - 1;
 
-export function OpenDayCountdown({ startsAt, endsAt }: { startsAt: string; endsAt: string }) {
+export function OpenDayCountdown({
+  startsAt,
+  endsAt,
+  location = "",
+}: {
+  startsAt: string;
+  endsAt: string;
+  /** Where the stand is, as an admin typed it. Empty means say nothing. */
+  location?: string;
+}) {
   // ISO strings across the boundary rather than Dates, so the identity of this
   // object is stable across renders and the effect below is not re-armed on
   // every one of them.
@@ -70,8 +79,10 @@ export function OpenDayCountdown({ startsAt, endsAt }: { startsAt: string; endsA
     return () => window.clearTimeout(timer);
   }, [day]);
 
-  const dateLabel = openDayDateLabel(day);
+  const where = location.trim();
+  const dateLabel = where ? `${openDayDateLabel(day)} · ${where}` : openDayDateLabel(day);
   const closing = openDayClock(day.endsAt);
+  const here = where ? `We are at ${where} until ${closing}.` : `We are at the stand until ${closing}.`;
 
   return (
     /* `isolate` keeps the glows behind the digits: it makes this the stacking
@@ -126,7 +137,7 @@ export function OpenDayCountdown({ startsAt, endsAt }: { startsAt: string; endsA
           JavaScript has not arrived yet still learns when to turn up. */}
       <p className="mt-4 text-sm text-ras-gray dark:text-white/70">
         {phase === "during"
-          ? `We are at the stand until ${closing}. Come and say hello.`
+          ? `${here} Come and say hello.`
           : phase === "after"
             ? "Everything below is still here, and registration is still open."
             : dateLabel}
