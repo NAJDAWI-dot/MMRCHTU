@@ -60,7 +60,7 @@ five times as far. That ratio is why search runs and speed runs are two differen
 and walk, and you will trace the outside of the maze until your eight minutes are gone. This is
 not a corner case. It is the single most common way a first-year team scores zero.
 
-<FloodFill />
+<MazeLab />
 
 **Do not trust absolute colours.** The maze is painted plywood, and paint fades. A threshold you
 tuned in your lab under one lamp will not mean the same thing in a hall with sunlight through a
@@ -71,6 +71,12 @@ drive.
 the day.
 
 ## Sizing the chassis
+
+Here is the machine this guide describes, at its real size. Drag it round, take it apart, and
+press **Show the corridor** to stand it between two walls the exact distance apart that the
+rulebook leaves you. Click any part to read what it is and what to look for when you buy one.
+
+<RobotViewer />
 
 The rulebook's size limit is 25cm on each side. That is the legality check, and it is not the
 constraint that matters. A cell is 18cm, a wall eats 12mm of it, and the tolerance can take
@@ -123,6 +129,11 @@ corridor or drifting towards a wall.
 **The usual arrangement is five sensors.** One facing each side to see the side walls, one facing
 forward for the wall ahead, and two angled forward at about 45 degrees to catch a corner coming
 and to see a gap opening up. Fewer than four and you will be guessing.
+
+Drag the mouse around and watch what the five of them actually report. Turn it, put it off
+centre, and try the layout with no side walls at all.
+
+<SensorRig />
 
 **Infrared emitter and receiver pairs** are the standard: cheap, fast, and easy to read on an
 analogue pin. The trick is ambient light. Read the receiver with the emitter off, read it again

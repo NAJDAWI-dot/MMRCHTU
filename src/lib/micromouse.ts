@@ -405,3 +405,103 @@ export function islandMaze(
   // mazes. The caller is told which it got.
   return { maze: fallback, isIsland: false };
 }
+
+/* ------------------------------------------------------------ editing walls */
+
+export interface WallSegment {
+  /** Endpoints in viewBox units, ready to draw. */
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  cell: Cell;
+  /** Index into DIRS, and into the cell's wall array. */
+  dir: number;
+  /** Whether a wall actually stands here. */
+  present: boolean;
+  /** False for the outer boundary, which is not a reader's to knock down. */
+  editable: boolean;
+}
+
+/**
+ * Every edge in the maze as a drawable, clickable segment.
+ *
+ * The maze carries its walls twice: `cells` is the grid a mouse walks, and
+ * `walls` is the same information merged into long paths for drawing. Merged
+ * paths are lovely to render and impossible to edit, so anything that lets a
+ * reader knock a wall down has to draw from the grid instead.
+ *
+ * Empty edges are reported too, with `present` false. A maze you can only
+ * subtract from is half an editor, and the gap you want to close is usually
+ * the one that makes the point.
+ *
+ * Each edge is emitted once rather than twice, by only ever reporting a cell's
+ * north and west sides plus the outer edges. Otherwise every internal wall
+ * would be drawn twice and clicking one would toggle it straight back.
+ */
+export function wallSegments(maze: Maze, unit: number): WallSegment[] {
+  const out: WallSegment[] = [];
+
+  for (let y = 0; y < maze.size; y++) {
+    for (let x = 0; x < maze.size; x++) {
+      const walls = maze.cells[y * maze.size + x]!;
+      const left = x * unit;
+      const top = y * unit;
+
+      out.push({
+        x1: left, y1: top, x2: left + unit, y2: top,
+        cell: { x, y }, dir: 0, present: walls[0], editable: y > 0,
+      });
+      out.push({
+        x1: left, y1: top, x2: left, y2: top + unit,
+        cell: { x, y }, dir: 3, present: walls[3], editable: x > 0,
+      });
+
+      // The far two edges of the grid, which no other cell will report.
+      if (y === maze.size - 1) {
+        out.push({
+          x1: left, y1: top + unit, x2: left + unit, y2: top + unit,
+          cell: { x, y }, dir: 2, present: walls[2], editable: false,
+        });
+      }
+      if (x === maze.size - 1) {
+        out.push({
+          x1: left + unit, y1: top, x2: left + unit, y2: top + unit,
+          cell: { x, y }, dir: 1, present: walls[1], editable: false,
+        });
+      }
+    }
+  }
+
+  return out;
+}
+
+/**
+ * The same maze with one wall flipped, on both sides of it.
+ *
+ * A wall belongs to two cells and the grid stores it twice. Flip one copy and
+ * the mouse can drive through it in one direction and not the other, which is
+ * a bug that looks exactly like a pathfinding bug and is not one.
+ *
+ * Returns a new maze. The old one is still referenced by whatever is animating
+ * over it, and mutating underneath an animation is how a route ends up drawn
+ * through a wall that has just appeared.
+ */
+export function toggleWall(maze: Maze, cell: Cell, dir: number): Maze {
+  const d = DIRS[dir];
+  if (!d) return maze;
+
+  const nx = cell.x + d.dx;
+  const ny = cell.y + d.dy;
+  // The outer boundary stays up. A maze you can drive out of is not a maze.
+  if (nx < 0 || ny < 0 || nx >= maze.size || ny >= maze.size) return maze;
+
+  const cells = maze.cells.map((walls) => [...walls] as typeof walls);
+  const here = cells[cell.y * maze.size + cell.x]!;
+  const there = cells[ny * maze.size + nx]!;
+  const next = !here[d.wall];
+  here[d.wall] = next;
+  there[d.opp] = next;
+
+  return { ...maze, cells };
+}

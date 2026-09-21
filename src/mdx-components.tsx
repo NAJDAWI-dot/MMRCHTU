@@ -3,7 +3,9 @@ import { MazeAnatomy } from "@/components/rules/MazeAnatomy";
 import { RobotFootprint } from "@/components/rules/RobotFootprint";
 import { RunComparison } from "@/components/rules/RunComparison";
 import { ScoreFormula } from "@/components/rules/ScoreFormula";
-import { FloodFill } from "@/components/micromouse/FloodFill";
+import { MazeLab } from "@/components/micromouse/MazeLab";
+import { RobotViewer } from "@/components/micromouse/RobotViewer";
+import { SensorRig } from "@/components/micromouse/SensorRig";
 import { MouseSizing } from "@/components/micromouse/MouseSizing";
 import { TimeBudget } from "@/components/micromouse/TimeBudget";
 
@@ -20,8 +22,10 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     RobotFootprint,
     RunComparison,
     ScoreFormula,
-    // The build guide's three.
-    FloodFill,
+    // The build guide's.
+    RobotViewer,
+    MazeLab,
+    SensorRig,
     MouseSizing,
     TimeBudget,
     // Last, so a caller passing its own overrides still wins.
