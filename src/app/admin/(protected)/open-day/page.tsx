@@ -6,6 +6,7 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getOpenDayConfig } from "@/lib/site-config";
 import {
   openDayDateLabel,
+  openDayLocked,
   openDayPhase,
   resolveOpenDayWindow,
   toAmmanDateTimeLocal,
@@ -35,6 +36,7 @@ export default async function AdminOpenDayPage() {
   const config = await getOpenDayConfig();
   const day = resolveOpenDayWindow(config);
   const phase = openDayPhase(day);
+  const shut = openDayLocked(config, phase);
   // Whether the dates in force are the admin's own or the ones the code falls
   // back to. Worth saying out loud: the clock looks equally convincing either
   // way, and an admin who has never opened this tab has no other way to tell.
@@ -60,6 +62,11 @@ export default async function AdminOpenDayPage() {
         <h2 className="font-display font-bold text-ras-purple dark:text-white">Right now</h2>
         <p className="mt-2 text-sm text-ras-gray dark:text-white/75">
           {config.enabled ? PHASE_SUMMARY[phase] : "The countdown is switched off everywhere."}
+        </p>
+        <p className="mt-1 text-sm text-ras-gray dark:text-white/75">
+          {shut
+            ? "The page is shut: visitors get the countdown and nothing else, and it opens itself the moment that reaches zero. Signed in, you see the whole page."
+            : "The page is open to everybody."}
         </p>
         <p className="mt-1 text-sm font-semibold text-ras-purple dark:text-white">
           {openDayDateLabel(day)}
@@ -147,6 +154,24 @@ export default async function AdminOpenDayPage() {
                 <span className="block text-xs text-ras-gray dark:text-white/60">
                   Off removes the clock from the open day page and the slider from the homepage.
                   The open day page itself stays up.
+                </span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-ras-gray/20 p-3 text-sm">
+              <input
+                type="checkbox"
+                name="lockUntilOpen"
+                defaultChecked={config.lockUntilOpen}
+                className="mt-1"
+              />
+              <span>
+                <span className="font-semibold text-ras-purple dark:text-white">
+                  Keep the page shut until the countdown finishes
+                </span>
+                <span className="block text-xs text-ras-gray dark:text-white/60">
+                  Visitors get the countdown and nothing else, and the page opens itself when the
+                  doors do. While it is shut it leaves the site menu, stays out of search results,
+                  and the homepage band carries no buttons. You can still open it by URL.
                 </span>
               </span>
             </label>

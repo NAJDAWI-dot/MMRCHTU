@@ -18,6 +18,7 @@ export async function updateOpenDay(formData: FormData) {
   const data = {
     enabled: formData.get("enabled") === "on",
     showOnHome: formData.get("showOnHome") === "on",
+    lockUntilOpen: formData.get("lockUntilOpen") === "on",
     startsAt: fromAmmanDateTimeLocal(String(formData.get("startsAt") ?? "")),
     endsAt: fromAmmanDateTimeLocal(String(formData.get("endsAt") ?? "")),
     // Trimmed and capped: this goes on the homepage of the site, and a venue
@@ -37,4 +38,8 @@ export async function updateOpenDay(formData: FormData) {
   revalidatePath("/open-day");
   revalidatePath("/");
   revalidatePath("/admin/open-day");
+  // The lock decides whether Open Day is in the site menu, and the menu lives
+  // in the root layout, so the layout cache has to go with it.
+  revalidatePath("/", "layout");
+  revalidatePath("/sitemap.xml");
 }

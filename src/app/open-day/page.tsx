@@ -6,9 +6,11 @@ import { MazeExplainer } from "@/components/open-day/MazeExplainer";
 import { CrestStudio } from "@/components/open-day/CrestStudio";
 import { OpenDayCountdown } from "@/components/open-day/OpenDayCountdown";
 import { TeamWall, type WallTeam } from "@/components/open-day/TeamWall";
+import { OpenDayHolding } from "@/components/open-day/OpenDayHolding";
 import { OPEN_DAY_EVENT } from "@/lib/leaderboard";
-import { WALL_LIMIT, resolveOpenDayWindow } from "@/lib/open-day";
+import { WALL_LIMIT, openDayDateLabel, openDayLocked, openDayPhase, resolveOpenDayWindow } from "@/lib/open-day";
 import { normaliseReferralCode } from "@/lib/referral";
+import { requireAdminApi } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getOpenDayConfig } from "@/lib/site-config";
 
@@ -27,11 +29,24 @@ import { getOpenDayConfig } from "@/lib/site-config";
  * page wastes the one visit.
  */
 
-export const metadata: Metadata = {
-  title: "Open Day",
-  description:
-    "IEEE RAS HTU at the university open day: what a micromouse is, your own team crest, the teams already entered, and Pac Mouse with a live board.",
-};
+/**
+ * Kept out of search results while the page is shut.
+ *
+ * A holding screen is a poor thing to have indexed: by the time anyone found
+ * it through a search the day would be over, and the listing would outlive
+ * both the clock and the stand.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const openDay = await getOpenDayConfig();
+  const shut = openDayLocked(openDay, openDayPhase(resolveOpenDayWindow(openDay)));
+
+  return {
+    title: "Open Day",
+    description:
+      "IEEE RAS HTU at the university open day: what a micromouse is, your own team crest, the teams already entered, and Pac Mouse with a live board.",
+    ...(shut ? { robots: { index: false, follow: true } } : {}),
+  };
+}
 
 // The wall and the board are both counts that change while the day is running,
 // and a cached page at a stand is a page showing this morning.
@@ -42,12 +57,37 @@ export default async function OpenDayPage({
 }: {
   searchParams: { ref?: string };
 }) {
+  const openDay = await getOpenDayConfig();
+  // The admin's dates where there are any, the ones in the code otherwise.
+  const day = resolveOpenDayWindow(openDay);
+  const shut = openDayLocked(openDay, openDayPhase(day));
+
+  /*
+    Signed in, and the page is shut: the stand page is shown in full with a
+    line saying so.
+
+    Checked only while it is shut, so an ordinary visit on the day never reads
+    a cookie or asks the database who is holding it. `requireAdminApi` is the
+    one that answers rather than redirecting, which is what this needs: a
+    visitor with no session is not lost, they are early.
+  */
+  const previewing = shut ? Boolean(await requireAdminApi()) : false;
+
+  if (shut && !previewing) {
+    return (
+      <OpenDayHolding
+        startsAt={day.startsAt.toISOString()}
+        endsAt={day.endsAt.toISOString()}
+        location={openDay.location}
+      />
+    );
+  }
+
   // Carried through every link out of this page, so a visitor who scanned one
   // ambassador's code still counts for them after a detour through the crest.
   const referral = normaliseReferralCode(searchParams.ref ?? "").slice(0, 20);
 
-  const [openDay, rows, total] = await Promise.all([
-    getOpenDayConfig(),
+  const [rows, total] = await Promise.all([
     prisma.registration.findMany({
       // A cancelled entry is not a team that is coming, and its name on the
       // wall would be a promise the day cannot keep.
@@ -64,14 +104,18 @@ export default async function OpenDayPage({
 
   const registerHref = referral ? `/register?ref=${encodeURIComponent(referral)}` : "/register";
 
-  // The admin's dates where there are any, the ones in the code otherwise. Read
-  // per request, which is what lets a date saved in the admin show up here
-  // without a rebuild; the page is already force-dynamic for the wall and the
-  // board, so it costs nothing.
-  const day = resolveOpenDayWindow(openDay);
-
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
+      {previewing ? (
+        /* A solid surface, not a crimson wash: the page background carries
+           artwork, and at five percent opacity a star was running straight
+           through the first line of this. */
+        <p className="mb-6 rounded-xl border border-ras-crimson/40 bg-[var(--color-surface)] px-4 py-3 text-sm text-ras-crimson shadow-sm dark:border-[#ff9b9b]/40 dark:text-[#ff9b9b]">
+          Only you can see this. Visitors get the countdown until {openDayDateLabel(day)}, and
+          the page opens itself when it reaches zero. The lock is on the Open Day tab.
+        </p>
+      ) : null}
+
       <header>
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ras-crimson dark:text-[#ff9b9b]">
           IEEE RAS HTU

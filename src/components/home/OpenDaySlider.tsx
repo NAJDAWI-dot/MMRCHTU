@@ -42,11 +42,24 @@ interface OpenDaySliderProps {
   endsAt: string;
   location: string;
   initialPhase: OpenDayPhase;
+  /**
+   * The page is shut until the doors open, so the band carries no buttons.
+   *
+   * Passed in rather than worked out here: the lock is the server's to
+   * decide, and it is the same decision the page itself is making.
+   */
+  locked: boolean;
 }
 
 const MAX_TIMEOUT_MS = 2 ** 31 - 1;
 
-export function OpenDaySlider({ startsAt, endsAt, location, initialPhase }: OpenDaySliderProps) {
+export function OpenDaySlider({
+  startsAt,
+  endsAt,
+  location,
+  initialPhase,
+  locked,
+}: OpenDaySliderProps) {
   const day = useMemo(
     () => ({ startsAt: new Date(startsAt), endsAt: new Date(endsAt) }),
     [startsAt, endsAt],
@@ -59,7 +72,13 @@ export function OpenDaySlider({ startsAt, endsAt, location, initialPhase }: Open
   const [reduced, setReduced] = useState(false);
   const pointerRef = useRef<number | null>(null);
 
-  const slides = useMemo(() => openDaySlides({ phase, location }), [phase, location]);
+  // The lock only holds before the doors open, and the phase below is live,
+  // so a band left open on screen unlocks itself at the same moment the page
+  // does rather than waiting for a reload.
+  const slides = useMemo(
+    () => openDaySlides({ phase, location, locked: locked && phase === "before" }),
+    [phase, location, locked],
+  );
   const count = slides.length;
   const still = paused || held || reduced;
 
@@ -234,14 +253,16 @@ function Panel({
             {slide.title}
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/75">{slide.body}</p>
-          <Link
-            href={slide.href}
-            tabIndex={active ? undefined : -1}
-            className="group mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[#f2a900] px-5 text-sm font-bold text-[#2a0e2f] transition-transform duration-200 hover:-translate-y-px active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-          >
-            <MouseMark className="h-4 w-4 transition-transform duration-200 group-hover:-rotate-6 motion-reduce:transition-none motion-reduce:group-hover:rotate-0" />
-            {slide.cta}
-          </Link>
+          {slide.linked ? (
+            <Link
+              href={slide.href}
+              tabIndex={active ? undefined : -1}
+              className="group mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[#f2a900] px-5 text-sm font-bold text-[#2a0e2f] transition-transform duration-200 hover:-translate-y-px active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+            >
+              <MouseMark className="h-4 w-4 transition-transform duration-200 group-hover:-rotate-6 motion-reduce:transition-none motion-reduce:group-hover:rotate-0" />
+              {slide.cta}
+            </Link>
+          ) : null}
         </div>
 
         <div className="flex justify-start sm:justify-end">

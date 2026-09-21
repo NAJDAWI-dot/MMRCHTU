@@ -5,6 +5,8 @@ import { MouseMark } from "@/components/brand/MouseMark";
 import { prisma } from "@/lib/prisma";
 import { parseStatus } from "@/lib/competition-day";
 import { hiddenPageHrefs } from "@/lib/page-visibility";
+import { openDayLocked, openDayPhase, resolveOpenDayWindow } from "@/lib/open-day";
+import { getOpenDayConfig } from "@/lib/site-config";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { getEarlyBirdState } from "@/lib/early-bird-server";
 
@@ -43,16 +45,24 @@ const LINKS = [
  * stays reachable by URL for them, which is where previewing it belongs.
  */
 async function hiddenHrefs(): Promise<Set<string>> {
-  const [config, publishedAlbums, adminHidden] = await Promise.all([
+  const [config, publishedAlbums, adminHidden, openDay] = await Promise.all([
     prisma.competitionDayConfig.findUnique({ where: { id: "singleton" } }),
     prisma.galleryAlbum.count({ where: { isPublished: true, photos: { some: {} } } }),
     hiddenPageHrefs(),
+    getOpenDayConfig(),
   ]);
 
   const hidden = new Set<string>(adminHidden);
   // No row yet means the schema defaults apply, and the default is not HIDDEN.
   if (parseStatus(config?.status) === "HIDDEN") hidden.add("/competition-day");
   if (publishedAlbums === 0) hidden.add("/gallery");
+  // And Open Day until the doors open, for the same reason as the other two:
+  // the menu should not offer a page that has nothing on it yet. The homepage
+  // band is where the countdown is announced, and admins reach the page by
+  // URL, which is where previewing belongs.
+  if (openDayLocked(openDay, openDayPhase(resolveOpenDayWindow(openDay)))) {
+    hidden.add("/open-day");
+  }
   return hidden;
 }
 

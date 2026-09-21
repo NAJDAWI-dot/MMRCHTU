@@ -21,6 +21,7 @@ import {
   nextSlideIndex,
   openDayClock,
   openDayDateLabel,
+  openDayLocked,
   openDayPhase,
   openDaySlides,
   openDayWindow,
@@ -420,5 +421,45 @@ describe("the homepage slider", () => {
   it("does not divide by an empty carousel", () => {
     expect(nextSlideIndex(0, 0)).toBe(0);
     expect(nextSlideIndex(3, 0, -1)).toBe(0);
+  });
+});
+
+describe("shutting the page until the day", () => {
+  it("is shut before the doors open and never after", () => {
+    const locked = { lockUntilOpen: true };
+    expect(openDayLocked(locked, "before")).toBe(true);
+    expect(openDayLocked(locked, "during")).toBe(false);
+    // Open for good once it has opened. The wall of teams and the day's board
+    // are worth reading the morning after, and a page that shuts again would
+    // make a liar of every link posted during the day.
+    expect(openDayLocked(locked, "after")).toBe(false);
+  });
+
+  it("stays open throughout when an admin has turned the lock off", () => {
+    for (const phase of ["before", "during", "after"] as const) {
+      expect(openDayLocked({ lockUntilOpen: false }, phase)).toBe(false);
+    }
+  });
+
+  it("offers nothing to click while the page is shut", () => {
+    const shut = openDaySlides({ phase: "before", location: "HTU Main Hall", locked: true });
+    expect(shut.every((slide) => slide.linked)).toBe(false);
+    expect(shut.some((slide) => slide.linked)).toBe(false);
+    // Still says what the day is for. The band is the announcement; it is the
+    // buttons that would be lies.
+    expect(shut.map((slide) => slide.kind)).toEqual(["clock", "crest", "play"]);
+    expect(shut[0]!.body).toContain("HTU Main Hall");
+  });
+
+  it("phrases the stand as something coming rather than something to do now", () => {
+    const shut = openDaySlides({ phase: "before", location: "", locked: true });
+    expect(shut[1]!.eyebrow).toBe("On the day");
+    expect(shut[2]!.eyebrow).toBe("On the day");
+  });
+
+  it("hands the buttons back the moment it is open", () => {
+    const open = openDaySlides({ phase: "during", location: "", locked: false });
+    expect(open.every((slide) => slide.linked)).toBe(true);
+    expect(open.every((slide) => slide.href.startsWith("/open-day"))).toBe(true);
   });
 });

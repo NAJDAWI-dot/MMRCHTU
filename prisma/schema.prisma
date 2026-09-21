@@ -462,6 +462,12 @@ model OpenDayConfig {
   // yesterday is worse than one saying nothing.
   showOnHome Boolean @default(true)
 
+  // Keeps the open day page shut until the countdown reaches zero. Visitors
+  // who follow the link get the clock and nothing else; the crests, the wall
+  // and the board open when the doors do. Signed-in admins are let through,
+  // so the page can be checked before the day rather than on it.
+  lockUntilOpen Boolean @default(true)
+
   updatedAt DateTime @updatedAt
 }
 

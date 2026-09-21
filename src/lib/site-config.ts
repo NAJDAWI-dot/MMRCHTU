@@ -49,6 +49,10 @@ const OPEN_DAY_FALLBACK: OpenDayConfig = {
   endsAt: null,
   location: "",
   showOnHome: true,
+  // Shut until the day, which is the state the page was asked to be in and
+  // the safe one: a stand page opening itself early is worse than one an
+  // admin has to open by hand.
+  lockUntilOpen: true,
   updatedAt: NEVER_SAVED,
 };
 

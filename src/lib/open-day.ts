@@ -489,6 +489,14 @@ export interface OpenDaySlide {
   body: string;
   href: string;
   cta: string;
+  /**
+   * Whether the button is drawn at all.
+   *
+   * False while the page is locked. The band is still worth carrying then —
+   * it is the announcement — but a button leading to a page that will only
+   * show the same clock again is a door painted on a wall.
+   */
+  linked: boolean;
 }
 
 /** How long each slide holds before the next one comes round. */
@@ -505,11 +513,18 @@ export const SLIDE_INTERVAL_MS = 6_500;
 export function openDaySlides({
   phase,
   location,
+  locked = false,
 }: {
   phase: OpenDayPhase;
   location: string;
+  /** The page is shut until the countdown reaches zero. See `openDayLocked`. */
+  locked?: boolean;
 }): OpenDaySlide[] {
   const where = location.trim();
+  // "On the day" rather than "now": while the page is shut these are things a
+  // reader cannot go and do yet, and copy in the imperative beside a missing
+  // button reads as something broken.
+  const soon = (now: string, later: string) => (locked ? later : now);
 
   return [
     {
@@ -532,22 +547,28 @@ export function openDaySlides({
             : "Come and find the stand. Four things to do, none of them longer than a minute.",
       href: "/open-day",
       cta: phase === "during" ? "What is on" : "See what is on",
+      linked: !locked,
     },
     {
       kind: "crest",
-      eyebrow: "At the stand",
+      eyebrow: locked ? "On the day" : "At the stand",
       title: "Get your team crest",
-      body: "Type a team name and take away the maze that belongs to it. Yours to keep, whether or not you enter.",
+      body: soon(
+        "Type a team name and take away the maze that belongs to it. Yours to keep, whether or not you enter.",
+        "Type a team name and take away the maze that belongs to it, yours to keep whether or not you enter.",
+      ),
       href: "/open-day#crest",
       cta: "Make one",
+      linked: !locked,
     },
     {
       kind: "play",
-      eyebrow: "At the stand",
+      eyebrow: locked ? "On the day" : "At the stand",
       title: "Play Pac Mouse",
       body: "A leaderboard for the day only, so you are playing the people standing next to you.",
       href: "/open-day#play",
       cta: "See the board",
+      linked: !locked,
     },
   ];
 }
@@ -562,4 +583,24 @@ export function openDaySlides({
 export function nextSlideIndex(current: number, total: number, step = 1): number {
   if (total <= 0) return 0;
   return (((current + step) % total) + total) % total;
+}
+
+/**
+ * Whether the open day page is shut to visitors.
+ *
+ * Shut until the countdown reaches zero, then open for good: the stand is a
+ * thing you can walk up to on one afternoon, and everything on the page —
+ * a crest to take away, a wall of teams, a board for the day — only means
+ * anything from the moment the doors open. Before that it is a room being set
+ * up, and the clock is the honest answer to anyone who arrives early.
+ *
+ * Deliberately not tied to `enabled`. That switch governs whether a clock is
+ * drawn; this one governs whether there is a page behind it, and an admin who
+ * hides the clock has not thereby thrown the doors open.
+ */
+export function openDayLocked(
+  config: { lockUntilOpen: boolean },
+  phase: OpenDayPhase,
+): boolean {
+  return config.lockUntilOpen && phase === "before";
 }

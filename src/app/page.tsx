@@ -8,7 +8,7 @@ import { parseStatus } from "@/lib/competition-day";
 
 import { shouldShowCountdown } from "@/lib/countdown";
 import { hiddenPageHrefs } from "@/lib/page-visibility";
-import { openDayPhase, resolveOpenDayWindow } from "@/lib/open-day";
+import { openDayLocked, openDayPhase, resolveOpenDayWindow } from "@/lib/open-day";
 import { getCompetitionDayConfig, getOpenDayConfig } from "@/lib/site-config";
 import { getEarlyBirdState } from "@/lib/early-bird-server";
 
@@ -104,6 +104,9 @@ export default async function HomePage() {
   */
   const openDayWindow = resolveOpenDayWindow(openDay);
   const openDayState = openDayPhase(openDayWindow);
+  // While the stand page is shut the band still runs, as the announcement it
+  // is, but without buttons: every one of them would lead to the same clock.
+  const openDayShut = openDayLocked(openDay, openDayState);
   const showOpenDay =
     openDay.enabled && openDay.showOnHome && !hidden.has("/open-day") && openDayState !== "after";
 
@@ -115,6 +118,7 @@ export default async function HomePage() {
           endsAt={openDayWindow.endsAt.toISOString()}
           location={openDay.location}
           initialPhase={openDayState}
+          locked={openDayShut}
         />
       ) : null}
 

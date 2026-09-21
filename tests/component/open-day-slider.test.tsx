@@ -47,6 +47,7 @@ const show = (props: Partial<Parameters<typeof OpenDaySlider>[0]> = {}) =>
       endsAt={new Date(Date.now() + 54 * HOUR).toISOString()}
       location=""
       initialPhase="before"
+      locked={false}
       {...props}
     />,
   );
@@ -139,6 +140,15 @@ describe("the open day slider", () => {
 
     expect(screen.getByText(/happening now/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /HTU Main Hall/ })).toBeInTheDocument();
+  });
+
+  it("carries no buttons while the page it points at is shut", () => {
+    show({ locked: true });
+    // The dots and the pause button stay: the band still turns, it just has
+    // nowhere to send anybody yet.
+    expect(screen.queryAllByRole("link", { hidden: true })).toHaveLength(0);
+    expect(dots()).toHaveLength(3);
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
   });
 
   it("takes itself down once the day is over", () => {
