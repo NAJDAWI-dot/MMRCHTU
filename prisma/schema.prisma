@@ -63,8 +63,8 @@ model Registration {
   /// These two answer that. Written on every transition and never cleared, so
   /// the row always says who touched it last. Null on rows whose status was
   /// last changed before this column existed.
-  paymentStatusBy    String?
-  paymentStatusAt    DateTime?
+  paymentStatusBy String?
+  paymentStatusAt DateTime?
 
   /// Proof of payment: a screenshot of the team's CliQ confirmation. Same
   /// url/key pair as GalleryPhoto — the key is kept so deleting a registration
@@ -203,7 +203,7 @@ model AdminUser {
   /// changing the password did nothing about it. The number is signed into the
   /// token and compared on every request, so bumping it makes every token
   /// issued before now fail to verify.
-  tokenVersion Int       @default(0)
+  tokenVersion Int @default(0)
 }
 
 model ScheduleEvent {
@@ -395,7 +395,7 @@ model GameScore {
   /// The allowed values live in src/lib/leaderboard.ts (SCORE_EVENTS) rather
   /// than in an enum here, for the same reason the statuses elsewhere are
   /// plain strings: adding next year's event should not need a migration.
-  event      String   @default("")
+  event String @default("")
 
   @@index([mode, score])
   @@index([event, mode, score])
@@ -604,11 +604,11 @@ model PaymentConfig {
 // team's registration. Two models called "team member" meaning "an entrant"
 // and "an organiser" would be a permanent source of the wrong query.
 model CommitteeDepartment {
-  id   String @id @default(cuid())
-  name String
+  id          String   @id @default(cuid())
+  name        String
   /// Short line under the department heading. Optional.
-  description String @default("")
-  sortOrder   Int    @default(0)
+  description String   @default("")
+  sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -658,11 +658,40 @@ model CommitteeMember {
 
   /// Hidden members stay in the admin list but leave the public page, so
   /// somebody can be added before an announcement without being visible.
-  isPublished Boolean @default(true)
-  sortOrder   Int     @default(0)
+  isPublished Boolean  @default(true)
+  sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([departmentId])
   @@index([isPublished])
+}
+
+/// A link at the foot of the build guide: a video, a playlist or a site.
+///
+/// `kind` is a plain String, the same tradeoff as Registration.status, held to
+/// VIDEO | PLAYLIST | SITE by ReferenceKind in src/lib/references.ts. Anything
+/// else is read back as a website rather than crashing a public page.
+///
+/// The first seven rows are inserted by the migration rather than by the seed,
+/// because the seed runs on every deploy: a starter link the committee deleted
+/// would come back on the next push, which is not what a Remove button means.
+model MicromouseReference {
+  id    String @id @default(cuid())
+  kind  String @default("SITE")
+  title String
+  url   String
+
+  /// The channel or the site it comes from, shown under the title.
+  author String @default("")
+  /// Why it is worth the reader's time, in the committee's words.
+  note   String @default("")
+
+  /// Hidden references stay in the admin list but leave the public page.
+  isPublished Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isPublished, sortOrder])
 }

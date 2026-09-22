@@ -1,8 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { loadMicromouseGuide } from "@/lib/mdx";
+import { prisma } from "@/lib/prisma";
 import { RULES } from "@/lib/rules";
 import { MATCH_SECONDS, narrowestGapMm } from "@/lib/micromouse";
+import { toReference } from "@/lib/references";
+import { References } from "@/components/micromouse/References";
+
+/**
+ * Five minutes, so a reference added in the admin screen is not stuck behind
+ * a build. The admin action revalidates this path anyway, which is what makes
+ * an edit appear at once; this is only the backstop for a cache that outlived
+ * the request that should have cleared it.
+ */
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Micro Mouse",
@@ -22,6 +33,14 @@ export const metadata: Metadata = {
  */
 export default async function MicromousePage() {
   const Guide = await loadMicromouseGuide();
+  const references = (
+    await prisma.micromouseReference.findMany({
+      where: { isPublished: true },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    })
+  )
+    .map(toReference)
+    .filter((reference) => reference !== null);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">
@@ -89,6 +108,8 @@ export default async function MicromousePage() {
       <div className="prose prose-headings:font-display prose-headings:text-ras-purple dark:prose-invert dark:prose-headings:text-white mt-10 max-w-none">
         <Guide />
       </div>
+
+      <References items={references} />
 
       <p className="mt-10 border-t border-ras-gray/15 pt-6 text-sm text-ras-gray dark:text-white/70">
         Stuck on something this page does not cover?{" "}
