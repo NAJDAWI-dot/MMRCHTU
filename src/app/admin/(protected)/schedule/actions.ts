@@ -29,6 +29,8 @@ export async function createEvent(formData: FormData) {
   });
 
   revalidatePath("/schedule");
+  // The day site's running order, while day mode is on.
+  revalidatePath("/");
   revalidatePath("/admin/schedule");
 }
 
@@ -52,6 +54,8 @@ export async function updateEvent(formData: FormData) {
   });
 
   revalidatePath("/schedule");
+  // The day site's running order, while day mode is on.
+  revalidatePath("/");
   revalidatePath("/admin/schedule");
 }
 
@@ -64,5 +68,7 @@ export async function deleteEvent(formData: FormData) {
   await prisma.scheduleEvent.delete({ where: { id } });
 
   revalidatePath("/schedule");
+  // The day site's running order, while day mode is on.
+  revalidatePath("/");
   revalidatePath("/admin/schedule");
 }

@@ -36,6 +36,7 @@ const COMPETITION_DAY_FALLBACK: CompetitionDayConfig = {
   venue: "",
   details: "",
   eventDate: null,
+  dayMode: false,
   updatedAt: NEVER_SAVED,
 };
 

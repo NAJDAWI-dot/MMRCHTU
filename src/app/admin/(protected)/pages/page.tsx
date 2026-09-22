@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { parseStatus } from "@/lib/competition-day";
 import { MANAGED_PAGES } from "@/lib/pages";
+import { DAY_MODE_HIDDEN_PAGES, DAY_MODE_MENU_OMITS } from "@/lib/day-mode";
 import { setPageHidden } from "./actions";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
@@ -32,6 +33,14 @@ async function otherReasons(): Promise<Map<string, string>> {
       "/competition-day",
       "Also hidden by its status on the Competition Day tab, which is set to Hidden.",
     );
+  }
+  if (dayConfig?.dayMode) {
+    for (const href of DAY_MODE_HIDDEN_PAGES) {
+      reasons.set(href, "Also hidden by Day Mode, which is on. It comes back when day mode goes off.");
+    }
+    for (const href of DAY_MODE_MENU_OMITS) {
+      reasons.set(href, "Out of the menu while Day Mode is on, though its address still works.");
+    }
   }
   if (publishedAlbums === 0) {
     reasons.set(

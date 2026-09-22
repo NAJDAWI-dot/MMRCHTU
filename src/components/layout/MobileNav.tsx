@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { EarlyBirdBadge } from "@/components/promo/EarlyBirdBadge";
 import { MouseMark } from "@/components/brand/MouseMark";
+import { LiveDot } from "@/components/day/LiveDot";
 import { useEffect, useId, useRef, useState } from "react";
 
 /**
@@ -22,6 +23,8 @@ export interface NavLink {
   href: string;
   /** Rendered as a pill rather than a plain row. See Nav. */
   special?: boolean;
+  /** The day site's Live entry: a pulsing dot in place of the mouse. */
+  live?: boolean;
   label: string;
 }
 
@@ -126,7 +129,7 @@ export function MobileNav({ links, earlyBird = false }: { links: NavLink[]; earl
                             : "text-ras-gray hover:bg-ras-purple/5 hover:text-ras-purple dark:text-white/80 dark:hover:bg-white/5 dark:hover:text-white"
                       }`}
                     >
-                      {link.special ? <MouseMark className="h-4 w-4 opacity-80" /> : null}
+                      {link.live ? <LiveDot /> : link.special ? <MouseMark className="h-4 w-4 opacity-80" /> : null}
                       {link.label}
                       {/* Inline, not floating: these rows are full-width, so a
                           pill centred over one would land in the middle of it

@@ -23,6 +23,9 @@ export async function updateRegistrationStatus(formData: FormData) {
   await prisma.registration.update({ where: { id }, data: { status } });
 
   revalidatePath("/admin/registrations");
+  // The day site lists confirmed teams, so confirming one on the morning puts
+  // it on the start line without waiting for the page's timer.
+  revalidatePath("/");
 }
 
 // Payment state is deliberately not writable from here. It has exactly one
@@ -124,4 +127,5 @@ export async function deleteRegistration(formData: FormData) {
 
   revalidatePath("/admin/registrations");
   revalidatePath("/admin/payments");
+  revalidatePath("/");
 }

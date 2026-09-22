@@ -430,7 +430,27 @@ model CompetitionDayConfig {
   // countdown simply does not appear until a date is set.
   eventDate DateTime?
 
+  // Day mode: while on, the homepage becomes the competition day site and the
+  // pages in DAY_MODE_HIDDEN_PAGES (src/lib/day-mode.ts) go dark. Off by
+  // default, so adding the column changes nothing until an admin flips it.
+  dayMode Boolean @default(false)
+
   updatedAt DateTime @updatedAt
+}
+
+// A short notice on the competition day site: "Round two starts at 14:00",
+// "Team Byte, please come to the inspection desk". Plain text, rendered as
+// React children, so an admin cannot inject markup. Pinned ones sit above the
+// rest; otherwise the newest is first.
+model DayAnnouncement {
+  id          String   @id @default(cuid())
+  body        String
+  isPinned    Boolean  @default(false)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isPublished, createdAt])
 }
 
 // The open day stand: when it runs, where it is, and where its clock appears.

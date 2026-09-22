@@ -37,6 +37,12 @@ export const ADMIN_LINKS: AdminLink[] = [
     keywords: "venue running order",
   },
   {
+    href: "/admin/day-mode",
+    label: "Day Mode",
+    icon: "dayMode",
+    keywords: "competition day live switch announcements notices hall",
+  },
+  {
     href: "/admin/open-day",
     label: "Open Day",
     icon: "openDay",

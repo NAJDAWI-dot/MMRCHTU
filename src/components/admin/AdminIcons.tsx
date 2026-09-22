@@ -19,6 +19,7 @@ export type AdminIconName =
   | "competition"
   | "openDay"
   | "micromouse"
+  | "dayMode"
   | "faq"
   | "gallery"
   | "pages"
@@ -92,6 +93,16 @@ const PATHS: Record<AdminIconName, ReactNode> = {
       <circle cx="16" cy="9" r="2.6" />
       <circle cx="12.4" cy="11.4" r=".9" />
       <path d="M4 17.5c-1.4 0-2.2 1-2.2 2" />
+    </>
+  ),
+  dayMode: (
+    <>
+      {/* A switch with a broadcast mark over it: the thing that flips the
+          site, and the notices it sends out while flipped. */}
+      <rect x="3" y="12" width="18" height="8" rx="4" />
+      <circle cx="17" cy="16" r="2.2" />
+      <path d="M8.5 7.5a5 5 0 0 1 7 0" />
+      <path d="M6 5a8.5 8.5 0 0 1 12 0" />
     </>
   ),
   faq: (

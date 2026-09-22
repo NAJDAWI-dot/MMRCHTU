@@ -11,13 +11,20 @@ import { hiddenPageHrefs } from "@/lib/page-visibility";
 import { openDayLocked, openDayPhase, resolveOpenDayWindow } from "@/lib/open-day";
 import { getCompetitionDayConfig, getOpenDayConfig } from "@/lib/site-config";
 import { getEarlyBirdState } from "@/lib/early-bird-server";
+import { DayHome } from "@/components/day/DayHome";
+import { loadDaySite } from "@/lib/day-site";
+import { dayModeOn } from "@/lib/page-visibility";
 
 // The countdown reads a live config row, so this page cannot be baked at
 // build time and still be right.
 // The only database-backed thing here is the competition date, and the
 // clock itself ticks in the browser. Admin saves call revalidatePath("/",
 // "layout"), so a changed date appears at once rather than in five minutes.
-export const revalidate = 300;
+//
+// A minute rather than five since day mode: the homepage is then the day site,
+// whose "on now" card moves with the clock. Every other change (the switch, an
+// announcement, a schedule edit) clears it at once anyway.
+export const revalidate = 60;
 
 /**
  * The three cards under the hero.
@@ -68,6 +75,13 @@ const FEATURE_CARDS = [
 ] as const;
 
 export default async function HomePage() {
+  // Day mode turns this page into the competition day site. Checked first and
+  // on its own, so the ordinary homepage's reads are not spent on a page that
+  // is about to be replaced.
+  if (await dayModeOn()) {
+    return <DayHome data={await loadDaySite()} />;
+  }
+
   const [config, hidden, earlyBird, openDay] = await Promise.all([
     getCompetitionDayConfig(),
     hiddenPageHrefs(),

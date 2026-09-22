@@ -4,11 +4,20 @@ import { MouseMark } from "@/components/brand/MouseMark";
 
 import { prisma } from "@/lib/prisma";
 import { parseStatus } from "@/lib/competition-day";
-import { hiddenPageHrefs } from "@/lib/page-visibility";
+import { dayModeOn, hiddenPageHrefs } from "@/lib/page-visibility";
+import { dayModeMenuHidden } from "@/lib/day-mode";
 import { openDayLocked, openDayPhase, resolveOpenDayWindow } from "@/lib/open-day";
 import { getOpenDayConfig } from "@/lib/site-config";
-import { MobileNav } from "@/components/layout/MobileNav";
+import { MobileNav, type NavLink } from "@/components/layout/MobileNav";
+import { LiveDot } from "@/components/day/LiveDot";
 import { getEarlyBirdState } from "@/lib/early-bird-server";
+
+/**
+ * The day site's own first entry: "Live", pointing at the homepage it has
+ * become. Rendered as the pill, with a pulsing dot, so the one thing that
+ * changes minute to minute is the first thing in the menu.
+ */
+const DAY_LINK = { href: "/", label: "Live", special: true, live: true };
 
 const LINKS = [
   { href: "/open-day", label: "Open Day" },
@@ -46,14 +55,15 @@ const LINKS = [
  * stays reachable by URL for them, which is where previewing it belongs.
  */
 async function hiddenHrefs(): Promise<Set<string>> {
-  const [config, publishedAlbums, adminHidden, openDay] = await Promise.all([
+  const [config, publishedAlbums, adminHidden, openDay, day] = await Promise.all([
     prisma.competitionDayConfig.findUnique({ where: { id: "singleton" } }),
     prisma.galleryAlbum.count({ where: { isPublished: true, photos: { some: {} } } }),
     hiddenPageHrefs(),
     getOpenDayConfig(),
+    dayModeOn(),
   ]);
 
-  const hidden = new Set<string>(adminHidden);
+  const hidden = new Set<string>([...adminHidden, ...dayModeMenuHidden(day)]);
   // No row yet means the schema defaults apply, and the default is not HIDDEN.
   if (parseStatus(config?.status) === "HIDDEN") hidden.add("/competition-day");
   if (publishedAlbums === 0) hidden.add("/gallery");
@@ -76,8 +86,12 @@ async function hiddenHrefs(): Promise<Set<string>> {
  * drift the first time a link was added to one of them.
  */
 export async function Nav() {
-  const hidden = await hiddenHrefs();
-  const links = LINKS.filter((link) => !hidden.has(link.href));
+  const [hidden, day] = await Promise.all([hiddenHrefs(), dayModeOn()]);
+  // In day mode the committee pill steps down to a plain link, so Live is the
+  // only pill in the row and nothing competes with it.
+  const links: NavLink[] = day
+    ? [DAY_LINK, ...LINKS.filter((link) => !hidden.has(link.href)).map(({ href, label }) => ({ href, label }))]
+    : LINKS.filter((link) => !hidden.has(link.href));
   // One read for both menus, and cached for the rest of the request, so the
   // hero on the landing page does not ask the same question again.
   const earlyBird = await getEarlyBirdState();
@@ -97,7 +111,11 @@ export async function Nav() {
               href={link.href}
               className="group inline-flex items-center gap-1.5 rounded-full border border-ras-purple/30 bg-gradient-to-r from-ras-purple/15 via-ras-crimson/10 to-ras-purple/15 px-3 py-1.5 text-sm font-semibold text-ras-purple shadow-sm transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-px hover:border-ras-purple/55 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0 dark:border-white/25 dark:from-white/12 dark:via-white/5 dark:to-white/12 dark:text-white dark:hover:border-white/45"
             >
-              <MouseMark className="h-4 w-4 opacity-80 transition-transform duration-200 group-hover:-rotate-6 motion-reduce:transition-none motion-reduce:group-hover:rotate-0" />
+              {link.live ? (
+                <LiveDot />
+              ) : (
+                <MouseMark className="h-4 w-4 opacity-80 transition-transform duration-200 group-hover:-rotate-6 motion-reduce:transition-none motion-reduce:group-hover:rotate-0" />
+              )}
               {link.label}
             </Link>
           ) : (
