@@ -3,6 +3,11 @@ import { MazeAnatomy } from "@/components/rules/MazeAnatomy";
 import { RobotFootprint } from "@/components/rules/RobotFootprint";
 import { RunComparison } from "@/components/rules/RunComparison";
 import { ScoreFormula } from "@/components/rules/ScoreFormula";
+import { MazeLab } from "@/components/micromouse/MazeLab";
+import { RobotViewer } from "@/components/micromouse/RobotViewer";
+import { SensorRig } from "@/components/micromouse/SensorRig";
+import { MouseSizing } from "@/components/micromouse/MouseSizing";
+import { TimeBudget } from "@/components/micromouse/TimeBudget";
 
 // Required by @next/mdx for App Router: provides the component overrides
 // used when rendering any imported .mdx file.
@@ -17,6 +22,12 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     RobotFootprint,
     RunComparison,
     ScoreFormula,
+    // The build guide's.
+    RobotViewer,
+    MazeLab,
+    SensorRig,
+    MouseSizing,
+    TimeBudget,
     // Last, so a caller passing its own overrides still wins.
     ...components,
   };

@@ -38,6 +38,11 @@ export const MANAGED_PAGES: readonly ManagedPage[] = [
   },
   { href: "/game", label: "Pac Mouse", covers: "The game and its leaderboard." },
   { href: "/rules", label: "Rules", covers: "The rulebook and the readiness checklist under it." },
+  {
+    href: "/micromouse",
+    label: "Micro Mouse",
+    covers: "The build guide: chassis, sensors, flood fill and how to spend the eight minutes.",
+  },
   { href: "/schedule", label: "Schedule", covers: "The published run of dates." },
   {
     href: "/competition-day",

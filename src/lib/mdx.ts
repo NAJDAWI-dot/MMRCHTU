@@ -16,6 +16,18 @@ export async function loadRulebook(): Promise<ComponentType> {
 }
 
 /**
+ * The build guide behind /micromouse.
+ *
+ * MDX for the same reason the rulebook is: it is long prose with diagrams
+ * dropped between the paragraphs, and it wants editing by whoever knows the
+ * most about mice that year rather than by whoever is least afraid of JSX.
+ */
+export async function loadMicromouseGuide(): Promise<ComponentType> {
+  const mod = await import("../../content/micromouse/guide.mdx");
+  return mod.default;
+}
+
+/**
  * The site's legal pages, slug to title.
  *
  * One place that decides which pages exist, so the route's static params, the
