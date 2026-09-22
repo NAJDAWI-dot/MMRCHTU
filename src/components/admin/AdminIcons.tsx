@@ -18,6 +18,7 @@ export type AdminIconName =
   | "schedule"
   | "competition"
   | "openDay"
+  | "micromouse"
   | "faq"
   | "gallery"
   | "pages"
@@ -81,6 +82,16 @@ const PATHS: Record<AdminIconName, ReactNode> = {
     <>
       <path d="M6 21V3" />
       <path d="M6 4h12l-2.6 3.6L18 11.5H6z" />
+    </>
+  ),
+  micromouse: (
+    <>
+      {/* A mouse in profile: one ear, one eye and a tail, which is the same
+          animal the 3D viewer on the guide is wearing. */}
+      <path d="M4 17.5h10.5a5.5 5.5 0 0 0 0-11c-3 0-5 1.8-5.6 4.2L4 13.5z" />
+      <circle cx="16" cy="9" r="2.6" />
+      <circle cx="12.4" cy="11.4" r=".9" />
+      <path d="M4 17.5c-1.4 0-2.2 1-2.2 2" />
     </>
   ),
   faq: (

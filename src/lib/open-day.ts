@@ -1,5 +1,6 @@
 import { CELL, MAZE_GOLD, generateMaze, type Maze, type Rand } from "@/lib/maze";
 import { DIAGRAM_BRAID, RULES, compareRuns } from "@/lib/rules";
+import { externalUrl } from "@/lib/links";
 
 /**
  * The open day page: how long the silent explainer runs for, and the
@@ -623,17 +624,5 @@ export const MAP_URL_MAX = 500;
  * dropping it would look like the field is broken.
  */
 export function parseMapUrl(value: string | null | undefined): string {
-  let raw = String(value ?? "").trim();
-  if (!raw || raw.length > MAP_URL_MAX) return "";
-
-  if (!raw.includes("://") && /^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(raw)) {
-    raw = `https://${raw}`;
-  }
-
-  try {
-    const url = new URL(raw);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : "";
-  } catch {
-    return "";
-  }
+  return externalUrl(value, MAP_URL_MAX);
 }

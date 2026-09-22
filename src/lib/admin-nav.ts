@@ -42,6 +42,12 @@ export const ADMIN_LINKS: AdminLink[] = [
     icon: "openDay",
     keywords: "stand countdown clock slider homepage location venue",
   },
+  {
+    href: "/admin/micromouse",
+    label: "Micro Mouse",
+    icon: "micromouse",
+    keywords: "guide references links videos playlists websites reading list",
+  },
   { href: "/admin/faq", label: "FAQ", icon: "faq", keywords: "questions answers" },
   { href: "/admin/gallery", label: "Gallery", icon: "gallery", keywords: "photos albums pictures" },
   {
