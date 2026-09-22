@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireSection } from "@/lib/admin-access";
 
 export async function updateFormConfig(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/register-form");
 
   const deadlineDateStr = String(formData.get("deadlineDate") ?? "");
   const deadlineDate = deadlineDateStr ? new Date(deadlineDateStr) : null;

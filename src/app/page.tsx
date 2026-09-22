@@ -11,8 +11,7 @@ import { hiddenPageHrefs } from "@/lib/page-visibility";
 import { openDayLocked, openDayPhase, resolveOpenDayWindow } from "@/lib/open-day";
 import { getCompetitionDayConfig, getOpenDayConfig } from "@/lib/site-config";
 import { getEarlyBirdState } from "@/lib/early-bird-server";
-import { DayHome } from "@/components/day/DayHome";
-import { loadDaySite } from "@/lib/day-site";
+import { redirect } from "next/navigation";
 import { dayModeOn } from "@/lib/page-visibility";
 
 // The countdown reads a live config row, so this page cannot be baked at
@@ -75,11 +74,11 @@ const FEATURE_CARDS = [
 ] as const;
 
 export default async function HomePage() {
-  // Day mode turns this page into the competition day site. Checked first and
-  // on its own, so the ordinary homepage's reads are not spent on a page that
-  // is about to be replaced.
+  // While the day site is public, the homepage hands over to it. Checked first
+  // and on its own, so the ordinary homepage's reads are not spent on a page
+  // nobody is going to see.
   if (await dayModeOn()) {
-    return <DayHome data={await loadDaySite()} />;
+    redirect("/day");
   }
 
   const [config, hidden, earlyBird, openDay] = await Promise.all([

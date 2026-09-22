@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { requireAdminApi } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { inlineScreenshotType } from "@/lib/payment-proof";
+import { requireSectionApi } from "@/lib/admin-access";
 
 /**
  * An admin's view of one team's proof-of-payment screenshot.
@@ -37,7 +37,7 @@ import { inlineScreenshotType } from "@/lib/payment-proof";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const admin = await requireAdminApi();
+  const admin = await requireSectionApi("/admin/payments");
   if (!admin) {
     return new NextResponse("Not found", { status: 404 });
   }

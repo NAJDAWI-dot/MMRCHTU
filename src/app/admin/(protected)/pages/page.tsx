@@ -8,6 +8,7 @@ import { MANAGED_PAGES } from "@/lib/pages";
 import { DAY_MODE_HIDDEN_PAGES, DAY_MODE_MENU_OMITS } from "@/lib/day-mode";
 import { setPageHidden } from "./actions";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Admin | Pages",
@@ -52,6 +53,7 @@ async function otherReasons(): Promise<Map<string, string>> {
 }
 
 export default async function AdminPagesPage() {
+  await requireSection("/admin/pages");
   const [rows, reasons] = await Promise.all([
     prisma.pageVisibility.findMany({ select: { href: true, isHidden: true } }),
     otherReasons(),

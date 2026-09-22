@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { fromAmmanDateTimeLocal, parseMapUrl } from "@/lib/open-day";
+import { requireSection } from "@/lib/admin-access";
 
 /**
  * Saving the open day.
@@ -13,7 +13,7 @@ import { fromAmmanDateTimeLocal, parseMapUrl } from "@/lib/open-day";
  * that is the hour it opens.
  */
 export async function updateOpenDay(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/open-day");
 
   const data = {
     enabled: formData.get("enabled") === "on",

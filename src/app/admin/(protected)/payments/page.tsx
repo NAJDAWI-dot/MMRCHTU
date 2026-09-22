@@ -23,6 +23,7 @@ import { AdminFilters } from "@/components/admin/AdminFilters";
 import { isEarlyBirdActive } from "@/lib/pricing";
 import { updatePaymentConfig, verifyPayment } from "./actions";
 import { PaymentRowForm } from "./PaymentRowForm";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Admin | Payments",
@@ -48,6 +49,7 @@ export default async function AdminPaymentsPage({
 }: {
   searchParams?: { q?: string; status?: string; sort?: string };
 }) {
+  await requireSection("/admin/payments");
   const q = searchParams?.q?.trim() || undefined;
   // The only alternative to urgency order, and it is spelled out rather than
   // any-value-means-recent, so a typo falls back to the useful default.

@@ -9,6 +9,7 @@ import { TeamMembership } from "@/components/admin/TeamMembership";
 import { prisma } from "@/lib/prisma";
 import { formatFils, formatPayerName, payerNameFromRow, paymentDelta } from "@/lib/payment";
 import { rejectPayment, verifyPayment } from "../actions";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Admin | Review payments",
@@ -67,6 +68,7 @@ export default async function ReviewPaymentsPage({
 }: {
   searchParams?: { skip?: string; error?: string };
 }) {
+  await requireSection("/admin/payments");
   const skipped = parseSkipped(searchParams?.skip);
 
   const [team, waiting] = await Promise.all([

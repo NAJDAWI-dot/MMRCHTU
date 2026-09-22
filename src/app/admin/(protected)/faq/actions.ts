@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireSection } from "@/lib/admin-access";
 
 export async function createFaqEntry(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/faq");
 
   await prisma.faqEntry.create({
     data: {
@@ -20,7 +20,7 @@ export async function createFaqEntry(formData: FormData) {
 }
 
 export async function updateFaqEntry(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/faq");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing FAQ entry id.");
@@ -40,7 +40,7 @@ export async function updateFaqEntry(formData: FormData) {
 }
 
 export async function deleteFaqEntry(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/faq");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing FAQ entry id.");
@@ -52,7 +52,7 @@ export async function deleteFaqEntry(formData: FormData) {
 }
 
 export async function replyToQuestion(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/faq");
 
   const id = String(formData.get("id") ?? "");
   const reply = String(formData.get("reply") ?? "");
@@ -67,7 +67,7 @@ export async function replyToQuestion(formData: FormData) {
 }
 
 export async function promoteQuestion(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/faq");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing question id.");

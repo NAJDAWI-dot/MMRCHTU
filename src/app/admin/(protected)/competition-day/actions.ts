@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseStatus } from "@/lib/competition-day";
+import { requireSection } from "@/lib/admin-access";
 
 /**
  * Reads the datetime-local field that drives the countdown.
@@ -19,7 +19,7 @@ function parseEventDate(value: FormDataEntryValue | null): Date | null {
 }
 
 export async function updateCompetitionDay(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/competition-day");
 
   const data = {
     status: parseStatus(formData.get("status")),

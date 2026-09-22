@@ -13,11 +13,11 @@ import { LiveDot } from "@/components/day/LiveDot";
 import { getEarlyBirdState } from "@/lib/early-bird-server";
 
 /**
- * The day site's own first entry: "Live", pointing at the homepage it has
- * become. Rendered as the pill, with a pulsing dot, so the one thing that
+ * The day site's own first entry: "Live", pointing at the day site the
+ * homepage now hands over to. Rendered as the pill, with a pulsing dot, so the one thing that
  * changes minute to minute is the first thing in the menu.
  */
-const DAY_LINK = { href: "/", label: "Live", special: true, live: true };
+const DAY_LINK = { href: "/day", label: "Live", special: true, live: true };
 
 const LINKS = [
   { href: "/open-day", label: "Open Day" },

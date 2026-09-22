@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   isAmbassadorStatus,
@@ -10,6 +9,7 @@ import {
   validateAmbassador,
   type AmbassadorErrors,
 } from "@/lib/referral";
+import { requireSection } from "@/lib/admin-access";
 
 export interface AmbassadorFormState {
   status: "idle" | "created" | "error";
@@ -22,7 +22,7 @@ export async function createAmbassador(
   _prevState: AmbassadorFormState,
   formData: FormData,
 ): Promise<AmbassadorFormState> {
-  await requireAdmin();
+  await requireSection("/admin/ambassadors");
 
   const name = String(formData.get("name") ?? "").trim();
   const university = String(formData.get("university") ?? "").trim();
@@ -60,7 +60,7 @@ export async function createAmbassador(
 }
 
 export async function setAmbassadorStatus(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/ambassadors");
 
   const id = String(formData.get("id") ?? "");
   const status = formData.get("status");
@@ -75,7 +75,7 @@ export async function setAmbassadorStatus(formData: FormData) {
  * and stop counting for anyone (the foreign key is ON DELETE SET NULL).
  */
 export async function deleteAmbassador(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/ambassadors");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing ambassador id.");

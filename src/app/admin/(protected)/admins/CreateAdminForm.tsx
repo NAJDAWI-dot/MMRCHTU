@@ -3,6 +3,7 @@
 import { useFormState, useFormStatus } from "react-dom";
 import { createAdmin, type AdminFormState } from "./actions";
 import { Button } from "@/components/ui/Button";
+import { RoleChecks } from "./RoleChecks";
 
 const initialState: AdminFormState = { status: "idle" };
 
@@ -22,6 +23,9 @@ export function CreateAdminForm() {
       <div>
         <label className={labelClass}>Password</label>
         <input name="password" type="password" required minLength={8} className={inputClass} />
+      </div>
+      <div className="sm:col-span-2">
+        <RoleChecks idPrefix="new" />
       </div>
       {state.status === "error" ? (
         <p role="alert" className="text-sm text-accent sm:col-span-2">

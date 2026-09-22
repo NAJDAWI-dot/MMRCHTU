@@ -28,6 +28,12 @@ export interface AdminLink {
 
 export const ADMIN_LINKS: AdminLink[] = [
   { href: "/admin", label: "Dashboard", icon: "dashboard", keywords: "home overview" },
+  {
+    href: "/admin/day",
+    label: "Day HQ",
+    icon: "dayHq",
+    keywords: "competition day hq desks check-in scoring bracket volunteers announcements guides",
+  },
   { href: "/admin/analytics", label: "Analytics", icon: "analytics", keywords: "stats charts numbers" },
   { href: "/admin/schedule", label: "Schedule", icon: "schedule", keywords: "dates timeline events" },
   {
@@ -38,9 +44,9 @@ export const ADMIN_LINKS: AdminLink[] = [
   },
   {
     href: "/admin/day-mode",
-    label: "Day Mode",
+    label: "Day Site Access",
     icon: "dayMode",
-    keywords: "competition day live switch announcements notices hall",
+    keywords: "competition day live switch public private only me audience",
   },
   {
     href: "/admin/open-day",

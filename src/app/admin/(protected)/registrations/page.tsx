@@ -11,6 +11,7 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminFilters } from "@/components/admin/AdminFilters";
 import { MIN_EXPORT_TOKEN_LENGTH } from "@/lib/export-token";
 import { REGISTRATION_STATUSES } from "@/lib/registration-status";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Admin | Registrations",
@@ -25,6 +26,7 @@ export default async function AdminRegistrationsPage({
 }: {
   searchParams?: { q?: string; status?: string };
 }) {
+  await requireSection("/admin/registrations");
   const q = searchParams?.q?.trim() || undefined;
   // Anything that is not a real payment status is dropped rather than passed to
   // the query, so a hand-edited URL narrows nothing instead of erroring.

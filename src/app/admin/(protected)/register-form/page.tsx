@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { getRegisterFormConfig } from "@/lib/site-config";
 import { updateFormConfig } from "./actions";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Admin | Register Form",
@@ -20,6 +21,7 @@ function toLocalInputValue(date: Date | null): string {
 }
 
 export default async function AdminRegisterFormPage() {
+  await requireSection("/admin/register-form");
   const config = await getRegisterFormConfig();
 
   return (

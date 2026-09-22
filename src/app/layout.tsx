@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/brand/ThemeProvider";
 import { SplashScreen } from "@/components/brand/SplashScreen";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { ChromeGate } from "@/components/layout/ChromeGate";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { RouteLoader } from "@/components/layout/RouteLoader";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -111,7 +112,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="site-background" aria-hidden="true" />
         <ThemeProvider>
           <ServiceWorkerRegistrar />
-          <SplashScreen />
+          <ChromeGate>
+            <SplashScreen />
+          </ChromeGate>
           <RouteLoader />
           {/*
             Sitewide, not just the landing page.
@@ -123,19 +126,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             than blinking out, and the thirty-second cadence belongs to the
             visitor rather than restarting on every page.
           */}
-          <AmbientMice />
+          <ChromeGate>
+            <AmbientMice />
+          </ChromeGate>
           {/* Sitewide for the same reason, and outside PageTransition for a
               second one — see the note in MazeDescent about fixed positioning
               inside an animating transform. */}
-          <MazeDescent />
+          <ChromeGate>
+            <MazeDescent />
+          </ChromeGate>
           <a href="#main-content" className="skip-link">
             Skip to content
           </a>
-          <Header />
+          <ChromeGate>
+            <Header />
+          </ChromeGate>
           <main id="main-content">
             <PageTransition>{children}</PageTransition>
           </main>
-          <Footer />
+          <ChromeGate>
+            <Footer />
+          </ChromeGate>
         </ThemeProvider>
         {/*
           Vercel Web Analytics.

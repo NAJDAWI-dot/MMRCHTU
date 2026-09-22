@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { removePhoto, storePhoto } from "@/lib/photo-storage";
 import {
@@ -11,6 +10,7 @@ import {
   type AllowedImageType,
 } from "@/lib/gallery";
 import { parseCommitteeRank, portraitStorageKey, stageStorageKey } from "@/lib/roster";
+import { requireSection } from "@/lib/admin-access";
 
 /**
  * Everything the Team tab writes.
@@ -39,7 +39,7 @@ function numberOr(value: FormDataEntryValue | null, fallback: number): number {
 /* -------------------------------------------------------------------------- */
 
 export async function createDepartment(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireSection("/admin/team");
 
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("A department needs a name.");
@@ -56,7 +56,7 @@ export async function createDepartment(formData: FormData): Promise<void> {
 }
 
 export async function updateDepartment(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireSection("/admin/team");
 
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
@@ -83,7 +83,7 @@ export async function updateDepartment(formData: FormData): Promise<void> {
  * a surprise anybody should be able to trigger with one button.
  */
 export async function deleteDepartment(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireSection("/admin/team");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing department id.");
@@ -104,7 +104,7 @@ function departmentOrNull(value: FormDataEntryValue | null): string | null {
 }
 
 export async function createMember(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireSection("/admin/team");
 
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("A member needs a name.");
@@ -124,7 +124,7 @@ export async function createMember(formData: FormData): Promise<void> {
 }
 
 export async function updateMember(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireSection("/admin/team");
 
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
@@ -147,7 +147,7 @@ export async function updateMember(formData: FormData): Promise<void> {
 }
 
 export async function deleteMember(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireSection("/admin/team");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing member id.");
@@ -214,7 +214,7 @@ const SLOT: Record<ImageSlot, SlotRules> = {
  * perfectly good one a moment earlier.
  */
 async function replaceMemberImage(slot: ImageSlot, formData: FormData): Promise<PortraitResult> {
-  await requireAdmin();
+  await requireSection("/admin/team");
 
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, error: "Missing member id." };
@@ -261,7 +261,7 @@ async function replaceMemberImage(slot: ImageSlot, formData: FormData): Promise<
 }
 
 async function clearMemberImage(slot: ImageSlot, formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireSection("/admin/team");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing member id.");

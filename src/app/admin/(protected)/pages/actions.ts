@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isManagedPage } from "@/lib/pages";
+import { requireSection } from "@/lib/admin-access";
 
 /**
  * Hides or un-hides one public page.
@@ -14,7 +14,7 @@ import { isManagedPage } from "@/lib/pages";
  * switch anywhere to bring it back.
  */
 export async function setPageHidden(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/pages");
 
   const href = String(formData.get("href") ?? "");
   if (!isManagedPage(href)) {

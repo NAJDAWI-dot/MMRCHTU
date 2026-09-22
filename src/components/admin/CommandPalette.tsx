@@ -51,8 +51,17 @@ const MIN_TEAM_QUERY = 2;
 /** Long enough to swallow a burst of typing, short enough not to feel laggy. */
 const DEBOUNCE_MS = 180;
 
-export function CommandPalette() {
+/**
+ * `allowedHrefs` is the list of screens this admin's roles open, worked out on
+ * the server. The palette offers only those, so a shortcut never leads to the
+ * no-access page.
+ */
+export function CommandPalette({ allowedHrefs }: { allowedHrefs?: string[] } = {}) {
   const router = useRouter();
+  const pageCommands = useMemo(
+    () => (allowedHrefs ? PAGE_COMMANDS.filter((command) => allowedHrefs.includes(command.href ?? "")) : PAGE_COMMANDS),
+    [allowedHrefs],
+  );
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [teams, setTeams] = useState<TeamHit[]>([]);
@@ -177,8 +186,13 @@ export function CommandPalette() {
 
     // Teams come back from the server already filtered and ordered by
     // recency, so they are not re-ranked here — only the fixed page list is.
-    return [...rankCommands(PAGE_COMMANDS, trimmed), ...teamCommands, ...actionCommands];
-  }, [query, teams]);
+    const all = [...rankCommands(pageCommands, trimmed), ...teamCommands, ...actionCommands];
+    // Team hits and quick actions lead into Registrations; drop any that lead
+    // somewhere this admin's roles do not open.
+    return allowedHrefs
+      ? all.filter((command) => !command.href || allowedHrefs.includes(command.href.split("?")[0] ?? ""))
+      : all;
+  }, [query, teams, pageCommands, allowedHrefs]);
 
   // A new query means a new list, and holding the old row number would leave
   // the highlight on whatever happens to be in that position now.

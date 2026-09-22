@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
 import { AdminGreeting } from "@/components/admin/AdminGreeting";
 import { AdminIcon, type AdminIconName } from "@/components/admin/AdminIcons";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard",
@@ -26,7 +26,7 @@ interface Attention {
 }
 
 export default async function AdminDashboardPage() {
-  const admin = await requireAdmin();
+  const admin = await requireSection("/admin");
 
   const [
     registrationCount,

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { BROADCAST_LIST_KINDS, BROADCAST_LIST_KIND_LABELS } from "@/lib/broadcast";
 import { createBroadcastList } from "./actions";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Admin | Email Lists",
@@ -15,6 +16,7 @@ const FIELD =
   "mt-1 w-full rounded-md border border-ras-gray/30 bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-fg)]";
 
 export default async function AdminBroadcastsPage() {
+  await requireSection("/admin/broadcasts");
   /*
     Two queries, not one per list. Prisma cannot select "the newest sent email
     per list" inside an include, and the alternative — an include per row — is a

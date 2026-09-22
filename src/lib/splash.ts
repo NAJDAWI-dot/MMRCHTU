@@ -99,6 +99,9 @@ export function splashHoldMs(mode: SplashMode, runMs?: number): number {
 export function splashPrePaintScript(): string {
   return (
     `(function(){try{` +
+    // Not on the competition day site: it has no splash, and the class would
+    // otherwise hold its page still with nothing ever there to release it.
+    `var p=location.pathname;if(p==="/day"||p.indexOf("/day/")===0)return;` +
     `document.documentElement.classList.add(${JSON.stringify(SPLASH_PENDING_CLASS)});` +
     `}catch(e){}})();`
   );

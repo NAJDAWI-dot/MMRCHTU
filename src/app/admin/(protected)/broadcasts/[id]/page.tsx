@@ -11,12 +11,14 @@ import { deleteBroadcastList, removeContact } from "../actions";
 import { lastUsedWrapper } from "../compose-actions";
 import { AddContactsForm, ImportForm } from "../ListForms";
 import { EmailComposer, type ComposerDraft } from "../EmailComposer";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Admin | Email List",
 };
 
 export default async function BroadcastListPage({ params }: { params: { id: string } }) {
+  await requireSection("/admin/broadcasts");
   const list = await prisma.broadcastList.findUnique({
     where: { id: params.id },
     include: { contacts: { orderBy: { addedAt: "asc" } } },

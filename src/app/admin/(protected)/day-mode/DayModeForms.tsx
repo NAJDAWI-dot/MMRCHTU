@@ -1,68 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/Button";
-import { ANNOUNCEMENT_MAX } from "@/lib/day-mode";
-import { createAnnouncement, deleteAnnouncement, setDayMode, updateAnnouncement } from "./actions";
+import { DAY_AUDIENCES, DAY_AUDIENCE_HINTS, DAY_AUDIENCE_LABELS, type DayAudience } from "@/lib/day-access";
+import { setAudience } from "./actions";
 import { EMPTY_STATE, type ActionState } from "./state";
-
-const inputClass =
-  "mt-1 w-full rounded-md border border-ras-gray/30 bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-fg)] focus:border-ras-purple focus:outline-none";
-const labelClass = "block text-xs font-medium text-ras-gray dark:text-white/70";
-
-/**
- * The switch, armed by the first click.
- *
- * Flipping it changes what every visitor sees, so the first press only says
- * what is about to happen and the second one does it. The same two-step shape
- * as deleting a registration, for the same reason: a button that big should
- * not act on a stray tap.
- */
-export function DayModeSwitch({ on }: { on: boolean }) {
-  const [armed, setArmed] = useState(false);
-
-  // Disarmed once the switch has actually moved, rather than on submit: taking
-  // the form away mid-submit would also take away its "Switching…" state.
-  useEffect(() => setArmed(false), [on]);
-
-  if (!armed) {
-    return (
-      <Button type="button" variant={on ? "secondary" : "primary"} onClick={() => setArmed(true)}>
-        {on ? "Turn day mode off" : "Turn day mode on"}
-      </Button>
-    );
-  }
-
-  return (
-    <form
-      action={setDayMode}
-      className="rounded-lg border border-ras-crimson/40 bg-ras-crimson/5 p-3"
-    >
-      <input type="hidden" name="dayMode" value={on ? "off" : "on"} />
-      <p className="text-sm text-[var(--color-fg)]">
-        {on
-          ? "The normal homepage comes back, and Register and Rules reappear in the menu."
-          : "The homepage becomes the day site for everyone, and Register and Rules go dark until you turn it off."}
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <SwitchButton on={on} />
-        <Button type="button" variant="ghost" size="sm" onClick={() => setArmed(false)}>
-          Cancel
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-function SwitchButton({ on }: { on: boolean }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="sm" disabled={pending}>
-      {pending ? "Switching…" : on ? "Yes, back to the normal site" : "Yes, switch the site over"}
-    </Button>
-  );
-}
 
 function Notice({ state }: { state: ActionState }) {
   if (!state.message) return null;
@@ -70,9 +13,7 @@ function Notice({ state }: { state: ActionState }) {
     <p
       role="status"
       className={`rounded-md px-3 py-2 text-sm ${
-        state.ok
-          ? "bg-ras-purple/10 text-ras-purple dark:bg-white/10 dark:text-white"
-          : "bg-ras-crimson/10 text-accent"
+        state.ok ? "bg-ras-purple/10 text-ras-purple dark:bg-white/10 dark:text-white" : "bg-ras-crimson/10 text-accent"
       }`}
     >
       {state.message}
@@ -80,128 +21,127 @@ function Notice({ state }: { state: ActionState }) {
   );
 }
 
-function SubmitButton({ children, pendingLabel }: { children: string; pendingLabel: string }) {
+function SubmitButton({ children, variant = "primary" }: { children: string; variant?: "primary" | "secondary" }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending}>
-      {pending ? pendingLabel : children}
+    <Button type="submit" variant={variant} disabled={pending}>
+      {pending ? "Saving…" : children}
     </Button>
   );
 }
 
-export interface AnnouncementRow {
+export interface AdminOption {
   id: string;
-  body: string;
-  isPinned: boolean;
-  isPublished: boolean;
+  username: string;
+  isMe: boolean;
 }
 
-function Fields({ row, idPrefix }: { row?: AnnouncementRow; idPrefix: string }) {
-  return (
-    <>
-      <div>
-        <label className={labelClass} htmlFor={`${idPrefix}-body`}>
-          Announcement
-        </label>
-        <textarea
-          id={`${idPrefix}-body`}
-          name="body"
-          required
-          rows={3}
-          maxLength={ANNOUNCEMENT_MAX}
-          defaultValue={row?.body ?? ""}
-          placeholder="Round two starts at 14:00. Teams to the pit area."
-          className={inputClass}
-        />
-      </div>
-      <div className="flex flex-wrap gap-x-6 gap-y-2">
-        <label className="flex items-center gap-2 text-sm text-ras-gray dark:text-white/70">
-          <input type="checkbox" name="isPublished" defaultChecked={row ? row.isPublished : true} className="h-4 w-4" />
-          Show it
-        </label>
-        <label className="flex items-center gap-2 text-sm text-ras-gray dark:text-white/70">
-          <input type="checkbox" name="isPinned" defaultChecked={row?.isPinned ?? false} className="h-4 w-4" />
-          Pin to the top
-        </label>
-      </div>
-    </>
-  );
-}
-
-export function AddAnnouncementForm() {
-  const [state, action] = useFormState(createAnnouncement, EMPTY_STATE);
-  const form = useRef<HTMLFormElement>(null);
-
-  useEffect(() => {
-    if (state.ok) form.current?.reset();
-  }, [state]);
+/**
+ * Who can open the day site.
+ *
+ * Going public asks twice, like the old switch did: it changes what every
+ * visitor to mmrchtu.tech sees.
+ */
+export function AudienceForm({
+  audience,
+  viewerIds,
+  admins,
+}: {
+  audience: DayAudience;
+  viewerIds: string[];
+  admins: AdminOption[];
+}) {
+  const [state, action] = useFormState(setAudience, EMPTY_STATE);
+  const [choice, setChoice] = useState<DayAudience>(audience);
+  const [confirmPublic, setConfirmPublic] = useState(false);
+  const goingPublic = choice === "PUBLIC" && audience !== "PUBLIC";
 
   return (
-    <form ref={form} action={action} className="mt-3 space-y-3">
-      <Fields idPrefix="new" />
-      <Notice state={state} />
-      <SubmitButton pendingLabel="Posting…">Post announcement</SubmitButton>
-    </form>
-  );
-}
-
-export function EditAnnouncementForm({ row, posted }: { row: AnnouncementRow; posted: string }) {
-  const [state, action] = useFormState(updateAnnouncement, EMPTY_STATE);
-
-  return (
-    <>
-      <form action={action} className="space-y-3">
-        <input type="hidden" name="id" value={row.id} />
-        <Fields row={row} idPrefix={row.id} />
-        <Notice state={state} />
-        <div className="flex flex-wrap items-center gap-3">
-          <SubmitButton pendingLabel="Saving…">Save</SubmitButton>
-          <span className="text-xs text-ras-gray dark:text-white/55">
-            {posted}
-            {row.isPublished ? "" : " · not showing"}
-          </span>
+    <div className="space-y-4">
+      <form action={action}>
+        <input type="hidden" name="onlyMe" value="yes" />
+        <input type="hidden" name="audience" value="PRIVATE" />
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[#F2A900]/50 bg-[#F2A900]/10 p-3">
+          <p className="min-w-0 flex-1 text-sm text-[var(--color-fg)]">
+            <strong>Only me.</strong> Lock the day site to your account alone while you build it.
+          </p>
+          <SubmitButton>Only me</SubmitButton>
         </div>
       </form>
-      <DeleteAnnouncement row={row} />
-    </>
-  );
-}
 
-function DeleteAnnouncement({ row }: { row: AnnouncementRow }) {
-  const [armed, setArmed] = useState(false);
+      <form action={action} className="space-y-4">
+        <fieldset>
+          <legend className="text-xs font-medium text-ras-gray dark:text-white/70">Or choose who can open it</legend>
+          <div className="mt-2 grid gap-2 sm:grid-cols-3">
+            {DAY_AUDIENCES.map((value) => (
+              <label
+                key={value}
+                className={`cursor-pointer rounded-lg border p-3 text-sm ${
+                  choice === value
+                    ? "border-ras-purple bg-ras-purple/10 dark:border-white/40 dark:bg-white/10"
+                    : "border-ras-gray/20 dark:border-white/10"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="audience"
+                  value={value}
+                  checked={choice === value}
+                  onChange={() => {
+                    setChoice(value);
+                    setConfirmPublic(false);
+                  }}
+                  className="sr-only"
+                />
+                <span className="block font-semibold text-[var(--color-fg)]">{DAY_AUDIENCE_LABELS[value]}</span>
+                <span className="mt-1 block text-xs text-ras-gray dark:text-white/60">{DAY_AUDIENCE_HINTS[value]}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
 
-  if (!armed) {
-    return (
-      <Button type="button" variant="ghost" className="mt-2 text-accent" onClick={() => setArmed(true)}>
-        Delete
-      </Button>
-    );
-  }
+        {choice === "PRIVATE" ? (
+          <fieldset>
+            <legend className="text-xs font-medium text-ras-gray dark:text-white/70">Admins who can open it</legend>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {admins.map((admin) => (
+                <label
+                  key={admin.id}
+                  className="flex items-center gap-2 rounded-full border border-ras-gray/25 px-3 py-1.5 text-sm dark:border-white/15"
+                >
+                  <input
+                    type="checkbox"
+                    name="viewerIds"
+                    value={admin.id}
+                    defaultChecked={viewerIds.includes(admin.id)}
+                    className="h-4 w-4"
+                  />
+                  {admin.username}
+                  {admin.isMe ? <span className="text-xs text-ras-gray">(you)</span> : null}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        ) : null}
 
-  const preview = row.body.length > 60 ? `${row.body.slice(0, 60)}…` : row.body;
+        {goingPublic ? (
+          <label className="flex items-start gap-2 rounded-lg border border-ras-crimson/40 bg-ras-crimson/5 p-3 text-sm">
+            <input
+              type="checkbox"
+              checked={confirmPublic}
+              onChange={(event) => setConfirmPublic(event.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            Yes, open it to everyone. mmrchtu.tech will open on the day site, and Register and Rules
+            will be hidden until I change this back.
+          </label>
+        ) : null}
 
-  return (
-    <form
-      action={deleteAnnouncement}
-      className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-ras-crimson/40 bg-ras-crimson/5 p-2"
-    >
-      <input type="hidden" name="id" value={row.id} />
-      <span className="text-xs text-accent">
-        Delete <strong>{preview}</strong>?
-      </span>
-      <DeleteButton />
-      <Button type="button" variant="ghost" size="sm" onClick={() => setArmed(false)}>
-        Cancel
-      </Button>
-    </form>
-  );
-}
-
-function DeleteButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" variant="secondary" size="sm" disabled={pending}>
-      {pending ? "Deleting…" : "Yes, delete it"}
-    </Button>
+        <Button type="submit" disabled={goingPublic && !confirmPublic}>
+          Save who can open it
+        </Button>
+      </form>
+      <Notice state={state} />
+    </div>
   );
 }

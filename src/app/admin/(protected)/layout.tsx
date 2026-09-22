@@ -2,6 +2,8 @@ import { requireAdmin } from "@/lib/auth";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { CommandPalette } from "@/components/admin/CommandPalette";
 import { Button } from "@/components/ui/Button";
+import { ADMIN_LINKS } from "@/lib/admin-nav";
+import { ROLE_LABELS, canOpen, parseRoles } from "@/lib/roles";
 
 /**
  * Never prerender anything under the admin area.
@@ -17,6 +19,10 @@ export const dynamic = "force-dynamic";
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin();
   const monogram = admin.username.trim().charAt(0).toUpperCase() || "?";
+  const roles = parseRoles(admin.roles);
+  // Worked out here, once, and handed to both menus: an admin is only ever
+  // offered the screens their roles open.
+  const allowedHrefs = ADMIN_LINKS.filter((link) => canOpen(roles, link.href)).map((link) => link.href);
 
   return (
     // Stacked on a phone, side by side from md up. A fixed 192px column on a
@@ -39,7 +45,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <span className="block truncate font-semibold text-ras-purple dark:text-white">
               {admin.username}
             </span>
-            <span className="block text-xs text-ras-gray dark:text-white/50">Signed in</span>
+            <span className="block truncate text-xs text-ras-gray dark:text-white/50">
+              {roles.length ? roles.map((role) => ROLE_LABELS[role]).join(" · ") : "No role yet"}
+            </span>
           </span>
         </div>
 
@@ -47,10 +55,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             reach any of the twelve items below it, and putting it there is
             what tells anyone who never presses shortcuts that it exists. */}
         <div className="mb-3 px-1 md:px-0">
-          <CommandPalette />
+          <CommandPalette allowedHrefs={allowedHrefs} />
         </div>
 
-        <AdminNav />
+        <AdminNav allowedHrefs={allowedHrefs} />
 
         <form action="/admin/logout" method="post" className="mt-3 px-1 md:px-0">
           <Button type="submit" variant="ghost" size="sm" className="w-full">

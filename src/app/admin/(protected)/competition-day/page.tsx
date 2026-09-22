@@ -12,6 +12,7 @@ import {
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import { updateCompetitionDay } from "./actions";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Admin | Competition Day",
@@ -22,6 +23,7 @@ const inputClass =
 const labelClass = "block text-xs font-medium text-ras-gray dark:text-white/70";
 
 export default async function AdminCompetitionDayPage() {
+  await requireSection("/admin/competition-day");
   const config = await getCompetitionDayConfig();
   const current = parseStatus(config.status);
 

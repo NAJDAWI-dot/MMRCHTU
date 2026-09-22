@@ -1,0 +1,346 @@
+/*
+  The competition day site: its own look, on the same app.
+
+  Night in the arena. A near-black purple floor, the brand's three colours as
+  slow light on it, the maze grid underneath everything, glass panels on top.
+  Always dark, whatever theme the main site is set to: it is a scoreboard, and
+  it is read in a hall with the lights down over the maze.
+
+  Every moving thing here stops for anyone who asked for reduced motion.
+*/
+
+.day-root {
+  --day-bg: #07030b;
+  --day-ink: #f6f0fa;
+  --day-muted: rgba(246, 240, 250, 0.62);
+  --day-faint: rgba(246, 240, 250, 0.38);
+  --day-line: rgba(255, 255, 255, 0.09);
+  --day-glass: rgba(255, 255, 255, 0.045);
+  --day-glass-strong: rgba(255, 255, 255, 0.075);
+  --day-gold: #f2a900;
+  --day-rose: #ff4f86;
+  --day-violet: #b388ff;
+  --day-crimson: #c3124a;
+  --day-mint: #3ee6a8;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100dvh;
+  color: var(--day-ink);
+  background: var(--day-bg);
+  color-scheme: dark;
+}
+
+/* The floor: light, grid and grain, fixed behind the scroll. */
+.day-floor {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(60rem 40rem at 8% -10%, rgba(125, 44, 140, 0.55), transparent 60%),
+    radial-gradient(50rem 36rem at 105% 110%, rgba(195, 18, 74, 0.38), transparent 60%),
+    radial-gradient(32rem 22rem at 92% 4%, rgba(242, 169, 0, 0.16), transparent 70%),
+    var(--day-bg);
+}
+
+.day-floor::before {
+  /* The maze grid, fading out towards the edges. */
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at 50% 30%, black 20%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, black 20%, transparent 75%);
+}
+
+.day-floor::after {
+  /* A slow aurora drifting across the top. */
+  content: "";
+  position: absolute;
+  top: -30vh;
+  left: -20vw;
+  width: 140vw;
+  height: 80vh;
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    rgba(179, 136, 255, 0.0),
+    rgba(179, 136, 255, 0.22),
+    rgba(255, 79, 134, 0.18),
+    rgba(242, 169, 0, 0.12),
+    rgba(179, 136, 255, 0.0)
+  );
+  filter: blur(80px);
+  opacity: 0.8;
+  animation: day-aurora 38s ease-in-out infinite alternate;
+}
+
+@keyframes day-aurora {
+  0% {
+    transform: translate3d(-6%, 0, 0) rotate(-4deg);
+  }
+  100% {
+    transform: translate3d(8%, 6%, 0) rotate(5deg);
+  }
+}
+
+/* Glass: the panel everything sits on. */
+.day-glass {
+  position: relative;
+  background: linear-gradient(180deg, var(--day-glass-strong), var(--day-glass));
+  border: 1px solid var(--day-line);
+  border-radius: 1.25rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 24px 60px -30px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+
+/* A glass panel that lights its edge on hover: every link card. */
+.day-card {
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.day-card:hover,
+.day-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(242, 169, 0, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 0 1px rgba(242, 169, 0, 0.18),
+    0 24px 60px -24px rgba(242, 169, 0, 0.35);
+}
+
+.day-card:focus-visible {
+  outline: 2px solid var(--day-gold);
+  outline-offset: 3px;
+}
+
+/* The gold-to-rose-to-violet type used for the big words. */
+.day-gradient-text {
+  background: linear-gradient(92deg, #ffd166 0%, var(--day-gold) 22%, var(--day-rose) 58%, var(--day-violet) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.day-kicker {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--day-gold);
+}
+
+/* The live dot, bigger and louder than the main site's. */
+.day-live-dot {
+  position: relative;
+  display: inline-flex;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 999px;
+  background: var(--day-rose);
+  box-shadow: 0 0 12px var(--day-rose);
+}
+
+.day-live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--day-rose);
+  animation: day-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes day-ping {
+  75%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* The ticker under the bar: results and notices, running right to left. */
+.day-ticker {
+  mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+}
+
+.day-ticker-track {
+  display: flex;
+  width: max-content;
+  animation: day-ticker 55s linear infinite;
+}
+
+.day-ticker:hover .day-ticker-track {
+  animation-play-state: paused;
+}
+
+@keyframes day-ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* A slow shimmer across the champion's name. */
+.day-shimmer {
+  background-size: 200% auto;
+  animation: day-shimmer 6s linear infinite;
+}
+
+@keyframes day-shimmer {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* Rises into place as the page loads, staggered by --i. */
+.day-rise {
+  animation: day-rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+@keyframes day-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+/* --------------------------------------------------------------- bracket
+   Two halves converging on the final. Each column holds pairs; a pair draws
+   the bracket joining its two matches, and a stub out to the next column, so
+   the lines are made by the layout itself and never drift from the cards. */
+
+.day-bracket {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.15fr) repeat(4, minmax(0, 1fr));
+  gap: 0 1.5rem;
+  min-height: 46rem;
+}
+
+.day-bracket-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.day-bracket-pair {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.day-bracket-slot {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 0.3rem 0;
+}
+
+.day-bracket-slot > * {
+  width: 100%;
+}
+
+.day-bracket-pair::after {
+  content: "";
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  width: 0.75rem;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+}
+
+.day-bracket-pair::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 0.75rem;
+  border-top: 2px solid rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+}
+
+.day-bracket-left .day-bracket-pair::after {
+  right: -0.75rem;
+  border-left: 0;
+  border-radius: 0 0.6rem 0.6rem 0;
+}
+
+.day-bracket-left .day-bracket-pair::before {
+  right: -1.5rem;
+}
+
+.day-bracket-right .day-bracket-pair::after {
+  left: -0.75rem;
+  border-right: 0;
+  border-radius: 0.6rem 0 0 0.6rem;
+}
+
+.day-bracket-right .day-bracket-pair::before {
+  left: -1.5rem;
+}
+
+/* A semi-final: one match, a straight line into the final. */
+.day-bracket-single {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.day-bracket-single > * {
+  width: 100%;
+}
+
+.day-bracket-single::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 1.5rem;
+  border-top: 2px solid rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+}
+
+.day-bracket-left .day-bracket-single::before {
+  right: -1.5rem;
+}
+
+.day-bracket-right .day-bracket-single::before {
+  left: -1.5rem;
+}
+
+.day-bracket-single[data-decided="true"]::before {
+  border-color: rgba(242, 169, 0, 0.55);
+}
+
+/* A pair whose winner is known lights its lines gold. */
+.day-bracket-pair[data-decided="true"]::after,
+.day-bracket-pair[data-decided="true"]::before {
+  border-color: rgba(242, 169, 0, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .day-floor::after,
+  .day-live-dot::after,
+  .day-ticker-track,
+  .day-shimmer,
+  .day-rise {
+    animation: none;
+  }
+
+  .day-card,
+  .day-card:hover {
+    transition: none;
+    transform: none;
+  }
+}

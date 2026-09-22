@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { KIND_IMPORT_STATUS, parseContactInput, parseListKind, type BroadcastListKind } from "@/lib/broadcast";
 
@@ -13,6 +12,7 @@ import { KIND_IMPORT_STATUS, parseContactInput, parseListKind, type BroadcastLis
 // changed does not re-render the page, so the admin kept seeing the previous
 // action's message with no way to tell whether their change applied.
 import type { ActionState } from "./state";
+import { requireSection } from "@/lib/admin-access";
 
 /**
  * Adds contacts to a list, skipping addresses already on it.
@@ -46,7 +46,7 @@ async function addUniqueContacts(
 }
 
 export async function createBroadcastList(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/broadcasts");
 
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("List name is required.");
@@ -63,7 +63,7 @@ export async function createBroadcastList(formData: FormData) {
 }
 
 export async function deleteBroadcastList(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/broadcasts");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing list id.");
@@ -76,7 +76,7 @@ export async function deleteBroadcastList(formData: FormData) {
 }
 
 export async function addContacts(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireAdmin();
+  await requireSection("/admin/broadcasts");
 
   const listId = String(formData.get("listId") ?? "");
   if (!listId) return { message: "Missing list id.", ok: false };
@@ -103,7 +103,7 @@ export async function addContacts(_prev: ActionState, formData: FormData): Promi
 }
 
 export async function removeContact(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/broadcasts");
 
   const id = String(formData.get("id") ?? "");
   const listId = String(formData.get("listId") ?? "");
@@ -121,7 +121,7 @@ export async function removeContact(formData: FormData) {
  * without disturbing hand-added contacts.
  */
 export async function importFromRegistrations(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireAdmin();
+  await requireSection("/admin/broadcasts");
 
   const listId = String(formData.get("listId") ?? "");
   if (!listId) return { message: "Missing list id.", ok: false };
