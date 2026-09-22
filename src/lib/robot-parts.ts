@@ -21,9 +21,33 @@ import { narrowestGapMm } from "@/lib/micromouse";
 export type PartShape =
   | { kind: "box"; w: number; h: number; d: number }
   | { kind: "cylinder"; r: number; h: number; axis: "x" | "y" | "z" }
-  | { kind: "sphere"; r: number };
+  | { kind: "sphere"; r: number }
+  /** Top half of a sphere. What a moulded cover looks like from outside. */
+  | { kind: "dome"; r: number }
+  /** Points along +z before any rotation, so a snout points forwards. */
+  | { kind: "cone"; r: number; h: number };
 
-export interface RobotPart {
+/**
+ * One shape inside a part that is not a single shape.
+ *
+ * The electronics are all one box or one cylinder each, which is honest: a
+ * gearmotor is a cylinder. A moulded cover is not, and forcing it to be would
+ * either flatten it into a lump or split it into fourteen list entries nobody
+ * wants to scroll past.
+ */
+export interface PartPiece {
+  shape: PartShape;
+  /** Offset from the part's own position, in millimetres. */
+  at?: [number, number, number];
+  /** Degrees about x, y and z, applied after the shape is laid on its axis. */
+  rotate?: [number, number, number];
+  /** Stretches the shape. An ellipsoid is a sphere that has been sat on. */
+  scale?: [number, number, number];
+  /** Its own colour, where one colour would not do. Pink ears, black eyes. */
+  colour?: string;
+}
+
+interface PartBase {
   id: string;
   label: string;
   /** What it is, in a sentence. */
@@ -32,16 +56,30 @@ export interface RobotPart {
   detail: string;
   /** The rulebook line it touches, where there is one. */
   rule?: string;
-  shape: PartShape;
   /** Centre of the part, in millimetres. X across, Y up, Z forward. */
   at: [number, number, number];
   /** Where it travels to when the exploded view is fully open. */
   explode: [number, number, number];
   /** Hex, used for the mesh and the swatch in the list. */
   colour: string;
+}
+
+/** A part that is one shape, which is every piece of electronics here. */
+export interface RobotPart extends PartBase {
+  shape: PartShape;
   /** Extra copies of the same shape, offset from `at`. Sensor pips use it. */
   repeat?: [number, number, number][];
+  pieces?: never;
 }
+
+/** A part that is several shapes at once. The mouse body is the only one. */
+export interface ShellPart extends PartBase {
+  pieces: PartPiece[];
+  shape?: never;
+  repeat?: never;
+}
+
+export type ViewerPart = RobotPart | ShellPart;
 
 /** How wide the whole machine is, wheels included. Checked in tests. */
 export const ROBOT_WIDTH_MM = 96;
@@ -124,7 +162,10 @@ export const ROBOT_PARTS: RobotPart[] = [
       "Far more than eight minutes of running in a pack the size of a stick of gum. Mount it low and in the middle so the mass sits between the wheels, and bring a charged spare: changing it inside your match is allowed and costs only time.",
     rule: "Onboard power only. Nothing that burns.",
     shape: { kind: "box", w: 52, h: 12, d: 20 },
-    at: [0, 9, -30],
+    // Sat between the wheels rather than behind them, which is where its own
+    // paragraph says to put it, and which keeps its top corners under the
+    // shell instead of pushing them out through the mouse's back.
+    at: [0, 9, -24],
     explode: [0, 60, -30],
     colour: "#3a3f8f",
   },
@@ -203,26 +244,130 @@ export const ROBOT_PARTS: RobotPart[] = [
   },
 ];
 
+/** The box a part occupies, in millimetres, assembled. */
+export interface PartBounds {
+  min: [number, number, number];
+  max: [number, number, number];
+}
+
+/**
+ * Where a part starts and stops on each axis.
+ *
+ * One place that knows how to measure a part, so the width the page prints,
+ * the legality check and the test that the shell does not sink into the board
+ * are all reading the same arithmetic.
+ */
+export function partBounds(part: ViewerPart): PartBounds {
+  const min: [number, number, number] = [Infinity, Infinity, Infinity];
+  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
+
+  const add = (at: [number, number, number], half: { x: number; y: number; z: number }) => {
+    const halves = [half.x, half.y, half.z];
+    for (let axis = 0; axis < 3; axis += 1) {
+      min[axis] = Math.min(min[axis]!, at[axis]! - halves[axis]!);
+      max[axis] = Math.max(max[axis]!, at[axis]! + halves[axis]!);
+    }
+  };
+
+  if (part.pieces) {
+    for (const piece of part.pieces) {
+      const off = piece.at ?? [0, 0, 0];
+      const centre: [number, number, number] = [
+        part.at[0] + off[0],
+        part.at[1] + off[1],
+        part.at[2] + off[2],
+      ];
+      const half = pieceHalfExtents(piece);
+      // A dome's flat face is its own y, so it stands on that line rather than
+      // straddling it.
+      if (piece.shape.kind === "dome" && !piece.rotate) {
+        add([centre[0], centre[1] + half.y / 2, centre[2]], { ...half, y: half.y / 2 });
+      } else {
+        add(centre, half);
+      }
+    }
+  } else {
+    for (const offset of [[0, 0, 0] as [number, number, number], ...(part.repeat ?? [])]) {
+      add(
+        [part.at[0] + offset[0], part.at[1] + offset[1], part.at[2] + offset[2]],
+        halfExtents(part.shape),
+      );
+    }
+  }
+
+  return { min, max };
+}
+
 /** Widest points of the assembled machine, wheels included. */
-export function robotExtents(parts: RobotPart[] = ROBOT_PARTS): { widthMm: number; lengthMm: number } {
+export function robotExtents(parts: ViewerPart[] = ROBOT_PARTS): {
+  widthMm: number;
+  lengthMm: number;
+} {
   let width = 0;
   let length = 0;
 
   for (const part of parts) {
-    for (const offset of [[0, 0, 0] as [number, number, number], ...(part.repeat ?? [])]) {
-      const [x, , z] = [part.at[0] + offset[0], part.at[1] + offset[1], part.at[2] + offset[2]];
-      const half = halfExtents(part.shape);
-      width = Math.max(width, Math.abs(x) + half.x);
-      length = Math.max(length, Math.abs(z) + half.z);
-    }
+    const { min, max } = partBounds(part);
+    width = Math.max(width, Math.abs(min[0]), Math.abs(max[0]));
+    length = Math.max(length, Math.abs(min[2]), Math.abs(max[2]));
   }
 
   return { widthMm: Math.round(width * 2), lengthMm: Math.round(length * 2) };
 }
 
+/**
+ * How far a piece reaches on each axis once it has been turned.
+ *
+ * The box around a turned shape, worked out the way collision code does it:
+ * each axis of the result takes the absolute row of the rotation matrix
+ * against the half-widths. Rotations are read in the same x, y, z order the
+ * renderer uses, so the numbers here are the numbers on screen.
+ *
+ * Doing it properly rather than bounding everything by a sphere matters for
+ * the tail, which is a long cylinder tilted a few degrees: the sphere around
+ * it is half as deep again as the tail, and it made the mouse look like it was
+ * standing in its own chassis.
+ */
+function pieceHalfExtents(piece: PartPiece): { x: number; y: number; z: number } {
+  const scale = piece.scale ?? [1, 1, 1];
+  const half = halfExtents(piece.shape);
+  const scaled = [half.x * scale[0], half.y * scale[1], half.z * scale[2]];
+  if (!piece.rotate || piece.rotate.every((angle) => angle === 0)) {
+    return { x: scaled[0]!, y: scaled[1]!, z: scaled[2]! };
+  }
+
+  const rotation = rotationMatrix(piece.rotate);
+  const reach = rotation.map((row) =>
+    row.reduce((total, cell, axis) => total + Math.abs(cell) * scaled[axis]!, 0),
+  );
+  return { x: reach[0]!, y: reach[1]!, z: reach[2]! };
+}
+
+/** X then Y then Z, the order three.js reads an Euler rotation in by default. */
+function rotationMatrix([x, y, z]: [number, number, number]): number[][] {
+  const [sx, cx] = sinCos(x);
+  const [sy, cy] = sinCos(y);
+  const [sz, cz] = sinCos(z);
+
+  return [
+    [cy * cz, -cy * sz, sy],
+    [cx * sz + sx * sy * cz, cx * cz - sx * sy * sz, -sx * cy],
+    [sx * sz - cx * sy * cz, sx * cz + cx * sy * sz, cx * cy],
+  ];
+}
+
+function sinCos(degrees: number): [number, number] {
+  const radians = (degrees * Math.PI) / 180;
+  return [Math.sin(radians), Math.cos(radians)];
+}
+
 function halfExtents(shape: PartShape): { x: number; y: number; z: number } {
   if (shape.kind === "box") return { x: shape.w / 2, y: shape.h / 2, z: shape.d / 2 };
   if (shape.kind === "sphere") return { x: shape.r, y: shape.r, z: shape.r };
+  // A dome is a sphere with the bottom taken off, so it is as wide and as deep
+  // as the ball it came from. Its height is measured up from the flat face.
+  if (shape.kind === "dome") return { x: shape.r, y: shape.r, z: shape.r };
+  if (shape.kind === "cone") return { x: shape.r, y: shape.r, z: shape.h / 2 };
   const along = shape.h / 2;
   const across = shape.r;
   return {
@@ -240,7 +385,7 @@ function halfExtents(shape: PartShape): { x: number; y: number; z: number } {
  * in the render loop: it is the one piece of the viewer that can be checked
  * without a browser.
  */
-export function partPosition(part: RobotPart, amount: number): [number, number, number] {
+export function partPosition(part: ViewerPart, amount: number): [number, number, number] {
   const t = Math.min(1, Math.max(0, amount));
   return [
     part.at[0] + part.explode[0] * t,
@@ -250,6 +395,6 @@ export function partPosition(part: RobotPart, amount: number): [number, number, 
 }
 
 /** Whether the assembled machine fits the corridor it has to drive down. */
-export function robotFitsCorridor(parts: RobotPart[] = ROBOT_PARTS): boolean {
+export function robotFitsCorridor(parts: ViewerPart[] = ROBOT_PARTS): boolean {
   return robotExtents(parts).widthMm < narrowestGapMm();
 }

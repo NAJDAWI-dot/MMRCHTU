@@ -35,8 +35,8 @@ export default async function MicromousePage() {
         Everything we can tell you about getting a robot round our maze on its own: what the
         rulebook costs your design, what to build, what to write, and how to spend the eight
         minutes when you get there. Written for this competition, not for micromouse in general.
-        Take the robot apart, drag it round a corridor to see what its sensors see, knock walls
-        down and watch the maze re-solve itself.
+        Take the shell off the mouse and pull the robot underneath apart, drag it round a corridor
+        to see what its sensors see, knock walls down and watch the maze re-solve itself.
       </p>
 
       {/* The three numbers that decide the most, before anybody scrolls. */}

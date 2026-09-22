@@ -3,7 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type * as THREE from "three";
 import { narrowestGapMm } from "@/lib/micromouse";
-import { ROBOT_PARTS, partPosition, robotExtents, type RobotPart } from "@/lib/robot-parts";
+import { MOUSE_SHELL } from "@/lib/mouse-shell";
+import {
+  ROBOT_PARTS,
+  partPosition,
+  robotExtents,
+  type PartShape,
+  type ViewerPart,
+} from "@/lib/robot-parts";
 
 /**
  * The mouse, in three dimensions, at its real size.
@@ -13,6 +20,11 @@ import { ROBOT_PARTS, partPosition, robotExtents, type RobotPart } from "@/lib/r
  * from the parts list in `@/lib/robot-parts`, and it can be pulled apart and
  * put back together, turned over, and stood in a corridor the exact width of
  * the one it has to drive down.
+ *
+ * It arrives wearing the shell from `@/lib/mouse-shell`, in that order for a
+ * reason: an animal first, then the circuit board underneath doing the work.
+ * The shell lifts off in one piece, either with the toggle or by pulling the
+ * whole robot apart.
  *
  * Three.js is loaded only when this component mounts, and this component is
  * only on the build guide. Nothing else on the site pays for it.
@@ -34,7 +46,8 @@ export function RobotViewer() {
   const [explode, setExplode] = useState(0);
   const [walls, setWalls] = useState(false);
   const [spin, setSpin] = useState(true);
-  const [selected, setSelected] = useState<RobotPart | null>(null);
+  const [shell, setShell] = useState(true);
+  const [selected, setSelected] = useState<ViewerPart | null>(null);
 
   const extents = robotExtents();
 
@@ -80,6 +93,10 @@ export function RobotViewer() {
   }, [spin, ready]);
 
   useEffect(() => {
+    stateRef.current?.setShell(shell);
+  }, [shell, ready]);
+
+  useEffect(() => {
     stateRef.current?.setSelected(selected?.id ?? null);
   }, [selected, ready]);
 
@@ -88,7 +105,10 @@ export function RobotViewer() {
     setSpin(false);
   }, []);
 
-  const pick = useCallback((part: RobotPart) => {
+  const pick = useCallback((part: ViewerPart) => {
+    // Picking a piece of bodywork while the bodywork is hidden would light up
+    // nothing at all, so it comes back on to be looked at.
+    if (part.pieces) setShell(true);
     setSelected((current) => (current?.id === part.id ? null : part));
   }, []);
 
@@ -138,6 +158,9 @@ export function RobotViewer() {
           />
 
           <div className="mt-3 flex flex-wrap gap-2">
+            <Toggle on={shell} onClick={() => setShell((v) => !v)}>
+              Mouse shell
+            </Toggle>
             <Toggle on={walls} onClick={() => setWalls((v) => !v)}>
               Show the corridor
             </Toggle>
@@ -148,26 +171,24 @@ export function RobotViewer() {
 
           <div className="mt-4 max-h-[190px] overflow-y-auto pr-1">
             <ul className="space-y-1">
+              {MOUSE_SHELL.map((part) => (
+                <PartRow
+                  key={part.id}
+                  part={part}
+                  selected={selected?.id === part.id}
+                  onClick={() => pick(part)}
+                />
+              ))}
+              {/* The bodywork sits above the line because it is the first thing
+                  off and the first thing anybody asks about. */}
+              <li aria-hidden="true" className="!mt-2 border-t border-ras-purple/15 pt-1 dark:border-white/10" />
               {ROBOT_PARTS.map((part) => (
-                <li key={part.id}>
-                  <button
-                    type="button"
-                    onClick={() => pick(part)}
-                    aria-pressed={selected?.id === part.id}
-                    className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
-                      selected?.id === part.id
-                        ? "bg-ras-purple/10 font-semibold text-ras-purple dark:bg-white/10 dark:text-white"
-                        : "text-ras-gray hover:bg-ras-purple/5 dark:text-white/70 dark:hover:bg-white/5"
-                    }`}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="h-3 w-3 shrink-0 rounded-sm"
-                      style={{ background: part.colour }}
-                    />
-                    {part.label}
-                  </button>
-                </li>
+                <PartRow
+                  key={part.id}
+                  part={part}
+                  selected={selected?.id === part.id}
+                  onClick={() => pick(part)}
+                />
               ))}
             </ul>
           </div>
@@ -194,10 +215,11 @@ export function RobotViewer() {
           </div>
         ) : (
           <p className="text-sm leading-relaxed text-ras-gray dark:text-white/70">
-            {extents.widthMm}mm wide and {extents.lengthMm}mm long, drawn at real size. The
-            corridor it has to fit down is {narrowestGapMm()}mm at its narrowest, which leaves{" "}
-            {Math.round((narrowestGapMm() - extents.widthMm) / 2)}mm either side. Pull it apart, or
-            pick a part to read what it is for.
+            {extents.widthMm}mm wide and {extents.lengthMm}mm long over the board, drawn at real
+            size. The corridor it has to fit down is {narrowestGapMm()}mm at its narrowest, which
+            leaves {Math.round((narrowestGapMm() - extents.widthMm) / 2)}mm either side, and the
+            ears are tucked inside the wheels so the shell costs none of it. Take the shell off,
+            pull the rest apart, or pick a part to read what it is for.
           </p>
         )}
         {/* Attached to the model, because this is the thing most likely to be
@@ -208,6 +230,38 @@ export function RobotViewer() {
         </p>
       </div>
     </div>
+  );
+}
+
+function PartRow({
+  part,
+  selected,
+  onClick,
+}: {
+  part: ViewerPart;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={selected}
+        className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
+          selected
+            ? "bg-ras-purple/10 font-semibold text-ras-purple dark:bg-white/10 dark:text-white"
+            : "text-ras-gray hover:bg-ras-purple/5 dark:text-white/70 dark:hover:bg-white/5"
+        }`}
+      >
+        <span
+          aria-hidden="true"
+          className="h-3 w-3 shrink-0 rounded-sm"
+          style={{ background: part.colour }}
+        />
+        {part.label}
+      </button>
+    </li>
   );
 }
 
@@ -242,6 +296,7 @@ interface ViewerHandles {
   setExplode: (amount: number) => void;
   setWalls: (on: boolean) => void;
   setSpin: (on: boolean) => void;
+  setShell: (on: boolean) => void;
   setSelected: (id: string | null) => void;
   dispose: () => void;
 }
@@ -255,7 +310,7 @@ interface ViewerHandles {
 function buildScene(
   three: typeof THREE,
   host: HTMLElement,
-  onPick: (part: RobotPart) => void,
+  onPick: (part: ViewerPart) => void,
 ): ViewerHandles {
   const renderer = new three.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -265,33 +320,67 @@ function buildScene(
   const scene = new three.Scene();
   const camera = new three.PerspectiveCamera(38, host.clientWidth / host.clientHeight, 1, 4000);
 
-  scene.add(new three.HemisphereLight(0xffffff, 0x3b2a44, 1.15));
-  const key = new three.DirectionalLight(0xffffff, 1.5);
+  scene.add(new three.HemisphereLight(0xffffff, 0x6a5570, 1.2));
+  const key = new three.DirectionalLight(0xffffff, 1.4);
   key.position.set(120, 240, 180);
   scene.add(key);
   const rim = new three.DirectionalLight(0xff9ecb, 0.5);
   rim.position.set(-160, 80, -140);
   scene.add(rim);
+  // A fill on the other side of the key. Without it the far ear falls to
+  // almost black against the body and stops reading as an ear at all.
+  const fill = new three.DirectionalLight(0xffffff, 0.5);
+  fill.position.set(-180, 120, 120);
+  scene.add(fill);
 
   const rig = new three.Group();
   scene.add(rig);
+  // Its own group, so the shell goes away in one line rather than by walking
+  // every mesh and asking it what it belongs to.
+  const shellGroup = new three.Group();
+  rig.add(shellGroup);
 
-  const meshes: { mesh: THREE.Mesh; part: RobotPart; offset: [number, number, number] }[] = [];
-  const materials = new Map<string, THREE.MeshStandardMaterial>();
+  const meshes: { mesh: THREE.Mesh; part: ViewerPart; offset: [number, number, number] }[] = [];
+  /** Every material a part owns, because the shell is not one colour. */
+  const materials = new Map<string, THREE.MeshStandardMaterial[]>();
+
+  const materialFor = (part: ViewerPart, colour: string) => {
+    const owned = materials.get(part.id) ?? [];
+    const existing = owned.find((m) => m.userData.colour === colour);
+    if (existing) return existing;
+    const material = new three.MeshStandardMaterial({
+      color: new three.Color(colour),
+      roughness: part.pieces ? 0.72 : 0.48,
+      metalness: part.pieces ? 0.04 : 0.18,
+    });
+    material.userData.colour = colour;
+    materials.set(part.id, [...owned, material]);
+    return material;
+  };
 
   for (const part of ROBOT_PARTS) {
-    const material = new three.MeshStandardMaterial({
-      color: new three.Color(part.colour),
-      roughness: 0.48,
-      metalness: 0.18,
-    });
-    materials.set(part.id, material);
-
     for (const offset of [[0, 0, 0] as [number, number, number], ...(part.repeat ?? [])]) {
-      const mesh = new three.Mesh(geometryFor(three, part), material);
+      const mesh = new three.Mesh(geometryFor(three, part.shape), materialFor(part, part.colour));
       mesh.userData.partId = part.id;
       rig.add(mesh);
       meshes.push({ mesh, part, offset });
+    }
+  }
+
+  for (const part of MOUSE_SHELL) {
+    for (const piece of part.pieces) {
+      const mesh = new three.Mesh(
+        geometryFor(three, piece.shape),
+        materialFor(part, piece.colour ?? part.colour),
+      );
+      if (piece.scale) mesh.scale.set(...piece.scale);
+      if (piece.rotate) {
+        const [rx, ry, rz] = piece.rotate;
+        mesh.rotation.set(rad(rx), rad(ry), rad(rz));
+      }
+      mesh.userData.partId = part.id;
+      shellGroup.add(mesh);
+      meshes.push({ mesh, part, offset: piece.at ?? [0, 0, 0] });
     }
   }
 
@@ -379,13 +468,15 @@ function buildScene(
   applyCamera();
 
   const applySelection = () => {
-    for (const [id, material] of materials) {
+    for (const [id, owned] of materials) {
       const lit = selectedId === id;
-      material.emissive.setHex(lit ? 0xf2a900 : 0x000000);
-      material.emissiveIntensity = lit ? 0.55 : 0;
-      material.opacity = selectedId && !lit ? 0.35 : 1;
-      material.transparent = Boolean(selectedId) && !lit;
-      material.needsUpdate = true;
+      for (const material of owned) {
+        material.emissive.setHex(lit ? 0xf2a900 : 0x000000);
+        material.emissiveIntensity = lit ? 0.55 : 0;
+        material.opacity = selectedId && !lit ? 0.35 : 1;
+        material.transparent = Boolean(selectedId) && !lit;
+        material.needsUpdate = true;
+      }
     }
   };
 
@@ -432,9 +523,12 @@ function buildScene(
     );
     const raycaster = new three.Raycaster();
     raycaster.setFromCamera(pointer, camera);
-    const hit = raycaster.intersectObjects(rig.children, false)[0];
+    // Recursive, because the shell lives in a group of its own. A hidden group
+    // is skipped, so a click passes through to the electronics when the shell
+    // is off.
+    const hit = raycaster.intersectObjects(rig.children, true)[0];
     const id = hit?.object.userData.partId as string | undefined;
-    const part = ROBOT_PARTS.find((p) => p.id === id);
+    const part = [...ROBOT_PARTS, ...MOUSE_SHELL].find((p) => p.id === id);
     if (part) onPick(part);
   };
 
@@ -487,6 +581,9 @@ function buildScene(
     setSpin: (on) => {
       spin = on;
     },
+    setShell: (on) => {
+      shellGroup.visible = on;
+    },
     setSelected: (id) => {
       selectedId = id;
       applySelection();
@@ -502,7 +599,7 @@ function buildScene(
         const mesh = object as THREE.Mesh;
         mesh.geometry?.dispose?.();
       });
-      for (const material of materials.values()) material.dispose();
+      for (const owned of materials.values()) for (const material of owned) material.dispose();
       wallMaterial.dispose();
       topMaterial.dispose();
       renderer.dispose();
@@ -511,10 +608,22 @@ function buildScene(
   };
 }
 
-function geometryFor(three: typeof THREE, part: RobotPart): THREE.BufferGeometry {
-  const shape = part.shape;
+const rad = (degrees: number) => (degrees * Math.PI) / 180;
+
+function geometryFor(three: typeof THREE, shape: PartShape): THREE.BufferGeometry {
   if (shape.kind === "box") return new three.BoxGeometry(shape.w, shape.h, shape.d);
   if (shape.kind === "sphere") return new three.SphereGeometry(shape.r, 24, 16);
+  // Top half only, flat face on the part's own y, so a cover sits on a board
+  // instead of sinking halfway into it.
+  if (shape.kind === "dome") {
+    return new three.SphereGeometry(shape.r, 32, 18, 0, Math.PI * 2, 0, Math.PI / 2);
+  }
+  if (shape.kind === "cone") {
+    const cone = new three.ConeGeometry(shape.r, shape.h, 28);
+    // Born pointing up, and a snout points forwards.
+    cone.rotateX(Math.PI / 2);
+    return cone;
+  }
 
   const cylinder = new three.CylinderGeometry(shape.r, shape.r, shape.h, 28);
   // Cylinders are born standing up. Lay them along whichever axis the part
