@@ -7,6 +7,7 @@ import { Empty, MatchCard, MoreLink, PageHead } from "@/components/day-site/ui";
 import { KNOCKOUT_ROUNDS, phaseInfo } from "@/lib/bracket";
 import { loadCompetition, type BracketMatch } from "@/lib/competition";
 import { formatPoints } from "@/lib/score-sheet";
+import { requireDayViewer } from "@/lib/day-access";
 
 export const revalidate = 30;
 export const metadata: Metadata = { title: "Bracket" };
@@ -92,6 +93,7 @@ function Column({ matches, side, nameOf }: { matches: (BracketMatch | undefined)
 
 /** Phases 2 to 6: two halves of the draw, meeting at the final. */
 export default async function DayBracketPage() {
+  await requireDayViewer();
   const state = await loadCompetition();
   const nameOf: NameOf = (id) => (id ? (state.byId.get(id)?.name ?? null) : null);
   const at = (round: number, slot: number) => state.bracket.find((m) => m.round === round && m.slot === slot);

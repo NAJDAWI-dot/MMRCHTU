@@ -12,6 +12,7 @@ import { shouldShowCountdown } from "@/lib/countdown";
 import { clockTime, postedAgo } from "@/lib/day-mode";
 import { loadDaySite } from "@/lib/day-site";
 import { formatPoints, formatTime } from "@/lib/score-sheet";
+import { requireDayViewer } from "@/lib/day-access";
 
 export const revalidate = 30;
 
@@ -32,6 +33,7 @@ function progressThrough(start: Date, end: Date | null | undefined, now: Date): 
 
 /** The live hub: the fanciest page on the site, and the one open all day. */
 export default async function DayLivePage() {
+  await requireDayViewer();
   const [state, site] = await Promise.all([loadCompetition(), loadDaySite()]);
   const nameOf = (id: string | null) => (id ? (state.byId.get(id)?.name ?? null) : null);
 

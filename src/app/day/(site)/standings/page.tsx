@@ -7,6 +7,7 @@ import { Empty, PageHead, SheetView, StatTile } from "@/components/day-site/ui";
 import { QUALIFIERS, QUALIFYING_STATUS_LABELS, type Standing } from "@/lib/bracket";
 import { loadCompetition } from "@/lib/competition";
 import { formatCells, formatPoints, formatTime } from "@/lib/score-sheet";
+import { requireDayViewer } from "@/lib/day-access";
 
 export const revalidate = 30;
 export const metadata: Metadata = { title: "Standings" };
@@ -75,6 +76,7 @@ function Row({ row, locked }: { row: Standing; locked: boolean }) {
 
 /** Phase 1: the qualifying table as a timing sheet, and the line the top 32 have to clear. */
 export default async function DayStandingsPage() {
+  await requireDayViewer();
   const state = await loadCompetition();
   const ranked = state.table.filter((row) => row.rank !== null);
   const unranked = state.table.filter((row) => row.rank === null);

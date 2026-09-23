@@ -3,11 +3,13 @@ import { DayIcon } from "@/components/day-site/icons";
 import { GuideView, PageHead } from "@/components/day-site/ui";
 import { loadGuide } from "@/lib/day-guide-server";
 import { loadDaySite } from "@/lib/day-site";
+import { requireDayViewer } from "@/lib/day-access";
 
 export const revalidate = 300;
 export const metadata: Metadata = { title: "Venue" };
 
 export default async function DayVenuePage() {
+  await requireDayViewer();
   const [guide, site] = await Promise.all([loadGuide("venue"), loadDaySite()]);
   return (
     <div className="space-y-12">

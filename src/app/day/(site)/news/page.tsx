@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Empty, PageHead } from "@/components/day-site/ui";
 import { loadDaySite } from "@/lib/day-site";
 import { clockTime, postedAgo } from "@/lib/day-mode";
+import { requireDayViewer } from "@/lib/day-access";
 
 export const revalidate = 30;
 export const metadata: Metadata = { title: "News" };
@@ -13,6 +14,7 @@ const TONE: Record<string, { label: string; className: string }> = {
 
 /** Every announcement from the desk, pinned first, as a feed. */
 export default async function DayNewsPage() {
+  await requireDayViewer();
   const site = await loadDaySite();
   return (
     <div className="space-y-12">

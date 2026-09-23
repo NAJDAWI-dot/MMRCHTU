@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Empty, PageHead } from "@/components/day-site/ui";
 import { clockTime } from "@/lib/day-mode";
 import { loadDaySite } from "@/lib/day-site";
+import { requireDayViewer } from "@/lib/day-access";
 
 export const revalidate = 30;
 export const metadata: Metadata = { title: "Schedule" };
@@ -12,6 +13,7 @@ export const metadata: Metadata = { title: "Schedule" };
  * schedule's events on the day.
  */
 export default async function DaySchedulePage() {
+  await requireDayViewer();
   const site = await loadDaySite();
   const nowIndex = site.timeline.findIndex((item) => item.state === "now");
 

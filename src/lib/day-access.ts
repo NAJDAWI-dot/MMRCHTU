@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { cookies, draftMode } from "next/headers";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { SESSION_COOKIE_NAME, verifySessionSignature } from "@/lib/auth";
 import { getCompetitionDayConfig } from "@/lib/site-config";
@@ -55,6 +56,19 @@ export const canViewDaySite = cache(async (): Promise<boolean> => {
   if (viewers.length === 0) return parseRoles(admin.roles).includes("MASTER");
   return viewers.includes(admin.id);
 });
+
+/**
+ * The first line of every day site page: "not found" for anyone the audience
+ * setting does not cover, before the page loads anything.
+ *
+ * The layout checks as well, but a page renders alongside its layout, not
+ * after it, so without this each page would run all of its queries only for
+ * the layout to throw them away. That matters most at build time, when every
+ * page is prerendered at once against a small connection pool.
+ */
+export async function requireDayViewer(): Promise<void> {
+  if (!(await canViewDaySite())) notFound();
+}
 
 /** Whether the day site is open to everyone. Reads no cookie. */
 export async function daySiteIsPublic(): Promise<boolean> {

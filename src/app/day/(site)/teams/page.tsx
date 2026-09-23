@@ -4,6 +4,7 @@ import { Empty, PageHead } from "@/components/day-site/ui";
 import { loadCompetition } from "@/lib/competition";
 import { prisma } from "@/lib/prisma";
 import { formatPoints, formatTime } from "@/lib/score-sheet";
+import { requireDayViewer } from "@/lib/day-access";
 
 export const revalidate = 30;
 export const metadata: Metadata = { title: "Teams" };
@@ -16,6 +17,7 @@ function universityOf(names: string[]): string {
 }
 
 export default async function DayTeamsPage() {
+  await requireDayViewer();
   const state = await loadCompetition();
   const members = await prisma.teamMember.findMany({
     where: { registrationId: { in: state.competitors.map((team) => team.id) } },

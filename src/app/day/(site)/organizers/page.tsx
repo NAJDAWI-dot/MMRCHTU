@@ -3,12 +3,14 @@ import { ChapterLogo } from "@/components/day-site/DayNav";
 import { GuideView, PageHead, SectionTitle } from "@/components/day-site/ui";
 import { loadGuide } from "@/lib/day-guide-server";
 import { prisma } from "@/lib/prisma";
+import { requireDayViewer } from "@/lib/day-access";
 
 export const revalidate = 300;
 export const metadata: Metadata = { title: "Organizers" };
 
 /** The committee running the day, from the committee page data, and who to ask. */
 export default async function DayOrganizersPage() {
+  await requireDayViewer();
   const [guide, members] = await Promise.all([
     loadGuide("organizers"),
     prisma.committeeMember.findMany({

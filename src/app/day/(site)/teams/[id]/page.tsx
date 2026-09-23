@@ -8,10 +8,12 @@ import { INSPECTION_LABELS, QUALIFIERS, ordinal, phaseInfo } from "@/lib/bracket
 import { loadCompetition, publicMembers } from "@/lib/competition";
 import { clockTime } from "@/lib/day-mode";
 import { formatPoints, formatTime } from "@/lib/score-sheet";
+import { canViewDaySite, requireDayViewer } from "@/lib/day-access";
 
 export const revalidate = 30;
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  if (!(await canViewDaySite())) return { title: "Team" };
   const state = await loadCompetition();
   return { title: state.byId.get(params.id)?.name ?? "Team" };
 }
@@ -22,6 +24,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
  * major only; nothing a team gave for contact purposes ever reaches this page.
  */
 export default async function DayTeamPage({ params }: { params: { id: string } }) {
+  await requireDayViewer();
   const state = await loadCompetition();
   const team = state.byId.get(params.id);
   if (!team) notFound();

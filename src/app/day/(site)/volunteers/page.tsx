@@ -3,12 +3,14 @@ import { DayIcon } from "@/components/day-site/icons";
 import { GuideView, PageHead, SectionTitle } from "@/components/day-site/ui";
 import { loadGuide } from "@/lib/day-guide-server";
 import { prisma } from "@/lib/prisma";
+import { requireDayViewer } from "@/lib/day-access";
 
 export const revalidate = 60;
 export const metadata: Metadata = { title: "Volunteers" };
 
 /** The volunteer briefing, and who is at which station. Phone numbers never appear here. */
 export default async function DayVolunteersPage() {
+  await requireDayViewer();
   const [guide, volunteers] = await Promise.all([
     loadGuide("volunteers"),
     prisma.volunteer.findMany({

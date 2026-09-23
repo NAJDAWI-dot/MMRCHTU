@@ -3,6 +3,7 @@ import Link from "next/link";
 import { DayIcon, type DayIconName } from "@/components/day-site/icons";
 import { GuideView, PageHead } from "@/components/day-site/ui";
 import { loadGuide } from "@/lib/day-guide-server";
+import { requireDayViewer } from "@/lib/day-access";
 
 export const revalidate = 60;
 export const metadata: Metadata = { title: "Competitors" };
@@ -15,6 +16,7 @@ const SHORTCUTS: { href: string; label: string; hint: string; icon: DayIconName 
 ];
 
 export default async function DayCompetitorsPage() {
+  await requireDayViewer();
   const guide = await loadGuide("competitors");
   return (
     <div className="space-y-12">
