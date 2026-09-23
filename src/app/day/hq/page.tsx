@@ -19,13 +19,14 @@ export const metadata: Metadata = { title: "Overview" };
 export default async function DayHqPage() {
   const admin = await requireSection("/day/hq");
   const roles = rolesOf(admin);
-  const [state, config, alerts, announcements, volunteers, slots] = await Promise.all([
+  const [state, config, alerts, announcements, volunteers, slots, sponsors] = await Promise.all([
     loadCompetition(),
     getCompetitionDayConfig(),
     prisma.dayAnnouncement.count({ where: { isPublished: true, isAlert: true } }),
     prisma.dayAnnouncement.count({ where: { isPublished: true } }),
     prisma.volunteer.count(),
     prisma.daySlot.count(),
+    prisma.sponsor.count({ where: { isPublished: true } }),
   ]);
 
   const total = state.competitors.length;
@@ -48,6 +49,7 @@ export default async function DayHqPage() {
   const counts: Record<string, string> = {
     "/day/hq/announcements": `${announcements} live · ${alerts} alert${alerts === 1 ? "" : "s"}`,
     "/day/hq/volunteers": `${volunteers} people`,
+    "/day/hq/sponsors": `${sponsors} on the slide`,
     "/day/hq/access": DAY_AUDIENCE_LABELS[audience],
     "/day/hq/check-in": `${arrived} of ${total} here`,
     "/day/hq/scoring": `${ran} of ${total} have run`,

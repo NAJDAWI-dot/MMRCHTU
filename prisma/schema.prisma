@@ -899,3 +899,23 @@ model MicromouseReference {
 
   @@index([isPublished, sortOrder])
 }
+
+// A sponsor of the competition, shown on the hall screen's sponsors slide and
+// edited on the Sponsors desk in Day HQ.
+model Sponsor {
+  id          String   @id @default(cuid())
+  name        String
+  // A label to group by, "Gold sponsor" or "Media partner". Empty for none.
+  tier        String   @default("")
+  website     String   @default("")
+  // The logo in blob storage, and its key so replacing or deleting the
+  // sponsor removes the file too. Empty for a sponsor shown by name.
+  logoUrl     String   @default("")
+  logoKey     String   @default("")
+  isPublished Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isPublished, sortOrder])
+}

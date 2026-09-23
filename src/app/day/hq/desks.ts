@@ -8,6 +8,7 @@ export const DESKS: readonly { href: string; label: string; blurb: string; icon:
   { href: "/day/hq/scoring/bracket", label: "Bracket", blurb: "Draw the top 32 and enter every match.", icon: "bracket" },
   { href: "/day/hq/announcements", label: "Announcements", blurb: "News, and alerts that pop up on every screen.", icon: "megaphone" },
   { href: "/day/hq/photos", label: "Photos", blurb: "Add photos from the hall; they go live on the day site and the screen.", icon: "camera" },
+  { href: "/day/hq/sponsors", label: "Sponsors", blurb: "Sponsors and their logos, for the sponsors slide on the hall screen.", icon: "star" },
   { href: "/day/hq/guides", label: "Guides", blurb: "The competitor, volunteer, organizer and venue pages.", icon: "book" },
   { href: "/day/hq/volunteers", label: "Volunteers", blurb: "Who is where, and when.", icon: "hand" },
   { href: "/day/hq/access", label: "Access", blurb: "Who can open the day site, and going live.", icon: "lock" },

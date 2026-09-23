@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Crest } from "@/components/day-site/Crest";
+import { SponsorLogo } from "@/components/day-site/SponsorLogo";
 import { DayIcon } from "@/components/day-site/icons";
 import { QUALIFIERS, matchesInRound, phaseInfo } from "@/lib/bracket";
 import { loadCompetition, type BracketMatch } from "@/lib/competition";
@@ -9,6 +10,9 @@ import { loadDayPhotos } from "@/lib/day-photos";
 import { loadQueue } from "@/lib/day-queue";
 import { loadDayShell } from "@/lib/day-shell";
 import { loadDaySite } from "@/lib/day-site";
+import { prisma } from "@/lib/prisma";
+import { finalPlacings, roundLeaderboard, type RoundResult } from "@/lib/screen-boards";
+import { groupByTier } from "@/lib/sponsors";
 import { formatPoints, formatTime } from "@/lib/score-sheet";
 import { HallScreen, type ScreenPanel } from "./HallScreen";
 
@@ -19,13 +23,21 @@ export const metadata: Metadata = { title: "Hall screen", robots: { index: false
  * The hall screen: the day on a projector, readable from the back row.
  *
  * Open it on the laptop driving the projector and press F. It cycles through
- * who is on the maze, the standings, the bracket round, the latest photos and
- * the news, and keeps itself current. Same access as the day site: a signed-in
+ * who is on the maze, the current phase's leaderboard, the day's schedule, the
+ * bracket round, the latest photos, the news and the sponsors, and keeps
+ * itself current. Same access as the day site: a signed-in
  * admin can run it before the day site goes public.
  */
 export default async function HallScreenPage() {
   await requireDayViewer();
-  const [state, site, queue, gallery, shell] = await Promise.all([loadCompetition(), loadDaySite(), loadQueue(), loadDayPhotos(5), loadDayShell()]);
+  const [state, site, queue, gallery, shell, sponsors] = await Promise.all([
+    loadCompetition(),
+    loadDaySite(),
+    loadQueue(),
+    loadDayPhotos(5),
+    loadDayShell(),
+    prisma.sponsor.findMany({ where: { isPublished: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], select: { id: true, name: true, tier: true, logoUrl: true } }),
+  ]);
   const nameOf = (id: string | null) => (id ? (state.byId.get(id)?.name ?? null) : null);
 
   const champion = state.competitors.find((team) => team.journey.state === "CHAMPION");
@@ -196,41 +208,154 @@ export default async function HallScreenPage() {
     });
   }
 
-  // ------------------------------------------------------------ standings
-  if (!state.drawn && ranked.length) {
-    const top = ranked.slice(0, 10);
-    const columns = top.length > 5 ? [top.slice(0, 5), top.slice(5)] : [top];
-    const leader = top[0]?.best ?? null;
+  // ----------------------------------------------------------- leaderboard
+  // The current phase's table: qualifying, the knockout round under way, or
+  // the final placings once there are champions.
+  type BoardRow = { key: string; rank: string; name: string; detail: string; score: string; tone: string; badge?: { text: string; className: string }; bar?: number };
+  let board: { kicker: string; title: string; rows: BoardRow[] } | null = null;
+  const RESULT_BADGE: Record<RoundResult, { text: string; className: string }> = {
+    through: { text: "Through", className: "bg-day-good/15 text-day-good" },
+    out: { text: "Out", className: "bg-day-ink/[0.07] text-day-faint" },
+    live: { text: "On the maze", className: "bg-day-live/15 text-day-live" },
+    "to-play": { text: "To play", className: "bg-day-ink/[0.07] text-day-muted" },
+  };
+  if (champion) {
+    const PLACE = { 1: ["Champions", "text-day-gold"], 2: ["Runners-up", "text-day-ink"], 3: ["Semi-finalists", "text-day-plum"] } as const;
+    board = {
+      kicker: "MMRC 26",
+      title: "Final standings",
+      rows: finalPlacings(state.bracket).map((placing) => ({
+        key: placing.teamId,
+        rank: String(placing.place),
+        name: nameOf(placing.teamId) ?? "",
+        detail: PLACE[placing.place][0],
+        score: "",
+        tone: PLACE[placing.place][1],
+      })),
+    };
+  } else if (state.drawn && currentRound) {
+    const rows = roundLeaderboard(state.bracket, currentRound);
+    const decidedInRound = state.bracket.filter((m) => m.round === currentRound && m.winnerId && !m.walkover && !m.void).length;
+    const playedInRound = state.bracket.filter((m) => m.round === currentRound && !m.walkover && !m.void).length;
+    let place = 0;
+    if (rows.some((row) => row.score !== null || row.result === "live")) {
+      board = {
+        kicker: `Phase ${currentRound} · ${decidedInRound} of ${playedInRound} matches decided`,
+        title: `${phaseInfo(currentRound).name} leaderboard`,
+        rows: rows.slice(0, 10).map((row) => ({
+          key: row.teamId,
+          rank: row.score !== null ? String(++place) : "–",
+          name: nameOf(row.teamId) ?? "",
+          detail: row.opponentId ? `vs ${nameOf(row.opponentId) ?? "–"}` : "",
+          score: row.score !== null ? formatPoints(row.score) : "",
+          tone: place === 1 && row.score !== null ? "text-day-gold" : "text-day-faint",
+          badge: RESULT_BADGE[row.result],
+        })),
+      };
+    }
+  } else if (ranked.length) {
+    const leader = ranked[0]?.best ?? null;
+    board = {
+      kicker: `Phase 1 · Qualifying · the top ${QUALIFIERS} go through`,
+      title: "Leaderboard",
+      rows: ranked.slice(0, 10).map((row) => ({
+        key: row.teamId,
+        rank: String(row.rank),
+        name: row.name,
+        detail: row.runs ? `${row.runs} ${row.runs === 1 ? "run" : "runs"} · best ${formatTime(row.official)}` : "No run reached the centre",
+        score: formatPoints(row.best),
+        tone: row.rank === 1 ? "text-day-gold" : "text-day-faint",
+        bar: leader && row.best ? Math.max(4, Math.round((row.best / leader) * 100)) : undefined,
+      })),
+    };
+  }
+  if (board && board.rows.length) {
+    const rows = board.rows;
+    const columns = rows.length > 5 ? [rows.slice(0, 5), rows.slice(5)] : [rows];
+    const perColumn = columns.length > 1 ? 5 : rows.length;
     panels.push({
-      key: "standings",
-      label: "Standings",
+      key: "leaderboard",
+      label: "Leaderboard",
       node: (
         <div className="flex h-full flex-col">
-          <PanelTitle kicker={`Qualifying · the top ${QUALIFIERS} go through`}>Standings</PanelTitle>
+          <PanelTitle kicker={board.kicker}>{board.title}</PanelTitle>
           <div className={`mt-[3vh] grid min-h-0 flex-1 gap-[3vh] ${columns.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
-            {columns.map((rows, column) => (
-              <ol key={column} className="day-card grid grid-cols-1 grid-rows-5 divide-y divide-day-line/[0.07] overflow-hidden">
-                {rows.map((row) => (
-                  <li key={row.teamId} className="flex min-h-0 items-center gap-[2.5vh] px-[3vh]">
-                    <span className={`day-num day-display w-[6vh] text-center text-[5vh] ${row.rank === 1 ? "text-day-gold" : "text-day-faint"}`}>{row.rank}</span>
+            {columns.map((column, index) => (
+              <ol
+                key={index}
+                className="day-card grid grid-cols-1 divide-y divide-day-line/[0.07] overflow-hidden"
+                style={{ gridTemplateRows: `repeat(${perColumn}, minmax(0, 1fr))` }}
+              >
+                {column.map((row) => (
+                  <li key={row.key} className="flex min-h-0 items-center gap-[2.5vh] px-[3vh]">
+                    <span className={`day-num day-display w-[6vh] shrink-0 text-center text-[5vh] ${row.tone}`}>{row.rank}</span>
                     <Crest name={row.name} size={48} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[3.2vh] font-semibold text-day-ink">{row.name}</span>
-                      <span className="day-num block text-[2vh] text-day-muted">
-                        {row.runs ? `${row.runs} ${row.runs === 1 ? "run" : "runs"} · best ${formatTime(row.official)}` : "No run reached the centre"}
-                      </span>
-                      {leader && row.best ? (
+                      <span className="day-num block truncate text-[2vh] text-day-muted">{row.detail}</span>
+                      {row.bar ? (
                         <span className="mt-[0.8vh] block h-[0.6vh] overflow-hidden rounded-full bg-day-ink/[0.07]" aria-hidden="true">
-                          <span className={`block h-full rounded-full ${row.rank === 1 ? "bg-day-gold" : "bg-day-plum/70"}`} style={{ width: `${Math.max(4, Math.round((row.best / leader) * 100))}%` }} />
+                          <span className={`block h-full rounded-full ${row.rank === "1" ? "bg-day-gold" : "bg-day-plum/70"}`} style={{ width: `${row.bar}%` }} />
                         </span>
                       ) : null}
                     </span>
-                    <span className="day-num day-display text-[5vh] text-day-ink">{formatPoints(row.best)}</span>
+                    {row.badge ? (
+                      <span className={`shrink-0 rounded-full px-[1.4vh] py-[0.5vh] text-[1.8vh] font-semibold ${row.badge.className}`}>{row.badge.text}</span>
+                    ) : null}
+                    {row.score ? <span className="day-num day-display shrink-0 text-[5vh] text-day-ink">{row.score}</span> : null}
                   </li>
                 ))}
               </ol>
             ))}
           </div>
+        </div>
+      ),
+    });
+  }
+
+  // -------------------------------------------------------------- schedule
+  // The day's running order from the Competition Day screen: a window around
+  // now, what is done dimmed, what is on now lit.
+  if (site.timeline.length) {
+    const firstOpen = site.timeline.findIndex((item) => item.state !== "past");
+    const from = firstOpen === -1 ? Math.max(0, site.timeline.length - 8) : Math.max(0, Math.min(firstOpen - 2, site.timeline.length - 8));
+    const items = site.timeline.slice(from, from + 8);
+    // "today" in the timeline means later today, not on now: only "now" is live.
+    const nextId = site.timeline.find((item) => item.state !== "past" && item.state !== "now")?.id;
+    panels.push({
+      key: "schedule",
+      label: "Schedule",
+      node: (
+        <div className="flex h-full flex-col">
+          <PanelTitle kicker={site.dateText || "Today"}>Schedule</PanelTitle>
+          <ol className="day-card mt-[3vh] grid min-h-0 flex-1 grid-cols-1 divide-y divide-day-line/[0.07] overflow-hidden" style={{ gridTemplateRows: `repeat(${items.length}, minmax(0, 1fr))` }}>
+            {items.map((item) => {
+              const now = item.state === "now";
+              const past = item.state === "past";
+              return (
+                <li key={item.id} className={`flex min-h-0 items-center gap-[3vh] px-[3.5vh] ${now ? "bg-day-live/[0.08]" : ""}`}>
+                  <span className={`day-num w-[22vh] shrink-0 text-[3vh] font-semibold ${past ? "text-day-faint" : "text-day-ink"}`}>
+                    {clockTime(item.startsAt)}
+                    {item.endsAt ? ` – ${clockTime(item.endsAt)}` : ""}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className={`block truncate text-[3.4vh] font-semibold ${past ? "text-day-faint line-through decoration-day-faint/40" : "text-day-ink"}`}>{item.title}</span>
+                    {item.location ? <span className="block truncate text-[2vh] text-day-muted">{item.location}</span> : null}
+                  </span>
+                  {now ? (
+                    <span className="flex shrink-0 items-center gap-[1vh] rounded-full bg-day-live/15 px-[1.6vh] py-[0.6vh] text-[2vh] font-semibold text-day-live">
+                      <span className="day-live-dot" aria-hidden="true" />
+                      Now
+                    </span>
+                  ) : past ? (
+                    <DayIcon name="check" className="h-[3vh] w-[3vh] shrink-0 text-day-good" />
+                  ) : item.id === nextId ? (
+                    <span className="shrink-0 rounded-full bg-day-ink/[0.07] px-[1.6vh] py-[0.6vh] text-[2vh] font-semibold text-day-ink">Next</span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
         </div>
       ),
     });
@@ -330,6 +455,37 @@ export default async function HallScreenPage() {
               </li>
             ))}
           </ul>
+        </div>
+      ),
+    });
+  }
+
+  // -------------------------------------------------------------- sponsors
+  if (sponsors.length) {
+    const groups = groupByTier(sponsors);
+    // Fewer sponsors, bigger logos; with tiers, the first tier leads.
+    const size = (count: number) => (count <= 3 ? "h-[26vh] w-[40vh]" : count <= 8 ? "h-[19vh] w-[30vh]" : "h-[13vh] w-[21vh]");
+    const tileFor = (index: number, count: number) => (groups.length === 1 ? size(count) : index === 0 ? size(Math.max(count, 4)) : size(Math.max(count, 9)));
+    panels.push({
+      key: "sponsors",
+      label: "Sponsors",
+      node: (
+        <div className="flex h-full flex-col">
+          <PanelTitle kicker="With thanks">Our sponsors</PanelTitle>
+          <div className="mt-[3vh] flex min-h-0 flex-1 flex-col justify-center gap-[3.5vh] overflow-hidden">
+            {groups.map((group, index) => (
+              <div key={group.tier || "untiered"} role="group" aria-label={group.tier || "Sponsors"}>
+                {group.tier ? <p className="day-kicker mb-[1.8vh] text-center text-[2vh]">{group.tier}</p> : null}
+                <ul className="flex flex-wrap justify-center gap-[2.5vh]">
+                  {group.sponsors.map((sponsor) => (
+                    <li key={sponsor.id}>
+                      <SponsorLogo name={sponsor.name} logoUrl={sponsor.logoUrl} className={`${tileFor(index, group.sponsors.length)} p-[2.4vh]`} nameClass="text-[3.4vh]" />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
       ),
     });
