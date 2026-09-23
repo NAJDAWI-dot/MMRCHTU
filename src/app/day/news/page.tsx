@@ -13,7 +13,7 @@ export default async function DayNewsPage() {
     <div className="space-y-10">
       <PageHead kicker="From the desk" title="Announcements" lead="Anything the organizers need you to know, as it happens." />
       {site.announcements.length ? (
-        <ul className="grid gap-4 md:grid-cols-2">
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
           {site.announcements.map((item, index) => (
             <li
               key={item.id}

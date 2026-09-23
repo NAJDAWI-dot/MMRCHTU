@@ -12,7 +12,7 @@ export default async function DayVenuePage() {
     <div className="space-y-10">
       <PageHead kicker={guide.kicker} title={guide.title} />
       {site.venue || site.dateText ? (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
           {site.venue ? (
             <StatTile label="Where" value={<span className="text-2xl sm:text-3xl">{site.venue}</span>} tone="gold" />
           ) : null}

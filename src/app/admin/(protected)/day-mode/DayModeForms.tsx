@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/Button";
-import { DAY_AUDIENCES, DAY_AUDIENCE_HINTS, DAY_AUDIENCE_LABELS, type DayAudience } from "@/lib/day-access";
+import { DAY_AUDIENCES, DAY_AUDIENCE_HINTS, DAY_AUDIENCE_LABELS, type DayAudience } from "@/lib/day-audience";
 import { setAudience } from "./actions";
 import { EMPTY_STATE, type ActionState } from "./state";
 

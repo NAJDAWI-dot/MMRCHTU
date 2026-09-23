@@ -26,7 +26,7 @@ export default async function DayOrganizersPage() {
       {members.length ? (
         <section className="space-y-5">
           <SectionTitle kicker="IEEE RAS HTU Student Chapter">The organizing committee</SectionTitle>
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {members.map((member) => (
               <li key={member.id} className="day-glass flex items-center gap-4 p-4">
                 {member.photoUrl ? (

@@ -77,7 +77,7 @@ export function TeamGrid({ teams }: { teams: TeamCardData[] }) {
         </p>
       </div>
 
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((team) => (
           <li key={team.id}>
             <Link href={`/day/teams/${team.id}`} className="day-card day-glass flex h-full items-center gap-4 p-4">

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CenteredScroll } from "@/components/day-site/CenteredScroll";
 import { Crest } from "@/components/day-site/Crest";
 import { PageHead } from "@/components/day-site/ui";
 import { KNOCKOUT_ROUNDS, formatScore, phaseInfo } from "@/lib/bracket";
@@ -36,7 +37,7 @@ function Cell({ match, nameOf }: { match: BracketMatch | undefined; nameOf: Name
         return (
           <div
             key={index}
-            className={`flex h-[2.1rem] items-center gap-2 px-2.5 ${index === 0 ? "border-b border-white/[0.06]" : ""} ${
+            className={`flex h-[2.1rem] items-center gap-1.5 px-2 ${index === 0 ? "border-b border-white/[0.06]" : ""} ${
               won ? "bg-[var(--day-gold)]/[0.12]" : ""
             }`}
           >
@@ -53,7 +54,7 @@ function Cell({ match, nameOf }: { match: BracketMatch | undefined; nameOf: Name
               </Link>
             ) : (
               <span className="min-w-0 flex-1 truncate italic text-white/30">
-                {match.round === 2 ? "Bye" : live ? "" : "To be decided"}
+                {match.round === 2 ? "Bye" : "TBD"}
               </span>
             )}
             <span className={`font-mono tabular-nums ${won ? "font-bold text-[var(--day-gold)]" : "text-white/70"}`}>
@@ -140,8 +141,8 @@ export default async function DayBracketPage() {
       ) : (
         <>
           {/* The tree, from large screens up. */}
-          <div className="hidden overflow-x-auto pb-4 lg:block">
-            <div className="min-w-[1180px]">
+          <CenteredScroll className="day-bleed hidden overflow-x-auto pb-4 lg:block">
+            <div className="mx-auto min-w-[1640px] max-w-[1720px]">
               <div className="day-bracket mb-3 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--day-faint)]" style={{ minHeight: 0 }}>
                 {["R32", "R16", "QF", "SF", "Final", "SF", "QF", "R16", "R32"].map((label, index) => (
                   <span key={index} className={label === "Final" ? "text-[var(--day-gold)]" : ""}>
@@ -184,7 +185,7 @@ export default async function DayBracketPage() {
                 <Column matches={half(2, "right")} side="right" nameOf={nameOf} />
               </div>
             </div>
-          </div>
+          </CenteredScroll>
 
           {/* Round by round, below that. */}
           <div className="space-y-10 lg:hidden">
@@ -197,19 +198,28 @@ export default async function DayBracketPage() {
                 </span>
               </Link>
             ) : null}
-            {[...KNOCKOUT_ROUNDS].reverse().map((round) => {
+            {/* In playing order. A round nobody has reached yet is one line,
+                not a column of empty boxes to scroll past. */}
+            {KNOCKOUT_ROUNDS.map((round) => {
               const matches = state.bracket.filter((m) => m.round === round && !m.void);
+              const reached = matches.some((m) => m.teamAId || m.teamBId);
               return (
                 <section key={round} aria-labelledby={`r-${round}`}>
                   <h2 id={`r-${round}`} className="font-display text-2xl font-extrabold text-white">
                     <span className="day-kicker mr-3">Phase {round}</span>
                     {phaseInfo(round).name}
                   </h2>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    {matches.map((match) => (
-                      <Cell key={match.id} match={match} nameOf={nameOf} />
-                    ))}
-                  </div>
+                  {reached ? (
+                    <div className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2">
+                      {matches.map((match) => (
+                        <Cell key={match.id} match={match} nameOf={nameOf} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm text-[var(--day-faint)]">
+                      {matches.length} match{matches.length === 1 ? "" : "es"}, once the {phaseInfo(round - 1).name} is played.
+                    </p>
+                  )}
                 </section>
               );
             })}

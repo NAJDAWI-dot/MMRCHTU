@@ -29,7 +29,7 @@ export default async function DayStandingsPage() {
         }
       />
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-3">
         <StatTile label="Teams with a score" value={ranked.length} hint={`of ${state.table.length}`} />
         <StatTile label="Places in the knockout" value={QUALIFIERS} tone="gold" />
         <StatTile

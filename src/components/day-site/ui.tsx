@@ -73,10 +73,6 @@ export function StatTile({ label, value, hint, tone = "white" }: { label: string
   );
 }
 
-export interface TeamNames {
-  get(id: string | null): string | null;
-}
-
 /**
  * Two teams, face to face. Used for "on the maze now", latest results and a
  * team's path through the bracket.
@@ -156,7 +152,7 @@ export function GuideView({ blocks }: { blocks: GuideBlock[] }) {
             {block.text}
           </h2>
         ) : block.kind === "list" ? (
-          <ul key={index} className="grid gap-2 sm:grid-cols-2">
+          <ul key={index} className="grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2">
             {block.items.map((item, i) => (
               <li key={i} className="flex gap-3 rounded-xl border border-white/[0.07] bg-white/[0.03] p-3 text-[var(--day-muted)]">
                 <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--day-gold)]" aria-hidden="true" />

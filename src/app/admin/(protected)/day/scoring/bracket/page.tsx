@@ -83,7 +83,7 @@ export default async function BracketDeskPage() {
                     {decided} of {matches.length} decided
                   </p>
                 </div>
-                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div className="mt-3 grid gap-3 lg:grid-cols-2">
                   {matches.map((row) => (
                     // Keyed by the pairing and the result as well as the id,
                     // so a form redraws with fresh values whenever an earlier

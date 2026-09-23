@@ -115,7 +115,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ChromeGate>
             <SplashScreen />
           </ChromeGate>
-          <RouteLoader />
+          {/* The maze curtain is the main site's; on the dark day site a light
+              sheet sliding over every page change is a flash, not a transition. */}
+          <ChromeGate>
+            <RouteLoader />
+          </ChromeGate>
           {/*
             Sitewide, not just the landing page.
 

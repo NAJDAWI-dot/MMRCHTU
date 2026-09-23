@@ -63,7 +63,7 @@ export default async function DayLivePage() {
           aria-hidden="true"
           className="pointer-events-none absolute -bottom-40 left-10 h-96 w-96 rounded-full bg-[var(--day-violet)]/20 blur-[110px]"
         />
-        <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-end">
+        <div className="relative grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-end">
           <div>
             <p className="day-kicker flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="inline-flex items-center gap-2 text-white">
@@ -130,7 +130,7 @@ export default async function DayLivePage() {
           >
             {live.length ? "On the maze" : `Next in the ${phaseInfo(upNext[0]!.round).name}`}
           </SectionTitle>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
             {(live.length ? live : upNext).map((match) => (
               <MatchCard key={match.id} match={match} nameOf={nameOf} live={match.status === "LIVE"} />
             ))}
@@ -139,11 +139,11 @@ export default async function DayLivePage() {
       ) : null}
 
       {/* ------------------------------------------- results and the table */}
-      <section className="grid gap-8 lg:grid-cols-2">
+      <section className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-2">
         <div className="space-y-5">
           <SectionTitle kicker="Latest">Results</SectionTitle>
           {results.length ? (
-            <div className="grid gap-3">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
               {results.map((match) => (
                 <MatchCard key={match.id} match={match} nameOf={nameOf} />
               ))}
@@ -191,7 +191,7 @@ export default async function DayLivePage() {
       </section>
 
       {/* ------------------------------------------------ schedule and news */}
-      <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+      <section className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <div className="space-y-5">
           <SectionTitle
             kicker="Times are Amman time"
@@ -263,7 +263,7 @@ export default async function DayLivePage() {
       {/* ------------------------------------------------------------ explore */}
       <section className="space-y-5">
         <SectionTitle kicker="Everything for the day">Find your way</SectionTitle>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {EXPLORE.map((item, index) => (
             <Link
               key={item.href}

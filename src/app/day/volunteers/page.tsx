@@ -33,7 +33,7 @@ export default async function DayVolunteersPage() {
       {stations.size ? (
         <section className="space-y-5">
           <SectionTitle kicker="Who is where">Stations</SectionTitle>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[...stations.entries()].map(([station, people]) => (
               <div key={station} className="day-glass p-5">
                 <p className="font-display text-xl font-extrabold text-white">{station}</p>

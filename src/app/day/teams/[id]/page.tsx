@@ -104,7 +104,7 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
         </div>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile label="Qualifying rank" value={standing?.rank ? ordinal(standing.rank) : "–"} tone="gold" />
         <StatTile label="Best score" value={formatScore(standing?.best)} hint={runs.length ? `From ${runs.length} run${runs.length === 1 ? "" : "s"}` : "No runs yet"} />
         <StatTile label="Seed" value={team.journey.seed ?? "–"} tone="mint" />
@@ -132,10 +132,10 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
         <p className="mt-2 text-[var(--day-muted)]">{verdict.body}</p>
       </section>
 
-      <section className="grid gap-8 lg:grid-cols-2">
+      <section className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-2">
         <div className="space-y-5">
           <SectionTitle kicker={`${members.length} member${members.length === 1 ? "" : "s"}`}>The team</SectionTitle>
-          <ul className="grid gap-3">
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">
             {members.map((member) => (
               <li key={member.id} className="day-glass flex items-center gap-4 p-4">
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[var(--day-violet)]/40 to-[var(--day-rose)]/30 font-display text-lg font-extrabold text-white">
@@ -179,7 +179,7 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
       {path.length ? (
         <section className="space-y-5">
           <SectionTitle kicker="Phases 2 to 6">The road through the bracket</SectionTitle>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
             {path.map((match) => (
               <div key={match.id}>
                 <p className="mb-2 text-sm font-semibold text-[var(--day-muted)]">

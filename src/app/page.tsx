@@ -77,6 +77,11 @@ export default async function HomePage() {
   // While the day site is public, the homepage hands over to it. Checked first
   // and on its own, so the ordinary homepage's reads are not spent on a page
   // nobody is going to see.
+  //
+  // A redirect cached here does not expire on the page's own timer, so the
+  // audience must only ever change through setAudience on the Day Site Access
+  // screen, which purges the whole site. Writing dayMode straight into the
+  // database leaves visitors redirected until the next deploy.
   if (await dayModeOn()) {
     redirect("/day");
   }

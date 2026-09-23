@@ -4,6 +4,9 @@ import { crestFor } from "@/lib/crest";
 /**
  * A team's maze crest: the same one it was given while typing its name on the
  * register form, generated from the name, so every team has its own.
+ *
+ * The stroke is in the drawing's own units, so a crest drawn small needs a
+ * heavier one or the walls fade to nothing and it reads as an empty tile.
  */
 export function Crest({ name, size = 40, glow = false }: { name: string; size?: number; glow?: boolean }) {
   const crest = crestFor(name);
@@ -16,7 +19,7 @@ export function Crest({ name, size = 40, glow = false }: { name: string; size?: 
       }`}
       style={{ width: box, height: box }}
     >
-      {crest ? <CrestMaze maze={crest} size={size} label={null} strokeWidth={2.8} /> : null}
+      {crest ? <CrestMaze maze={crest} size={size} label={null} strokeWidth={size < 36 ? 4.4 : 2.8} /> : null}
     </span>
   );
 }

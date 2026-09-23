@@ -18,7 +18,7 @@ export default async function DayCompetitorsPage() {
   return (
     <div className="space-y-10">
       <PageHead kicker={guide.kicker} title={guide.title} />
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="day-glass p-6 sm:p-10">
           <GuideView blocks={guide.blocks} />
         </div>
