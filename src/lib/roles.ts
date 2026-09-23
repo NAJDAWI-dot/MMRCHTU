@@ -60,7 +60,7 @@ const EVERYONE: readonly AdminRole[] = ADMIN_ROLES;
 
 /**
  * Which roles open which screen, by path prefix. The longest matching prefix
- * wins, so /admin/day/scoring can be stricter than /admin/day.
+ * wins, so /day/hq/scoring can be stricter than /day/hq.
  *
  * Anything not listed here is Master only. A new screen added without an entry
  * is therefore shut to everybody but Master until someone decides, which is
@@ -69,13 +69,13 @@ const EVERYONE: readonly AdminRole[] = ADMIN_ROLES;
 export const SECTION_ROLES: Record<string, readonly AdminRole[]> = {
   "/admin": EVERYONE,
   "/admin/no-access": EVERYONE,
-  "/admin/day": EVERYONE,
-  "/admin/day/check-in": ["REGISTRATION"],
-  "/admin/day/scoring": ["SCORING"],
-  "/admin/day/announcements": ["MEDIA", "OPERATIONS"],
-  "/admin/day/guides": ["MEDIA"],
-  "/admin/day/volunteers": ["OPERATIONS"],
-  "/admin/day-mode": ["MASTER"],
+  "/day/hq": EVERYONE,
+  "/day/hq/check-in": ["REGISTRATION"],
+  "/day/hq/scoring": ["SCORING"],
+  "/day/hq/announcements": ["MEDIA", "OPERATIONS"],
+  "/day/hq/guides": ["MEDIA"],
+  "/day/hq/volunteers": ["OPERATIONS"],
+  "/day/hq/access": ["MASTER"],
   "/admin/analytics": ["REGISTRATION"],
   "/admin/schedule": ["OPERATIONS"],
   "/admin/competition-day": ["OPERATIONS", "MEDIA"],
@@ -100,7 +100,7 @@ export const SECTION_ROLES: Record<string, readonly AdminRole[]> = {
  * dashboard's "everyone" would cover every screen under /admin that nobody
  * listed, which is exactly backwards.
  */
-const EXACT_ONLY = new Set(["/admin", "/admin/day"]);
+const EXACT_ONLY = new Set(["/admin", "/day/hq"]);
 
 /** The roles a path needs: its longest listed prefix, else Master only. */
 export function rolesForPath(pathname: string): readonly AdminRole[] {

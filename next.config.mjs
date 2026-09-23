@@ -30,6 +30,18 @@ const nextConfig = {
    * It wants its own deploy, in report-only first. These four have no such
    * failure mode.
    */
+  /**
+   * Day HQ moved inside the day site, from /admin/day to /day/hq, and the
+   * access screen with it. Old bookmarks follow.
+   */
+  async redirects() {
+    return [
+      { source: "/admin/day-mode", destination: "/day/hq/access", permanent: false },
+      { source: "/admin/day", destination: "/day/hq", permanent: false },
+      { source: "/admin/day/:path*", destination: "/day/hq/:path*", permanent: false },
+    ];
+  },
+
   async headers() {
     return [
       {

@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-/** A minute: as often as the page itself is regenerated, so no refresh is wasted. */
-const EVERY_MS = 60_000;
+/** Thirty seconds: as often as the live pages are regenerated, so no refresh is wasted. */
+const EVERY_MS = 30_000;
 
 /**
  * Keeps the day site current on a phone left open in the hall.

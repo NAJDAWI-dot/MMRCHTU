@@ -1,3 +1,5 @@
+import { compareResults, scoreSheet } from "@/lib/score-sheet";
+
 /**
  * The competition's scoring: qualifying standings and the knockout bracket.
  *
@@ -6,9 +8,9 @@
  * day. The admin actions read rows, hand them to these, and write back what
  * comes out.
  *
- * Phase 1 is qualifying. Its format is not decided yet, so it is kept general:
- * a team may run any number of times and its best run counts, "best" meaning
- * highest or lowest by a setting.
+ * Both phases score a team's eight minutes the rulebook's way, (successful
+ * runs / fastest run) * 1000, worked out in src/lib/score-sheet.ts. Phase 1 is
+ * qualifying: every team has one match sheet and the table ranks them.
  *
  * Phases 2 to 6 are the knockout: the top 32 of qualifying, seeded 1 v 32,
  * 2 v 31 and so on, then the round of 16, quarter-finals, semi-finals and the
@@ -51,7 +53,7 @@ export const PHASES: readonly PhaseInfo[] = [
     name: "Qualifying",
     short: "Q",
     teams: null,
-    blurb: "Every team runs. The best run counts, and the top 32 go through.",
+    blurb: "Every team gets eight minutes on the maze. Scored by the formula, and the top 32 go through.",
   },
   { phase: 2, name: "Round of 32", short: "R32", teams: 32, blurb: "Head to head: 1st plays 32nd, 2nd plays 31st, and so on." },
   { phase: 3, name: "Round of 16", short: "R16", teams: 16, blurb: "The sixteen winners, down the bracket." },
@@ -96,7 +98,10 @@ export function parseScore(value: unknown): number | null {
 
 export interface RunLike {
   registrationId: string;
-  score: number;
+  /** Kept for rows written before run times were: used when there are no times. */
+  score: number | null;
+  runTimes?: number[];
+  remaining?: number | null;
   createdAt: Date;
 }
 
@@ -108,47 +113,64 @@ export interface TeamLike {
 export interface Standing {
   teamId: string;
   name: string;
+  /** The score, or null for a team with no successful run (or no sheet). */
   best: number | null;
-  /** When the best run was recorded: the tie-break, first to set it wins. */
+  /** The fastest successful run, the official time. */
+  official: number | null;
+  /** Every successful run's time, in the order they were run. */
+  times: number[];
+  /** Cells short of the centre, for a team that never reached it. */
+  remaining: number | null;
+  /** When the sheet was written: the last tie-break, first to set it wins. */
   bestAt: Date | null;
+  /** Successful runs. */
   runs: number;
-  /** 1-based, or null for a team with no runs or not eligible. */
+  /** Whether the team has run at all, successful or not. */
+  recorded: boolean;
+  /** 1-based, or null for a team with no sheet or not eligible. */
   rank: number | null;
   qualified: boolean;
   eligible: boolean;
 }
 
+type Sheet = { score: number | null; official: number | null; remaining: number | null; times: number[]; at: Date };
+
+function sheetOf(run: RunLike): Sheet {
+  const times = run.runTimes ?? [];
+  if (times.length === 0 && run.score !== null) {
+    // Written before times were: the score is all there is.
+    return { score: run.score, official: null, remaining: null, times: [], at: run.createdAt };
+  }
+  const result = scoreSheet({ times, remaining: run.remaining ?? null });
+  return { score: result.score, official: result.official, remaining: result.remaining, times: result.times, at: run.createdAt };
+}
+
 /**
  * The qualifying table.
  *
- * Ranked by best run, then by who set that score first, then by name so the
- * order never depends on the database. Teams with no run yet, and teams not
- * eligible (withdrawn, or failed inspection), are listed after the ranked ones
- * without a rank, so the table shows everyone but only ranks who can go
- * through.
+ * Ranked the rulebook's way (see compareResults): every score above every
+ * mouse that never reached the centre, higher scores first, the faster
+ * official time on a tie; then those that never got there, closest first.
+ * After that, whoever ran first, then the name, so the order never depends on
+ * the database. Teams that have not run, and teams not eligible (withdrawn, or
+ * failed inspection), are listed after the ranked ones without a rank.
+ *
+ * A team should have one sheet. If it somehow has two, the better one counts.
  */
 export function standings(
   teams: TeamLike[],
   runs: RunLike[],
-  direction: Direction,
   options: { cutoff?: number; ineligible?: ReadonlySet<string> } = {},
 ): Standing[] {
   const cutoff = options.cutoff ?? QUALIFIERS;
   const ineligible = options.ineligible ?? new Set<string>();
 
-  const best = new Map<string, { score: number; at: Date; count: number }>();
+  const best = new Map<string, Sheet>();
   for (const run of runs) {
+    const sheet = sheetOf(run);
     const current = best.get(run.registrationId);
-    if (!current) {
-      best.set(run.registrationId, { score: run.score, at: run.createdAt, count: 1 });
-      continue;
-    }
-    current.count += 1;
-    const cmp = compareScores(run.score, current.score, direction);
-    if (cmp < 0 || (cmp === 0 && run.createdAt < current.at)) {
-      current.score = run.score;
-      current.at = run.createdAt;
-    }
+    const cmp = current ? compareResults(sheet, current) : -1;
+    if (!current || cmp < 0 || (cmp === 0 && sheet.at < current.at)) best.set(run.registrationId, sheet);
   }
 
   const rows = teams.map((team) => {
@@ -157,8 +179,12 @@ export function standings(
       teamId: team.id,
       name: team.name,
       best: entry?.score ?? null,
+      official: entry?.official ?? null,
+      times: entry?.times ?? [],
+      remaining: entry?.remaining ?? null,
       bestAt: entry?.at ?? null,
-      runs: entry?.count ?? 0,
+      runs: entry ? entry.times.length || (entry.score !== null ? 1 : 0) : 0,
+      recorded: !!entry,
       eligible: !ineligible.has(team.id),
     };
   });
@@ -167,14 +193,17 @@ export function standings(
     a.name.localeCompare(b.name, "en", { sensitivity: "base" });
 
   const ranked = rows
-    .filter((row) => row.best !== null && row.eligible)
+    .filter((row) => row.recorded && row.eligible)
     .sort(
       (a, b) =>
-        compareScores(a.best!, b.best!, direction) ||
+        compareResults(
+          { score: a.best, official: a.official, remaining: a.remaining },
+          { score: b.best, official: b.official, remaining: b.remaining },
+        ) ||
         a.bestAt!.getTime() - b.bestAt!.getTime() ||
         byName(a, b),
     );
-  const unranked = rows.filter((row) => row.best === null || !row.eligible).sort(byName);
+  const unranked = rows.filter((row) => !row.recorded || !row.eligible).sort(byName);
 
   return [
     ...ranked.map((row, index) => ({ ...row, rank: index + 1, qualified: index < cutoff })),
@@ -252,9 +281,18 @@ export interface MatchInput {
   scoreA: number | null;
   scoreB: number | null;
   winnerId: string | null;
+  /** Each side's successful run times and distance short, when entered. */
+  timesA?: number[];
+  timesB?: number[];
+  remainingA?: number | null;
+  remainingB?: number | null;
 }
 
 export interface ResolvedMatch extends MatchInput {
+  timesA: number[];
+  timesB: number[];
+  remainingA: number | null;
+  remainingB: number | null;
   /** Neither side can ever have a team: two byes met. Nobody plays it. */
   void: boolean;
   /** Decided without being played, because one side is a bye. */
@@ -318,10 +356,18 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
         !!stored &&
         (stored.scoreA !== null ||
           stored.scoreB !== null ||
+          (stored.timesA?.length ?? 0) > 0 ||
+          (stored.timesB?.length ?? 0) > 0 ||
+          (stored.remainingA ?? null) !== null ||
+          (stored.remainingB ?? null) !== null ||
           (stored.winnerId !== null && stored.teamAId !== null && stored.teamBId !== null));
 
       let scoreA = teamsChanged ? null : (stored?.scoreA ?? null);
       let scoreB = teamsChanged ? null : (stored?.scoreB ?? null);
+      let timesA = teamsChanged ? [] : (stored?.timesA ?? []);
+      let timesB = teamsChanged ? [] : (stored?.timesB ?? []);
+      let remainingA = teamsChanged ? null : (stored?.remainingA ?? null);
+      let remainingB = teamsChanged ? null : (stored?.remainingB ?? null);
       const storedWinner = teamsChanged ? null : (stored?.winnerId ?? null);
 
       let winnerId: string | null = null;
@@ -341,11 +387,19 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
         walkover = true;
         scoreA = null;
         scoreB = null;
+        timesA = [];
+        timesB = [];
+        remainingA = null;
+        remainingB = null;
       } else if (sideB.team && sideA.bye) {
         winnerId = sideB.team;
         walkover = true;
         scoreA = null;
         scoreB = null;
+        timesA = [];
+        timesB = [];
+        remainingA = null;
+        remainingB = null;
       }
 
       const match: ResolvedMatch = {
@@ -359,6 +413,10 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
         scoreA,
         scoreB,
         winnerId,
+        timesA,
+        timesB,
+        remainingA,
+        remainingB,
         void: isVoid,
         walkover,
         tied,
@@ -392,7 +450,11 @@ export function changedMatches(input: MatchInput[], resolved: ResolvedMatch[]): 
       stored.seedB !== match.seedB ||
       stored.scoreA !== match.scoreA ||
       stored.scoreB !== match.scoreB ||
-      stored.winnerId !== match.winnerId
+      stored.winnerId !== match.winnerId ||
+      (stored.timesA ?? []).join() !== match.timesA.join() ||
+      (stored.timesB ?? []).join() !== match.timesB.join() ||
+      (stored.remainingA ?? null) !== match.remainingA ||
+      (stored.remainingB ?? null) !== match.remainingB
     );
   });
 }
@@ -453,7 +515,7 @@ export function journeyOf(
   if (qualifyingLocked) {
     return { state: "NOT_QUALIFIED", label: "Did not qualify", round: 1, seed: null };
   }
-  if (standing?.runs) {
+  if (standing?.recorded) {
     return {
       state: "QUALIFYING",
       label: standing.qualified && standing.rank ? `Provisionally ${ordinal(standing.rank)}` : "Qualifying",
@@ -490,8 +552,8 @@ export const QUALIFYING_STATUSES = ["NOT_SET", "OPEN", "LOCKED"] as const;
 export type QualifyingStatus = (typeof QUALIFYING_STATUSES)[number];
 
 export const QUALIFYING_STATUS_LABELS: Record<QualifyingStatus, string> = {
-  NOT_SET: "Format not set yet",
-  OPEN: "Runs being recorded",
+  NOT_SET: "Not started",
+  OPEN: "Match sheets being recorded",
   LOCKED: "Locked, bracket drawn",
 };
 

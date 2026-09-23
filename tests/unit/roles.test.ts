@@ -23,18 +23,18 @@ describe("who opens what", () => {
   it("keeps an unlisted screen Master only rather than open to everyone", () => {
     expect(rolesForPath("/admin/some-future-screen")).toEqual(["MASTER"]);
     expect(canOpen(["SCORING"], "/admin/some-future-screen")).toBe(false);
-    expect(canOpen(["SCORING"], "/admin/day/something-new")).toBe(false);
+    expect(canOpen(["SCORING"], "/day/hq/something-new")).toBe(false);
   });
 
   it("gives every role the dashboard and the day hub", () => {
     for (const role of ["REGISTRATION", "SCORING", "MEDIA", "OPERATIONS"] as const) {
       expect(canOpen([role], "/admin")).toBe(true);
-      expect(canOpen([role], "/admin/day")).toBe(true);
+      expect(canOpen([role], "/day/hq")).toBe(true);
     }
   });
 
   it("keeps scoring out of money and registrations", () => {
-    expect(canOpen(["SCORING"], "/admin/day/scoring")).toBe(true);
+    expect(canOpen(["SCORING"], "/day/hq/scoring")).toBe(true);
     expect(canOpen(["SCORING"], "/admin/payments")).toBe(false);
     expect(canOpen(["SCORING"], "/admin/payments/screenshot/abc")).toBe(false);
     expect(canOpen(["SCORING"], "/admin/registrations")).toBe(false);
@@ -42,21 +42,21 @@ describe("who opens what", () => {
   });
 
   it("gives registration its desks and nothing about admins", () => {
-    expect(canOpen(["REGISTRATION"], "/admin/day/check-in")).toBe(true);
+    expect(canOpen(["REGISTRATION"], "/day/hq/check-in")).toBe(true);
     expect(canOpen(["REGISTRATION"], "/admin/payments/review")).toBe(true);
     expect(canOpen(["REGISTRATION"], "/admin/admins")).toBe(false);
-    expect(canOpen(["REGISTRATION"], "/admin/day-mode")).toBe(false);
+    expect(canOpen(["REGISTRATION"], "/day/hq/access")).toBe(false);
   });
 
   it("combines roles: media plus operations opens both desks", () => {
-    expect(canOpen(["MEDIA", "OPERATIONS"], "/admin/day/guides")).toBe(true);
-    expect(canOpen(["MEDIA", "OPERATIONS"], "/admin/day/volunteers")).toBe(true);
-    expect(canOpen(["MEDIA", "OPERATIONS"], "/admin/day/scoring")).toBe(false);
+    expect(canOpen(["MEDIA", "OPERATIONS"], "/day/hq/guides")).toBe(true);
+    expect(canOpen(["MEDIA", "OPERATIONS"], "/day/hq/volunteers")).toBe(true);
+    expect(canOpen(["MEDIA", "OPERATIONS"], "/day/hq/scoring")).toBe(false);
   });
 
   it("opens nothing but the dashboard and hub for an account with no role", () => {
     const open = ADMIN_LINKS.filter((link) => canOpen([], link.href)).map((link) => link.href);
-    expect(open.sort()).toEqual(["/admin", "/admin/day"]);
+    expect(open.sort()).toEqual(["/admin", "/day/hq"]);
   });
 
   it("has an explicit entry for every screen in the admin menu", () => {

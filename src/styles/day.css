@@ -1,164 +1,110 @@
 /*
   The competition day site: its own look, on the same app.
 
-  Night in the arena. A near-black purple floor, the brand's three colours as
-  slow light on it, the maze grid underneath everything, glass panels on top.
-  Always dark, whatever theme the main site is set to: it is a scoreboard, and
-  it is read in a hall with the lights down over the maze.
+  Race day, drawn from the main site's poster artwork: the maze corner, the
+  concentric arcs, the chequered flag, stars and halftone dots on grainy paper.
+  Cream paper and aubergine ink in the light theme, plum night and cream ink in
+  the dark one, following the same theme switch as the rest of the site.
 
-  Every moving thing here stops for anyone who asked for reduced motion.
+  Surfaces are solid, not glass, and colour is used for meaning: crimson for
+  labels, gold for the lead and the winner, rose for live, green for through.
+
+  Every value a page uses is a variable here, mapped into Tailwind as day-*,
+  so no page names a colour that only works in one theme. Every moving thing
+  stops for anyone who asked for reduced motion.
 */
 
 .day-root {
-  --day-bg: #07030b;
-  --day-ink: #f6f0fa;
-  --day-muted: rgba(246, 240, 250, 0.62);
-  --day-faint: rgba(246, 240, 250, 0.38);
-  --day-line: rgba(255, 255, 255, 0.09);
-  --day-glass: rgba(255, 255, 255, 0.045);
-  --day-glass-strong: rgba(255, 255, 255, 0.075);
-  --day-gold: #f2a900;
-  --day-rose: #ff4f86;
-  --day-violet: #b388ff;
-  --day-crimson: #c3124a;
-  --day-mint: #3ee6a8;
+  --day-bg: 246 239 225;
+  --day-surface: 255 251 243;
+  --day-sunk: 238 229 211;
+  --day-ink: 36 16 42;
+  --day-on-ink: 255 251 243;
+  --day-muted: 92 72 96;
+  --day-faint: 120 102 118;
+  --day-line: 36 16 42;
+  --day-crimson: 134 38 51;
+  --day-plum: 95 33 103;
+  --day-gold: 150 98 0;
+  --day-live: 200 22 76;
+  --day-good: 21 116 76;
+
+  /* The poster's own inks, for the artwork. */
+  --art-rose: 164 84 112;
+  --art-plum: 84 34 104;
+  --art-crimson: 150 40 62;
+  --art-deep: 60 24 72;
+  --art-sand: 214 176 120;
+
+  --day-shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 18px 40px -26px rgb(60 24 72 / 0.45),
+    0 2px 6px -2px rgb(60 24 72 / 0.08);
+  --day-shadow-lift: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 30px 60px -30px rgb(60 24 72 / 0.55),
+    0 6px 14px -6px rgb(60 24 72 / 0.14);
 
   position: relative;
   isolation: isolate;
   min-height: 100vh;
   min-height: 100dvh;
-  color: var(--day-ink);
-  background: var(--day-bg);
+  color: rgb(var(--day-ink));
+  background: rgb(var(--day-bg));
+  color-scheme: light;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+.dark .day-root {
+  --day-bg: 21 10 27;
+  --day-surface: 36 19 44;
+  --day-sunk: 28 14 35;
+  --day-ink: 250 242 230;
+  --day-on-ink: 30 13 36;
+  --day-muted: 212 194 208;
+  --day-faint: 166 144 164;
+  --day-line: 250 242 230;
+  --day-crimson: 255 128 152;
+  --day-plum: 210 166 226;
+  --day-gold: 244 178 36;
+  --day-live: 255 88 140;
+  --day-good: 96 216 160;
+
+  --art-rose: 170 70 110;
+  --art-plum: 104 52 140;
+  --art-crimson: 170 50 72;
+  --art-deep: 60 26 84;
+  --art-sand: 150 60 90;
+
+  --day-shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 24px 48px -28px rgb(0 0 0 / 0.75);
+  --day-shadow-lift: 0 1px 0 rgb(255 255 255 / 0.07) inset, 0 36px 70px -30px rgb(0 0 0 / 0.85);
+
   color-scheme: dark;
 }
 
-/* The floor: light, grid and grain, fixed behind the scroll. */
-.day-floor {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
+.day-root ::selection {
+  background: rgb(var(--day-crimson) / 0.25);
+}
+
+/* Lenis, the smooth scroll: what it asks the page for. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
   overflow: hidden;
-  background:
-    radial-gradient(60rem 40rem at 8% -10%, rgba(125, 44, 140, 0.55), transparent 60%),
-    radial-gradient(50rem 36rem at 105% 110%, rgba(195, 18, 74, 0.38), transparent 60%),
-    radial-gradient(32rem 22rem at 92% 4%, rgba(242, 169, 0, 0.16), transparent 70%),
-    var(--day-bg);
 }
 
-.day-floor::before {
-  /* The maze grid, fading out towards the edges. */
-  content: "";
-  position: absolute;
-  inset: -2px;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse at 50% 30%, black 20%, transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, black 20%, transparent 75%);
-}
-
-.day-floor::after {
-  /* A slow aurora drifting across the top. */
-  content: "";
-  position: absolute;
-  top: -30vh;
-  left: -20vw;
-  width: 140vw;
-  height: 80vh;
-  background: conic-gradient(
-    from 180deg at 50% 50%,
-    rgba(179, 136, 255, 0.0),
-    rgba(179, 136, 255, 0.22),
-    rgba(255, 79, 134, 0.18),
-    rgba(242, 169, 0, 0.12),
-    rgba(179, 136, 255, 0.0)
-  );
-  filter: blur(80px);
-  opacity: 0.8;
-  animation: day-aurora 38s ease-in-out infinite alternate;
-}
-
-@keyframes day-aurora {
-  0% {
-    transform: translate3d(-6%, 0, 0) rotate(-4deg);
-  }
-  100% {
-    transform: translate3d(8%, 6%, 0) rotate(5deg);
-  }
-}
-
-/* Glass: the panel everything sits on. */
-.day-glass {
-  position: relative;
-  background: linear-gradient(180deg, var(--day-glass-strong), var(--day-glass));
-  border: 1px solid var(--day-line);
-  border-radius: 1.25rem;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 24px 60px -30px rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-}
-
-/* A glass panel that lights its edge on hover: every link card. */
-.day-card {
-  transition:
-    transform 220ms ease,
-    border-color 220ms ease,
-    box-shadow 220ms ease;
-}
-
-.day-card:hover,
-.day-card:focus-visible {
-  transform: translateY(-2px);
-  border-color: rgba(242, 169, 0, 0.45);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 0 0 1px rgba(242, 169, 0, 0.18),
-    0 24px 60px -24px rgba(242, 169, 0, 0.35);
-}
-
-.day-card:focus-visible {
-  outline: 2px solid var(--day-gold);
+.day-root :focus-visible {
+  outline: 2px solid rgb(var(--day-crimson));
   outline-offset: 3px;
-}
-
-/* The gold-to-rose-to-violet type used for the big words. */
-.day-gradient-text {
-  background: linear-gradient(92deg, #ffd166 0%, var(--day-gold) 22%, var(--day-rose) 58%, var(--day-violet) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.day-kicker {
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--day-gold);
-}
-
-/* The live dot, bigger and louder than the main site's. */
-.day-live-dot {
-  position: relative;
-  display: inline-flex;
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 999px;
-  background: var(--day-rose);
-  box-shadow: 0 0 12px var(--day-rose);
-}
-
-.day-live-dot::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--day-rose);
-  animation: day-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+  border-radius: 0.6rem;
 }
 
 @keyframes day-ping {
@@ -169,50 +115,386 @@
   }
 }
 
-/* The ticker under the bar: results and notices, running right to left. */
-.day-ticker {
-  mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
-  -webkit-mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+/* ------------------------------------------------------------ backdrop */
+
+.day-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(70rem 50rem at 0% 0%, rgb(var(--art-rose) / 0.1), transparent 60%),
+    radial-gradient(60rem 44rem at 100% 100%, rgb(var(--art-plum) / 0.1), transparent 60%),
+    rgb(var(--day-bg));
 }
 
-.day-ticker-track {
+.dark .day-backdrop {
+  background:
+    radial-gradient(80rem 60rem at 0% 20%, rgb(150 40 80 / 0.55), transparent 65%),
+    radial-gradient(70rem 60rem at 100% 0%, rgb(84 40 120 / 0.55), transparent 65%),
+    linear-gradient(120deg, rgb(56 20 60), rgb(40 18 58) 55%, rgb(33 14 46));
+}
+
+/* Grain over everything, the printed-paper feel of the poster. */
+.day-grain {
+  position: absolute;
+  inset: -50%;
+  opacity: 0.32;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.2  0 0 0 0 0.25  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply;
+}
+
+.dark .day-grain {
+  opacity: 0.35;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 0.9  0 0 0 0 0.95  0 0 0 0.45 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* The artwork: each piece moves at its own depth as the page scrolls. */
+.day-art {
+  position: absolute;
+  will-change: transform;
+  transform: translate3d(0, calc(var(--day-y, 0px) * var(--depth, 0)), 0);
+}
+
+.day-art svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Worn print edges, like the poster: a noise mask over the shapes. */
+.day-worn {
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='w'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.2 1.9'/></filter><rect width='100%' height='100%' filter='url(%23w)'/></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='w'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.2 1.9'/></filter><rect width='100%' height='100%' filter='url(%23w)'/></svg>");
+}
+
+.day-spin {
+  animation: day-spin 140s linear infinite;
+  transform-origin: 50% 50%;
+}
+
+.day-spin-rev {
+  animation: day-spin 180s linear infinite reverse;
+  transform-origin: 50% 50%;
+}
+
+@keyframes day-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.day-twinkle {
+  animation: day-twinkle 5s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -0.7s);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes day-twinkle {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82) rotate(12deg);
+  }
+}
+
+/* The reading progress bar under the header. */
+.day-progress {
+  transform-origin: 0 50%;
+  transform: scaleX(var(--day-progress, 0));
+}
+
+/* ------------------------------------------------------------ reveals
+   Content rises into place as it scrolls into view. Only once the script has
+   said motion is on, so without it (or with reduced motion) nothing hides. */
+
+.day-motion [data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0);
+  filter: blur(6px);
+  transition:
+    opacity 900ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 1100ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 900ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+
+.day-motion [data-reveal="scale"] {
+  transform: scale(0.96);
+}
+
+.day-motion [data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+/* The page itself, arriving after a navigation. */
+.day-enter {
+  animation: day-enter 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes day-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+}
+
+/* The hero words, a line at a time. */
+.day-line-in {
+  display: inline-block;
+  animation: day-line-in 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 110ms + 150ms);
+}
+
+@keyframes day-line-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.5em, 0) rotate(1.5deg);
+    filter: blur(8px);
+  }
+}
+
+/* ------------------------------------------------------ the mouse run
+   A micromouse runs the hero's maze line, forever, and leaves its trail. */
+
+.day-run-path {
+  stroke-dasharray: var(--len) var(--len);
+  stroke-dashoffset: var(--len);
+  animation: day-draw 5.5s linear 0.6s infinite;
+}
+
+@keyframes day-draw {
+  0% {
+    stroke-dashoffset: var(--len);
+    opacity: 1;
+  }
+  70%,
+  88% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------ alerts */
+
+.day-banner {
+  mask-image: linear-gradient(90deg, transparent, black 4%, black 96%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 4%, black 96%, transparent);
+}
+
+.day-banner-track {
   display: flex;
   width: max-content;
-  animation: day-ticker 55s linear infinite;
+  animation: day-marquee var(--day-marquee, 40s) linear infinite;
 }
 
-.day-ticker:hover .day-ticker-track {
+.day-banner:hover .day-banner-track,
+.day-banner:focus-within .day-banner-track {
   animation-play-state: paused;
 }
 
-@keyframes day-ticker {
+@keyframes day-marquee {
   to {
     transform: translateX(-50%);
   }
 }
 
-/* A slow shimmer across the champion's name. */
-.day-shimmer {
-  background-size: 200% auto;
-  animation: day-shimmer 6s linear infinite;
+.day-banner-in {
+  animation: day-banner-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes day-shimmer {
-  to {
-    background-position: 200% center;
+@keyframes day-banner-in {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
   }
 }
 
-/* Rises into place as the page loads, staggered by --i. */
-.day-rise {
-  animation: day-rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  animation-delay: calc(var(--i, 0) * 70ms);
+.day-dialog-backdrop {
+  animation: day-fade 300ms ease both;
+  background: rgb(20 8 26 / 0.45);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
 }
 
-@keyframes day-rise {
+.day-dialog {
+  animation: day-pop 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes day-fade {
   from {
     opacity: 0;
-    transform: translateY(14px);
+  }
+}
+
+@keyframes day-pop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0) scale(0.94);
+  }
+}
+
+/* ------------------------------------------------------------ splash
+   Race start: the chapter presents, five lights come on one by one, go out,
+   and the name arrives behind a chequered flag that wipes the screen away.
+   It hides itself at the end in CSS alone, so a failed script can never leave
+   it over the page. */
+
+.day-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(60rem 40rem at 50% 120%, rgb(170 40 80 / 0.55), transparent 70%),
+    radial-gradient(50rem 40rem at 50% -20%, rgb(96 44 140 / 0.6), transparent 70%),
+    #140818;
+  color: #faf2e6;
+  animation: day-splash-out 700ms cubic-bezier(0.7, 0, 0.3, 1) 3150ms forwards;
+}
+
+.day-splash-seen .day-splash,
+.day-splash[data-gone="true"] {
+  display: none;
+}
+
+.day-splash[data-leaving="true"] {
+  animation: day-splash-out 600ms cubic-bezier(0.7, 0, 0.3, 1) forwards;
+}
+
+@keyframes day-splash-out {
+  0% {
+    clip-path: inset(0 0 0 0);
+  }
+  99% {
+    clip-path: inset(0 0 100% 0);
+    visibility: visible;
+  }
+  100% {
+    clip-path: inset(0 0 100% 0);
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+.day-splash-flag {
+  /* The finish line along the bottom, which then rides the wipe's edge up. */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 44px;
+  animation: day-flag 700ms cubic-bezier(0.7, 0, 0.3, 1) 3150ms forwards;
+}
+
+.day-splash[data-leaving="true"] .day-splash-flag {
+  animation: day-flag 600ms cubic-bezier(0.7, 0, 0.3, 1) forwards;
+}
+
+@keyframes day-flag {
+  to {
+    bottom: 100%;
+  }
+}
+
+.day-splash-chapter {
+  animation: day-rise-in 700ms cubic-bezier(0.16, 1, 0.3, 1) 100ms both;
+}
+
+.day-splash-lights {
+  animation: day-rise-in 600ms cubic-bezier(0.16, 1, 0.3, 1) 300ms both;
+}
+
+@keyframes day-rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+}
+
+/* The lights: on in turn, all out together. */
+.day-splash-light {
+  background: #2b1531;
+  box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.6);
+  animation:
+    day-light-on 60ms linear forwards,
+    day-light-off 80ms linear forwards;
+  animation-delay: calc(700ms + var(--i) * 260ms), 2100ms;
+}
+
+@keyframes day-light-on {
+  to {
+    background: radial-gradient(circle at 40% 35%, #ffb3c2, #ff2d55 45%, #b3002d);
+    box-shadow:
+      0 0 24px 4px rgb(255 45 85 / 0.7),
+      0 0 60px 10px rgb(255 45 85 / 0.35);
+  }
+}
+
+@keyframes day-light-off {
+  to {
+    background: #2b1531;
+    box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.6);
+  }
+}
+
+.day-splash-name {
+  opacity: 0;
+  animation: day-slam 800ms cubic-bezier(0.16, 1, 0.3, 1) 2150ms forwards;
+}
+
+@keyframes day-slam {
+  from {
+    opacity: 0;
+    transform: scale(1.3);
+    filter: blur(12px);
+    letter-spacing: 0.2em;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+.day-splash-streak {
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  animation: day-streak 700ms cubic-bezier(0.7, 0, 0.2, 1) 2200ms forwards;
+}
+
+@keyframes day-streak {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.day-splash-mouse {
+  offset-path: path("M -40 0 L 1400 0");
+  animation: day-zoom 900ms cubic-bezier(0.6, 0, 0.2, 1) 2150ms both;
+}
+
+@keyframes day-zoom {
+  from {
+    offset-distance: 0%;
+  }
+  to {
+    offset-distance: 100%;
   }
 }
 
@@ -233,6 +515,8 @@
 }
 
 .day-bracket {
+  --wire: rgb(var(--day-line) / 0.18);
+  --wire-lit: rgb(var(--day-gold) / 0.8);
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.15fr) repeat(4, minmax(0, 1fr));
   gap: 0 1.5rem;
@@ -268,7 +552,7 @@
   top: 25%;
   bottom: 25%;
   width: 0.75rem;
-  border: 2px solid rgba(255, 255, 255, 0.14);
+  border: 2px solid var(--wire);
   pointer-events: none;
 }
 
@@ -277,7 +561,7 @@
   position: absolute;
   top: 50%;
   width: 0.75rem;
-  border-top: 2px solid rgba(255, 255, 255, 0.14);
+  border-top: 2px solid var(--wire);
   pointer-events: none;
 }
 
@@ -301,7 +585,6 @@
   left: -1.5rem;
 }
 
-/* A semi-final: one match, a straight line into the final. */
 .day-bracket-single {
   position: relative;
   flex: 1;
@@ -318,7 +601,7 @@
   position: absolute;
   top: 50%;
   width: 1.5rem;
-  border-top: 2px solid rgba(255, 255, 255, 0.14);
+  border-top: 2px solid var(--wire);
   pointer-events: none;
 }
 
@@ -330,28 +613,79 @@
   left: -1.5rem;
 }
 
-.day-bracket-single[data-decided="true"]::before {
-  border-color: rgba(242, 169, 0, 0.55);
-}
-
-/* A pair whose winner is known lights its lines gold. */
+.day-bracket-single[data-decided="true"]::before,
 .day-bracket-pair[data-decided="true"]::after,
 .day-bracket-pair[data-decided="true"]::before {
-  border-color: rgba(242, 169, 0, 0.55);
+  border-color: var(--wire-lit);
 }
 
+/* ---------------------------------------------------------- scrollbars */
+
+.day-scroll-x {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--day-line) / 0.25) transparent;
+}
+
+.day-no-scrollbar {
+  scrollbar-width: none;
+}
+
+.day-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* -------------------------------------------------------- reduced motion */
+
 @media (prefers-reduced-motion: reduce) {
-  .day-floor::after,
   .day-live-dot::after,
-  .day-ticker-track,
-  .day-shimmer,
-  .day-rise {
+  .day-spin,
+  .day-spin-rev,
+  .day-twinkle,
+  .day-banner-track,
+  .day-enter,
+  .day-line-in,
+  .day-run-path,
+  .day-run-mouse,
+  .day-dialog,
+  .day-banner-in {
     animation: none;
   }
 
-  .day-card,
-  .day-card:hover {
+  .day-run-path {
+    stroke-dashoffset: 0;
+  }
+
+  .day-run-mouse {
+    display: none;
+  }
+
+  .day-art {
+    transform: none;
+  }
+
+  .day-lift,
+  .day-lift:hover,
+  .day-btn,
+  .day-btn:active {
     transition: none;
     transform: none;
+  }
+
+  .day-splash-light,
+  .day-splash-name,
+  .day-splash-streak,
+  .day-splash-mouse,
+  .day-splash-chapter,
+  .day-splash-lights {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+
+  .day-splash,
+  .day-splash-flag {
+    animation-delay: 900ms;
+    animation-duration: 300ms;
   }
 }

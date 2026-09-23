@@ -1,139 +1,276 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Crest } from "@/components/day-site/Crest";
-import { formatScore, phaseInfo, type Journey, type ResolvedMatch } from "@/lib/bracket";
+import { DayIcon, type DayIconName } from "@/components/day-site/icons";
+import { phaseInfo, type Journey, type ResolvedMatch } from "@/lib/bracket";
 import type { GuideBlock } from "@/lib/day-guides";
+import { formatCells, formatPoints, formatTime, scoreSheet, workingOf } from "@/lib/score-sheet";
 
-/** The heading every day page opens with. */
-export function PageHead({ kicker, title, lead, children }: { kicker: string; title: string; lead?: ReactNode; children?: ReactNode }) {
+/** The heading every day page opens with, arriving a line at a time. */
+export function PageHead({
+  kicker,
+  title,
+  lead,
+  children,
+}: {
+  kicker: ReactNode;
+  title: string;
+  lead?: ReactNode;
+  children?: ReactNode;
+}) {
   return (
-    <div className="day-rise flex flex-wrap items-end justify-between gap-6">
+    <div className="flex flex-wrap items-end justify-between gap-6">
       <div className="max-w-3xl">
-        <p className="day-kicker">{kicker}</p>
-        <h1 className="mt-2 font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-6xl">
-          {title}
+        <p className="day-kicker day-line-in">{kicker}</p>
+        <h1 className="day-display mt-3 text-[2.6rem] text-day-ink sm:text-6xl lg:text-7xl">
+          <span className="day-line-in" style={{ ["--i" as string]: 1 }}>
+            {title}
+          </span>
         </h1>
-        {lead ? <p className="mt-4 text-base text-[var(--day-muted)] sm:text-lg">{lead}</p> : null}
+        {lead ? (
+          <p className="day-line-in mt-5 max-w-2xl text-base leading-relaxed text-day-muted sm:text-lg" style={{ ["--i" as string]: 2 }}>
+            {lead}
+          </p>
+        ) : null}
       </div>
-      {children}
+      {children ? (
+        <div className="day-line-in" style={{ ["--i" as string]: 3 }}>
+          {children}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-export function SectionTitle({ kicker, children, action }: { kicker?: string; children: ReactNode; action?: ReactNode }) {
+export function SectionTitle({ kicker, children, action }: { kicker?: ReactNode; children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="flex flex-wrap items-end justify-between gap-3" data-reveal>
       <div>
         {kicker ? <p className="day-kicker">{kicker}</p> : null}
-        <h2 className="mt-1 font-display text-2xl font-extrabold tracking-tight text-white sm:text-3xl">{children}</h2>
+        <h2 className="day-display mt-2 text-3xl text-day-ink sm:text-4xl">{children}</h2>
       </div>
       {action}
     </div>
   );
 }
 
+/** "See all →", the way out of a section into its page. */
+export function MoreLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link href={href} className="group inline-flex items-center gap-1.5 text-sm font-semibold text-day-ink">
+      {children}
+      <DayIcon name="arrow" className="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1" />
+    </Link>
+  );
+}
+
 const JOURNEY_TONES: Record<Journey["state"], string> = {
-  REGISTERED: "border-white/15 bg-white/5 text-white/70",
-  QUALIFYING: "border-[var(--day-violet)]/40 bg-[var(--day-violet)]/10 text-[#d9c6ff]",
-  NOT_QUALIFIED: "border-white/10 bg-white/[0.03] text-white/50",
-  QUALIFIED: "border-[var(--day-mint)]/40 bg-[var(--day-mint)]/10 text-[var(--day-mint)]",
-  ALIVE: "border-[var(--day-mint)]/40 bg-[var(--day-mint)]/10 text-[var(--day-mint)]",
-  ELIMINATED: "border-white/10 bg-white/[0.03] text-white/55",
-  RUNNER_UP: "border-[#d8dde6]/40 bg-[#d8dde6]/10 text-[#e8ecf2]",
-  CHAMPION: "border-[var(--day-gold)]/60 bg-[var(--day-gold)]/15 text-[var(--day-gold)]",
+  REGISTERED: "bg-day-ink/[0.06] text-day-muted",
+  QUALIFYING: "bg-day-plum/10 text-day-plum",
+  NOT_QUALIFIED: "bg-day-ink/[0.06] text-day-faint",
+  QUALIFIED: "bg-day-good/10 text-day-good",
+  ALIVE: "bg-day-good/10 text-day-good",
+  ELIMINATED: "bg-day-ink/[0.06] text-day-muted",
+  RUNNER_UP: "bg-day-plum/10 text-day-plum",
+  CHAMPION: "bg-day-gold/15 text-day-gold",
 };
 
 export function JourneyBadge({ journey, size = "sm" }: { journey: Journey; size?: "sm" | "lg" }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border font-semibold ${JOURNEY_TONES[journey.state]} ${
-        size === "lg" ? "px-4 py-1.5 text-sm" : "px-2.5 py-0.5 text-[11px]"
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full font-semibold ${JOURNEY_TONES[journey.state]} ${
+        size === "lg" ? "px-4 py-1.5 text-sm" : "px-2.5 py-1 text-[11px]"
       }`}
     >
-      {journey.state === "CHAMPION" ? "🏆" : null}
+      {journey.state === "CHAMPION" ? <DayIcon name="trophy" className="h-3.5 w-3.5" /> : null}
       {journey.state === "ALIVE" ? <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" /> : null}
       {journey.label}
     </span>
   );
 }
 
-export function StatTile({ label, value, hint, tone = "white" }: { label: string; value: ReactNode; hint?: string; tone?: "white" | "gold" | "mint" | "rose" }) {
+export function StatTile({
+  label,
+  value,
+  hint,
+  tone = "ink",
+  icon,
+  index = 0,
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: ReactNode;
+  tone?: "ink" | "gold" | "good" | "live" | "crimson";
+  icon?: DayIconName;
+  index?: number;
+}) {
   const colour = {
-    white: "text-white",
-    gold: "text-[var(--day-gold)]",
-    mint: "text-[var(--day-mint)]",
-    rose: "text-[var(--day-rose)]",
+    ink: "text-day-ink",
+    gold: "text-day-gold",
+    good: "text-day-good",
+    live: "text-day-live",
+    crimson: "text-day-crimson",
   }[tone];
   return (
-    <div className="day-glass p-4 sm:p-5">
-      <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--day-faint)]">{label}</p>
-      <p className={`mt-2 font-display text-3xl font-extrabold tabular-nums sm:text-4xl ${colour}`}>{value}</p>
-      {hint ? <p className="mt-1 text-xs text-[var(--day-muted)]">{hint}</p> : null}
+    <div className="day-card p-5" data-reveal style={{ ["--i" as string]: index }}>
+      <p className="flex items-center gap-2 text-xs font-semibold text-day-muted">
+        {icon ? <DayIcon name={icon} className="h-4 w-4" /> : null}
+        {label}
+      </p>
+      <p className={`day-num day-display mt-3 text-4xl sm:text-5xl ${colour}`}>{value}</p>
+      {hint ? <p className="mt-2 text-xs text-day-muted">{hint}</p> : null}
+    </div>
+  );
+}
+
+/** Nothing here yet: said plainly, with the way on. */
+export function Empty({ icon = "flag", title, children }: { icon?: DayIconName; title: string; children?: ReactNode }) {
+  return (
+    <div className="day-card flex flex-col items-center px-6 py-14 text-center" data-reveal>
+      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-day-crimson/10 text-day-crimson">
+        <DayIcon name={icon} className="h-7 w-7" />
+      </span>
+      <p className="day-display mt-5 text-2xl text-day-ink">{title}</p>
+      {children ? <div className="mx-auto mt-2 max-w-md text-day-muted">{children}</div> : null}
     </div>
   );
 }
 
 /**
- * Two teams, face to face. Used for "on the maze now", latest results and a
- * team's path through the bracket.
+ * A match sheet, shown: every successful run's time, the fastest picked out as
+ * the official time, and the sum that makes the score.
+ */
+export function SheetView({
+  times,
+  remaining,
+  score,
+  compact = false,
+}: {
+  times: number[];
+  remaining: number | null;
+  /** A score from before run times were recorded, shown on its own. */
+  score?: number | null;
+  compact?: boolean;
+}) {
+  const sheet = scoreSheet({ times, remaining });
+  if (!times.length && score !== null && score !== undefined) {
+    return <p className="text-sm text-day-muted">Score {formatPoints(score)}.</p>;
+  }
+  const fastest = sheet.official;
+  return (
+    <div className="space-y-3">
+      {times.length ? (
+        <ol className="flex flex-wrap gap-1.5" aria-label="Successful runs">
+          {times.map((time, index) => {
+            const best = time === fastest && times.indexOf(time) === index;
+            return (
+              <li
+                key={index}
+                className={`day-num inline-flex items-baseline gap-1.5 rounded-lg px-2.5 py-1 text-sm ${
+                  best ? "bg-day-gold/15 font-bold text-day-gold ring-1 ring-day-gold/40" : "bg-day-ink/[0.05] text-day-ink"
+                }`}
+              >
+                <span className="text-[10px] font-semibold text-day-faint">R{index + 1}</span>
+                {formatTime(time)}
+                {best ? <span className="sr-only">(official time)</span> : null}
+              </li>
+            );
+          })}
+        </ol>
+      ) : (
+        <p className="text-sm text-day-muted">
+          No run reached the centre{remaining !== null ? `: stopped ${formatCells(remaining)} short` : ""}.
+        </p>
+      )}
+      {!compact && sheet.score !== null ? <p className="day-num text-sm text-day-muted">{workingOf(sheet)}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * Two teams, face to face, like a scoreboard: crests, names, seeds and the
+ * score, with the winner in full ink and the loser faded.
  */
 export function MatchCard({
   match,
   nameOf,
   live = false,
   highlight,
+  arena,
+  showSheets = false,
 }: {
   match: ResolvedMatch;
   nameOf: (id: string | null) => string | null;
   live?: boolean;
   highlight?: string;
+  arena?: string;
+  showSheets?: boolean;
 }) {
   const sides = [
-    { id: match.teamAId, seed: match.seedA, score: match.scoreA },
-    { id: match.teamBId, seed: match.seedB, score: match.scoreB },
+    { id: match.teamAId, seed: match.seedA, score: match.scoreA, times: match.timesA, remaining: match.remainingA },
+    { id: match.teamBId, seed: match.seedB, score: match.scoreB, times: match.timesB, remaining: match.remainingB },
   ];
   return (
     <div
-      className={`day-glass overflow-hidden p-4 ${live ? "border-[var(--day-rose)]/50 shadow-[0_0_60px_-20px_rgba(255,79,134,0.6)]" : ""}`}
+      className={`day-card overflow-hidden ${live ? "ring-2 ring-day-live/50" : ""}`}
+      data-reveal
     >
-      <p className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--day-faint)]">
-        <span className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-3 border-b border-day-line/[0.07] px-5 py-3 text-xs font-semibold">
+        <span className="flex items-center gap-2 text-day-muted">
           {live ? <span className="day-live-dot" aria-hidden="true" /> : null}
-          {live ? "On the maze now" : phaseInfo(match.round).name}
+          <span className={live ? "text-day-live" : ""}>{live ? "On the maze now" : phaseInfo(match.round).name}</span>
+          {arena ? <span className="text-day-faint">· {arena}</span> : null}
         </span>
-        <span>{match.walkover ? "Bye" : match.winnerId ? "Final score" : `Match ${match.slot + 1}`}</span>
-      </p>
-      <div className="mt-3 space-y-2">
+        <span className="text-day-faint">
+          {match.walkover ? "Bye" : match.winnerId ? "Final" : `Match ${match.slot + 1}`}
+        </span>
+      </div>
+      <div className="divide-y divide-day-line/[0.06]">
         {sides.map((side, index) => {
           const name = nameOf(side.id);
           const won = !!match.winnerId && match.winnerId === side.id;
           const lost = !!match.winnerId && !!side.id && match.winnerId !== side.id;
           return (
-            <div
-              key={index}
-              className={`flex items-center gap-3 rounded-xl px-2 py-1.5 ${won ? "bg-[var(--day-gold)]/10" : ""} ${
-                highlight && side.id === highlight ? "ring-1 ring-white/25" : ""
-              }`}
-            >
-              <span className="w-6 shrink-0 text-right font-mono text-xs text-[var(--day-faint)]">{side.seed ?? ""}</span>
-              {name ? <Crest name={name} size={22} /> : <span className="h-[29px] w-[29px] shrink-0 rounded-xl border border-dashed border-white/15" />}
-              {side.id && name ? (
-                <Link
-                  href={`/day/teams/${side.id}`}
-                  className={`min-w-0 flex-1 truncate font-semibold hover:underline ${lost ? "text-white/45" : "text-white"}`}
+            <div key={index} className={`px-5 py-3.5 ${highlight && side.id === highlight ? "bg-day-crimson/[0.05]" : ""}`}>
+              <div className="flex items-center gap-3">
+                {name ? (
+                  <Crest name={name} size={26} ring={won && match.round === 6} />
+                ) : (
+                  <span className="h-[35px] w-[35px] shrink-0 rounded-[28%] border border-dashed border-day-line/20" />
+                )}
+                <div className="min-w-0 flex-1">
+                  {side.id && name ? (
+                    <Link
+                      href={`/day/teams/${side.id}`}
+                      className={`block truncate text-[15px] font-semibold hover:underline ${lost ? "text-day-faint" : "text-day-ink"}`}
+                    >
+                      {name}
+                    </Link>
+                  ) : (
+                    <span className="block truncate text-[15px] italic text-day-faint">
+                      {match.round === 2 ? "Bye" : "To be decided"}
+                    </span>
+                  )}
+                  {side.seed ? <span className="text-[11px] font-medium text-day-faint">Seed {side.seed}</span> : null}
+                </div>
+                {won ? (
+                  <span className="grid h-5 w-5 place-items-center rounded-full bg-day-good text-day-on-ink" aria-label="Winner">
+                    <DayIcon name="check" className="h-3 w-3" />
+                  </span>
+                ) : null}
+                <span
+                  className={`day-num day-display min-w-[3.5ch] text-right text-3xl ${
+                    won ? "text-day-ink" : lost ? "text-day-faint" : "text-day-ink"
+                  }`}
                 >
-                  {name}
-                </Link>
-              ) : (
-                <span className="min-w-0 flex-1 truncate italic text-white/35">{match.round === 2 ? "Bye" : "To be decided"}</span>
-              )}
-              <span
-                className={`font-display text-2xl font-extrabold tabular-nums ${
-                  won ? "text-[var(--day-gold)]" : lost ? "text-white/40" : "text-white"
-                }`}
-              >
-                {match.walkover ? "" : formatScore(side.score)}
-              </span>
+                  {match.walkover ? "" : formatPoints(side.score)}
+                </span>
+              </div>
+              {showSheets && (side.times.length > 0 || side.remaining !== null) ? (
+                <div className="mt-3 pl-[47px]">
+                  <SheetView times={side.times} remaining={side.remaining} compact />
+                </div>
+              ) : null}
             </div>
           );
         })}
@@ -145,23 +282,25 @@ export function MatchCard({
 /** A guide's blocks, in the day site's type. */
 export function GuideView({ blocks }: { blocks: GuideBlock[] }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {blocks.map((block, index) =>
         block.kind === "heading" ? (
-          <h2 key={index} className="pt-4 font-display text-2xl font-extrabold tracking-tight text-white first:pt-0">
+          <h2 key={index} className="day-display pt-6 text-3xl text-day-ink first:pt-0" data-reveal>
             {block.text}
           </h2>
         ) : block.kind === "list" ? (
-          <ul key={index} className="grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2">
+          <ul key={index} className="grid grid-cols-[minmax(0,1fr)] gap-2.5 sm:grid-cols-2">
             {block.items.map((item, i) => (
-              <li key={i} className="flex gap-3 rounded-xl border border-white/[0.07] bg-white/[0.03] p-3 text-[var(--day-muted)]">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--day-gold)]" aria-hidden="true" />
-                <span>{item}</span>
+              <li key={i} className="day-card flex gap-3 p-4 text-day-muted" data-reveal style={{ ["--i" as string]: i }}>
+                <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-day-good/15 text-day-good">
+                  <DayIcon name="check" className="h-3 w-3" />
+                </span>
+                <span className="leading-relaxed">{item}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p key={index} className="max-w-3xl leading-relaxed text-[var(--day-muted)]">
+          <p key={index} className="max-w-3xl text-lg leading-relaxed text-day-muted" data-reveal>
             {block.text}
           </p>
         ),

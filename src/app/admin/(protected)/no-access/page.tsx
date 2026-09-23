@@ -25,7 +25,7 @@ export default async function NoAccessPage() {
           A master admin can change this on the Admins screen.
         </p>
         <p className="mt-4 text-sm">
-          <Link href="/admin/day" className="font-semibold text-accent hover:underline">
+          <Link href="/day/hq" className="font-semibold text-accent hover:underline">
             Go to Day HQ →
           </Link>
         </p>

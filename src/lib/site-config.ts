@@ -45,6 +45,9 @@ const COMPETITION_DAY_FALLBACK: CompetitionDayConfig = {
   qualifyingDirection: "HIGHER",
   qualifyingNote: "",
   matchDirection: "HIGHER",
+  runOrderStart: "",
+  runSlotMinutes: 10,
+  runOrderDrawnAt: null,
   updatedAt: NEVER_SAVED,
 };
 

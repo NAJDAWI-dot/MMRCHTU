@@ -464,6 +464,12 @@ model CompetitionDayConfig {
   // Head-to-head results use the same direction unless told otherwise.
   matchDirection String @default("HIGHER")
 
+  // The phase 1 running order: when the first team runs, how long each slot
+  // is, and when the order was drawn.
+  runOrderStart   String    @default("")
+  runSlotMinutes  Int       @default(10)
+  runOrderDrawnAt DateTime?
+
   updatedAt DateTime @updatedAt
 }
 
@@ -484,15 +490,32 @@ model TeamDayStatus {
   pit       String  @default("")
   withdrawn Boolean @default(false)
 
+  // The registration desk's own record: which members turned up (ids of
+  // TeamMember rows, comma-separated), whether badges went out, and a note
+  // only the desk sees.
+  presentIds String  @default("")
+  badges     Boolean @default(false)
+  deskNote   String  @default("")
+
+  // Place in the phase 1 running order, 1-based, once it has been drawn.
+  runOrder Int?
+
   updatedAt DateTime @updatedAt
 }
 
-// One qualifying run. A team may have several; the best counts.
+// A team's phase 1 match sheet: the time of every run that reached the
+// centre. The score is worked out from them by the rulebook formula,
+// (successful runs / fastest time) * 1000, and kept here so nothing has to
+// recompute it to sort. A mouse that never reached the centre has no score and
+// is ranked by `remaining`, how many cells short of the centre it stopped.
+// Rows from before run times were recorded have a score and no times.
 model QualifyingRun {
   id             String       @id @default(cuid())
   registrationId String
   registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
-  score          Float
+  score          Float?
+  runTimes       Float[]      @default([])
+  remaining      Float?
   note           String       @default("")
   recordedBy     String       @default("")
   createdAt      DateTime     @default(now())
@@ -518,6 +541,13 @@ model KnockoutMatch {
   scoreA   Float?
   scoreB   Float?
   winnerId String?
+
+  // The same match sheet as qualifying, one per side: every successful run's
+  // time, and the distance short of the centre for a side that never got there.
+  timesA     Float[] @default([])
+  timesB     Float[] @default([])
+  remainingA Float?
+  remainingB Float?
 
   // PENDING | LIVE | DONE
   status      String    @default("PENDING")
@@ -560,9 +590,32 @@ model DayGuide {
 // "Team Byte, please come to the inspection desk". Plain text, rendered as
 // React children, so an admin cannot inject markup. Pinned ones sit above the
 // rest; otherwise the newest is first.
+// One line of the competition day's running order, written on the Competition
+// Day screen. Times are clock times on the day ("09:00"), in Amman time, and
+// the date comes from CompetitionDayConfig.eventDate.
+model DaySlot {
+  id        String   @id @default(cuid())
+  startTime String
+  endTime   String   @default("")
+  title     String
+  location  String   @default("")
+  detail    String   @default("")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([startTime])
+}
+
 model DayAnnouncement {
   id          String   @id @default(cuid())
+  title       String   @default("")
   body        String
+  // An alert pops up over the day site, and once a visitor dismisses it,
+  // stays in the thin banner at the top until an admin edits or clears it.
+  isAlert     Boolean  @default(false)
+  // INFO | URGENT | GOOD
+  tone        String   @default("INFO")
   isPinned    Boolean  @default(false)
   isPublished Boolean  @default(true)
   createdAt   DateTime @default(now())

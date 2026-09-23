@@ -88,58 +88,52 @@ describe("scores", () => {
 
 describe("qualifying standings", () => {
   const teams = [team(1), team(2), team(3), team(4)];
+  const sheet = (id: string, runTimes: number[], minute: number, remaining: number | null = null) => ({
+    registrationId: id,
+    score: null,
+    runTimes,
+    remaining,
+    createdAt: at(minute),
+  });
 
-  it("counts each team's best run", () => {
-    const table = standings(
-      teams,
-      [
-        { registrationId: "t1", score: 40, createdAt: at(1) },
-        { registrationId: "t1", score: 90, createdAt: at(5) },
-        { registrationId: "t2", score: 70, createdAt: at(2) },
-      ],
-      "HIGHER",
-    );
-    expect(table.map((row) => [row.teamId, row.best, row.rank, row.runs])).toEqual([
-      ["t1", 90, 1, 2],
-      ["t2", 70, 2, 1],
-      ["t3", null, null, 0],
-      ["t4", null, null, 0],
+  it("scores each sheet by the rulebook formula", () => {
+    const table = standings(teams, [sheet("t1", [30, 25, 27, 26], 1), sheet("t2", [18], 2)]);
+    expect(table.map((row) => [row.teamId, row.best && Math.round(row.best * 10) / 10, row.official, row.runs, row.rank])).toEqual([
+      ["t1", 160, 25, 4, 1],
+      ["t2", 55.6, 18, 1, 2],
+      ["t3", null, null, 0, null],
+      ["t4", null, null, 0, null],
     ]);
   });
 
-  it("ranks the other way when lower is better", () => {
-    const table = standings(
-      teams,
-      [
-        { registrationId: "t1", score: 40, createdAt: at(1) },
-        { registrationId: "t2", score: 25, createdAt: at(2) },
-      ],
-      "LOWER",
-    );
-    expect(table[0]!.teamId).toBe("t2");
+  it("ranks a mouse that never reached the centre below every score, closest first", () => {
+    const table = standings(teams, [sheet("t1", [], 1, 6), sheet("t2", [], 2, 2), sheet("t3", [400], 3), sheet("t4", [], 4)]);
+    expect(table.map((row) => row.teamId)).toEqual(["t3", "t2", "t1", "t4"]);
+    expect(table.every((row) => row.rank !== null)).toBe(true);
   });
 
-  it("breaks a tie by who set the score first", () => {
-    const table = standings(
-      teams,
-      [
-        { registrationId: "t3", score: 50, createdAt: at(9) },
-        { registrationId: "t4", score: 50, createdAt: at(3) },
-      ],
-      "HIGHER",
-    );
-    expect(table.slice(0, 2).map((row) => row.teamId)).toEqual(["t4", "t3"]);
+  it("breaks an exact tie by the faster official time, then by who ran first", () => {
+    // 2 runs at 20s and 1 run at 10s both score 100.
+    const byTime = standings(teams, [sheet("t1", [20, 21], 1), sheet("t2", [10], 2)]);
+    expect(byTime.slice(0, 2).map((row) => row.teamId)).toEqual(["t2", "t1"]);
+    const byOrder = standings(teams, [sheet("t3", [20], 9), sheet("t4", [20], 3)]);
+    expect(byOrder.slice(0, 2).map((row) => row.teamId)).toEqual(["t4", "t3"]);
+  });
+
+  it("still ranks a score written before run times were", () => {
+    const table = standings(teams, [{ registrationId: "t1", score: 90, createdAt: at(1) }, sheet("t2", [10], 2)]);
+    expect(table.slice(0, 2).map((row) => [row.teamId, row.best])).toEqual([["t2", 100], ["t1", 90]]);
   });
 
   it("qualifies only down to the cutoff", () => {
-    const runs = teams.map((t, i) => ({ registrationId: t.id, score: 100 - i, createdAt: at(i) }));
-    const table = standings(teams, runs, "HIGHER", { cutoff: 2 });
+    const runs = teams.map((t, i) => sheet(t.id, [10 + i], i));
+    const table = standings(teams, runs, { cutoff: 2 });
     expect(table.map((row) => row.qualified)).toEqual([true, true, false, false]);
   });
 
   it("leaves an ineligible team unranked so the next team moves up", () => {
-    const runs = teams.map((t, i) => ({ registrationId: t.id, score: 100 - i, createdAt: at(i) }));
-    const table = standings(teams, runs, "HIGHER", { cutoff: 2, ineligible: new Set(["t1"]) });
+    const runs = teams.map((t, i) => sheet(t.id, [10 + i], i));
+    const table = standings(teams, runs, { cutoff: 2, ineligible: new Set(["t1"]) });
     expect(table.filter((row) => row.qualified).map((row) => row.teamId)).toEqual(["t2", "t3"]);
     expect(table.find((row) => row.teamId === "t1")!.rank).toBeNull();
   });
@@ -274,7 +268,7 @@ describe("results", () => {
 });
 
 describe("a team's journey", () => {
-  const table = standings([team(1)], [{ registrationId: "t1", score: 5, createdAt: at(0) }], "HIGHER");
+  const table = standings([team(1)], [{ registrationId: "t1", score: null, runTimes: [200], createdAt: at(0) }]);
 
   it("is provisional while qualifying is open", () => {
     expect(journeyOf("t1", table[0], [], false).label).toBe("Provisionally 1st");

@@ -24,9 +24,10 @@ export const metadata: Metadata = {
 };
 
 export default async function CompetitionDayPage() {
-  const [config, events, hidden, earlyBird] = await Promise.all([
+  const [config, events, slots, hidden, earlyBird] = await Promise.all([
     getCompetitionDayConfig(),
     prisma.scheduleEvent.findMany({ orderBy: { startsAt: "asc" } }),
+    prisma.daySlot.findMany({ orderBy: [{ startTime: "asc" }, { sortOrder: "asc" }] }),
     hiddenPageHrefs(),
     getEarlyBirdState(),
   ]);
@@ -131,6 +132,30 @@ export default async function CompetitionDayPage() {
             // message rather than showing an empty page.
             <HoldingNote text={config.comingSoonText} />
           )}
+
+          {/* The running order, written on the Competition Day admin screen:
+              the same one the competition day site follows on the day. */}
+          {slots.length > 0 ? (
+            <section className="mt-12">
+              <h2 className="font-display text-xl font-bold text-ras-purple dark:text-white">Running order</h2>
+              <p className="mt-1 text-sm text-ras-gray dark:text-white/60">Times are Amman time.</p>
+              <ol className="mt-4 divide-y divide-ras-gray/15 overflow-hidden rounded-lg border border-ras-gray/15 bg-[var(--color-surface)]">
+                {slots.map((slot) => (
+                  <li key={slot.id} className="flex gap-4 p-4">
+                    <span className="w-28 shrink-0 font-mono text-sm font-semibold text-accent">
+                      {slot.startTime}
+                      {slot.endTime ? `–${slot.endTime}` : ""}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-ras-purple dark:text-white">{slot.title}</span>
+                      {slot.location ? <span className="block text-sm text-ras-gray dark:text-white/70">{slot.location}</span> : null}
+                      {slot.detail ? <span className="mt-1 block text-sm text-ras-gray dark:text-white/60">{slot.detail}</span> : null}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ) : null}
         </>
       ) : (
         <HoldingNote text={config.comingSoonText} />

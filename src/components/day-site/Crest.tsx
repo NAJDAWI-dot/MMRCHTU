@@ -8,14 +8,14 @@ import { crestFor } from "@/lib/crest";
  * The stroke is in the drawing's own units, so a crest drawn small needs a
  * heavier one or the walls fade to nothing and it reads as an empty tile.
  */
-export function Crest({ name, size = 40, glow = false }: { name: string; size?: number; glow?: boolean }) {
+export function Crest({ name, size = 40, ring = false }: { name: string; size?: number; ring?: boolean }) {
   const crest = crestFor(name);
-  const box = size + Math.round(size * 0.3);
+  const box = size + Math.round(size * 0.34);
   return (
     <span
       aria-hidden="true"
-      className={`inline-flex shrink-0 items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.02] ${
-        glow ? "shadow-[0_0_40px_-8px_rgba(242,169,0,0.55)]" : ""
+      className={`inline-flex shrink-0 items-center justify-center rounded-[28%] border bg-day-sunk ${
+        ring ? "border-day-gold/60 shadow-[0_0_0_4px_rgb(var(--day-gold)/0.14)]" : "border-day-line/10"
       }`}
       style={{ width: box, height: box }}
     >

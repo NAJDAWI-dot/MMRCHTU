@@ -47,6 +47,27 @@ export default {
           violet: "#82468C",
           amethyst: "#74347D",
         },
+        /*
+          The competition day site. Every value is a theme variable set in
+          src/styles/day.css, cream paper in light and plum night in dark, so a
+          day page never names a colour that only works in one theme.
+        */
+        day: {
+          bg: "rgb(var(--day-bg) / <alpha-value>)",
+          surface: "rgb(var(--day-surface) / <alpha-value>)",
+          sunk: "rgb(var(--day-sunk) / <alpha-value>)",
+          ink: "rgb(var(--day-ink) / <alpha-value>)",
+          muted: "rgb(var(--day-muted) / <alpha-value>)",
+          faint: "rgb(var(--day-faint) / <alpha-value>)",
+          line: "rgb(var(--day-line) / <alpha-value>)",
+          crimson: "rgb(var(--day-crimson) / <alpha-value>)",
+          plum: "rgb(var(--day-plum) / <alpha-value>)",
+          gold: "rgb(var(--day-gold) / <alpha-value>)",
+          live: "rgb(var(--day-live) / <alpha-value>)",
+          good: "rgb(var(--day-good) / <alpha-value>)",
+          // Text on a solid ink fill: the page colour, flipped.
+          "on-ink": "rgb(var(--day-on-ink) / <alpha-value>)",
+        },
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
@@ -59,6 +80,8 @@ export default {
         // because it is the one Arabic-capable face present on effectively every
         // Windows machine, which is most of the audience.
         arabic: ["var(--font-arabic)", "Tahoma", "sans-serif"],
+        // The competition day site's headings and numbers: Archivo, run wide.
+        day: ["var(--font-day)", "var(--font-sans)", "system-ui", "sans-serif"],
       },
       minHeight: {
         "logo-clear": "139px", // ~36.8mm @ 96dpi, IEEE RAS min on-screen size

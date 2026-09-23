@@ -2,12 +2,16 @@ import { prisma } from "@/lib/prisma";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import { hiddenPageHrefs } from "@/lib/page-visibility";
 import { eventsForDay, sortAnnouncements } from "@/lib/day-mode";
+import { slotsToEvents } from "@/lib/day-slots";
 import { buildTimeline, focusEvent, type ScheduleItem } from "@/lib/schedule";
 
 export interface DayAnnouncementView {
   id: string;
+  title: string;
   body: string;
+  tone: string;
   isPinned: boolean;
+  isAlert: boolean;
   createdAt: Date;
 }
 
@@ -20,6 +24,12 @@ export interface DaySiteData {
   eventDate: Date | null;
   /** The running order for the day, each event knowing where "now" is. */
   timeline: ScheduleItem[];
+  /**
+   * Where the running order came from: the one written on the Competition
+   * Day screen, or, until there is one, the season schedule's events for the
+   * day.
+   */
+  scheduleSource: "day" | "season";
   /** Running now, or else the next thing to happen. */
   focus: ScheduleItem | null;
   /** The event after `focus`, when there is one. */
@@ -38,14 +48,15 @@ export interface DaySiteData {
  * is the page and not a drawing of it.
  */
 export async function loadDaySite(now: Date = new Date()): Promise<DaySiteData> {
-  const [config, events, announcements, teams, hidden] = await Promise.all([
+  const [config, events, slots, announcements, teams, hidden] = await Promise.all([
     getCompetitionDayConfig(),
     prisma.scheduleEvent.findMany({ orderBy: { startsAt: "asc" } }),
+    prisma.daySlot.findMany({ orderBy: [{ startTime: "asc" }, { sortOrder: "asc" }] }),
     prisma.dayAnnouncement.findMany({
       where: { isPublished: true },
       orderBy: { createdAt: "desc" },
       take: 30,
-      select: { id: true, body: true, isPinned: true, createdAt: true },
+      select: { id: true, title: true, body: true, tone: true, isPinned: true, isAlert: true, createdAt: true },
     }),
     prisma.registration.findMany({
       where: { status: "CONFIRMED" },
@@ -54,7 +65,11 @@ export async function loadDaySite(now: Date = new Date()): Promise<DaySiteData> 
     hiddenPageHrefs(),
   ]);
 
-  const timeline = buildTimeline(eventsForDay(events, config.eventDate, now), now);
+  const scheduleSource = slots.length ? "day" : "season";
+  const timeline = buildTimeline(
+    slots.length ? slotsToEvents(slots, config.eventDate, now) : eventsForDay(events, config.eventDate, now),
+    now,
+  );
   const focus = focusEvent(timeline);
   const after = focus ? (timeline[timeline.indexOf(focus) + 1] ?? null) : null;
 
@@ -66,6 +81,7 @@ export async function loadDaySite(now: Date = new Date()): Promise<DaySiteData> 
     details: config.details,
     eventDate: config.eventDate,
     timeline,
+    scheduleSource,
     focus,
     after,
     announcements: sortAnnouncements(announcements),

@@ -8,5 +8,5 @@ import { revalidatePath } from "next/cache";
 export function refreshDaySite() {
   revalidatePath("/day", "layout");
   revalidatePath("/");
-  revalidatePath("/admin/day", "layout");
+  revalidatePath("/day/hq", "layout");
 }

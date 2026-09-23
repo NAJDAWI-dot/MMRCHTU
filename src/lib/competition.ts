@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import {
   journeyOf,
-  parseDirection,
   parseInspection,
   parseQualifyingStatus,
   resolveBracket,
@@ -40,6 +39,12 @@ export interface Competitor {
   robotName: string;
   pit: string;
   withdrawn: boolean;
+  /** TeamMember ids the desk has marked as here. */
+  presentIds: string[];
+  badges: boolean;
+  deskNote: string;
+  /** Place in the phase 1 running order, once drawn. */
+  runOrder: number | null;
   eligible: boolean;
   standing: Standing | undefined;
   journey: Journey;
@@ -72,12 +77,16 @@ export const loadCompetition = cache(async (): Promise<CompetitionState> => {
       where: { status: "CONFIRMED" },
       select: { id: true, teamName: true, status: true, memberCount: true, dayStatus: true },
     }),
-    prisma.qualifyingRun.findMany({ select: { registrationId: true, score: true, createdAt: true } }),
+    prisma.qualifyingRun.findMany({
+      select: { registrationId: true, score: true, runTimes: true, remaining: true, createdAt: true },
+    }),
     prisma.knockoutMatch.findMany({ orderBy: [{ round: "asc" }, { slot: "asc" }] }),
   ]);
 
-  const qualifyingDirection = parseDirection(config.qualifyingDirection);
-  const matchDirection = parseDirection(config.matchDirection);
+  // The rulebook formula: a higher score is always the better one. The stored
+  // direction settings predate it and are no longer offered.
+  const qualifyingDirection: Direction = "HIGHER";
+  const matchDirection: Direction = "HIGHER";
   const ineligible = new Set(
     teams
       .filter((team) => team.dayStatus?.withdrawn || parseInspection(team.dayStatus?.inspection) === "FAILED")
@@ -87,7 +96,6 @@ export const loadCompetition = cache(async (): Promise<CompetitionState> => {
   const table = standings(
     teams.map((team) => ({ id: team.id, name: team.teamName.trim() })),
     runs,
-    qualifyingDirection,
     { ineligible },
   );
   const bracket = resolveBracket(matches, matchDirection).matches.map((match) => {
@@ -120,6 +128,10 @@ export const loadCompetition = cache(async (): Promise<CompetitionState> => {
         robotName: team.dayStatus?.robotName ?? "",
         pit: team.dayStatus?.pit ?? "",
         withdrawn: team.dayStatus?.withdrawn ?? false,
+        presentIds: (team.dayStatus?.presentIds ?? "").split(",").filter(Boolean),
+        badges: team.dayStatus?.badges ?? false,
+        deskNote: team.dayStatus?.deskNote ?? "",
+        runOrder: team.dayStatus?.runOrder ?? null,
         eligible: !ineligible.has(team.id),
         standing,
         journey: journeyOf(team.id, standing, bracket, drawn),
