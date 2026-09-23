@@ -5,6 +5,8 @@ import { requireSection } from "@/lib/admin-access";
 import { prisma } from "@/lib/prisma";
 import { refreshDaySite } from "@/lib/day-refresh";
 import { loadCompetition } from "@/lib/competition";
+import { nextToCall, popHistory, pushHistory, type QueueEntry } from "@/lib/run-queue";
+import { getCompetitionDayConfig } from "@/lib/site-config";
 import { parseClock } from "@/lib/day-slots";
 import {
   FINAL_ROUND,
@@ -127,7 +129,8 @@ export async function drawRunOrder(_previous: DeskState, formData: FormData): Pr
         create: { registrationId, runOrder: index + 1 },
       }),
     ),
-    upsertConfig({ runOrderStart: start, runSlotMinutes: minutes, runOrderDrawnAt: new Date() }),
+    // A new order starts a new queue.
+    upsertConfig({ runOrderStart: start, runSlotMinutes: minutes, runOrderDrawnAt: new Date(), queueTeamId: "", queueCalledAt: null, queueHistory: "" }),
   ]);
   refreshDaySite();
   return { ok: true, message: `Drawn: ${order.length} teams, the first at ${start}, every ${minutes} minutes.` };
@@ -135,9 +138,77 @@ export async function drawRunOrder(_previous: DeskState, formData: FormData): Pr
 
 export async function clearRunOrder(_previous: DeskState, _formData: FormData): Promise<DeskState> {
   await requireSection(SECTION);
-  await prisma.$transaction([prisma.teamDayStatus.updateMany({ data: { runOrder: null } }), upsertConfig({ runOrderDrawnAt: null })]);
+  await prisma.$transaction([prisma.teamDayStatus.updateMany({ data: { runOrder: null } }), upsertConfig({ runOrderDrawnAt: null, queueTeamId: "", queueCalledAt: null, queueHistory: "" })]);
   refreshDaySite();
   return { ok: true, message: "The running order is cleared." };
+}
+
+// ------------------------------------------------------- the call queue
+
+/**
+ * Puts a team on the maze. The teams on deck and in the hole follow from the
+ * running order, so this, and the call history "Back one" steps through, is
+ * all the queue stores.
+ */
+async function callTeam(id: string, name: string, current: string, history: string): Promise<DeskState> {
+  await upsertConfig({
+    queueTeamId: id,
+    queueCalledAt: id ? new Date() : null,
+    queueHistory: current && current !== id ? pushHistory(history, current) : history,
+  });
+  refreshDaySite();
+  return { ok: true, message: id ? `${name} is on the maze.` : "Nobody is on the maze. The queue is stood down." };
+}
+
+async function queueState() {
+  const [state, config] = await Promise.all([loadCompetition(), getCompetitionDayConfig()]);
+  const entries: QueueEntry[] = state.competitors.map((team) => ({
+    id: team.id,
+    name: team.name,
+    runOrder: team.runOrder,
+    eligible: team.eligible,
+    ran: !!team.standing?.recorded,
+  }));
+  return { state, entries, current: config.queueTeamId, history: config.queueHistory };
+}
+
+export async function callNext(_previous: DeskState, _formData: FormData): Promise<DeskState> {
+  await requireSection(SECTION);
+  const { state, entries, current, history } = await queueState();
+  if (state.qualifyingStatus === "LOCKED") return { ok: false, message: "Qualifying is closed, so there is nobody left to call." };
+  if (!entries.some((entry) => entry.runOrder !== null)) return { ok: false, message: "Draw the running order first." };
+  const next = nextToCall(entries, current);
+  if (!next) return { ok: false, message: "Every team in the running order has run." };
+  return callTeam(next.id, next.name, current, history);
+}
+
+/** Undoes the last call: whoever was on the maze before comes back. */
+export async function callBack(_previous: DeskState, _formData: FormData): Promise<DeskState> {
+  await requireSection(SECTION);
+  const { entries, history } = await queueState();
+  const popped = popHistory(history);
+  if (!popped) return { ok: false, message: "There is no earlier call to go back to." };
+  const team = entries.find((entry) => entry.id === popped.id);
+  await upsertConfig({ queueTeamId: popped.id, queueCalledAt: new Date(), queueHistory: popped.history });
+  refreshDaySite();
+  return { ok: true, message: `Back to ${team?.name ?? "the team before"}.` };
+}
+
+/** Calls one team out of turn, for a team that has to run early or late. */
+export async function callChosen(_previous: DeskState, formData: FormData): Promise<DeskState> {
+  await requireSection(SECTION);
+  const { state, entries, current, history } = await queueState();
+  if (state.qualifyingStatus === "LOCKED") return { ok: false, message: "Qualifying is closed, so there is nobody left to call." };
+  const chosen = entries.find((entry) => entry.id === String(formData.get("teamId") ?? ""));
+  if (!chosen || chosen.runOrder === null) return { ok: false, message: "Pick a team from the running order." };
+  if (!chosen.eligible) return { ok: false, message: `${chosen.name} cannot run: withdrawn or failed inspection.` };
+  return callTeam(chosen.id, chosen.name, current, history);
+}
+
+export async function standDown(_previous: DeskState, _formData: FormData): Promise<DeskState> {
+  await requireSection(SECTION);
+  const { current, history } = await queueState();
+  return callTeam("", "", current, history);
 }
 
 // ------------------------------------------------------------- the draw

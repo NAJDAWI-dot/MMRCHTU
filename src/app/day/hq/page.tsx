@@ -76,10 +76,16 @@ export default async function DayHqPage() {
               {slots ? null : " No running order has been written on the Competition Day screen yet."}
             </p>
           </div>
-          <Link href="/day" className="day-btn day-btn-ink">
-            <DayIcon name="live" className="h-4 w-4" />
-            Open the day site
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/day" className="day-btn day-btn-ink">
+              <DayIcon name="live" className="h-4 w-4" />
+              Open the day site
+            </Link>
+            <Link href="/day/screen" target="_blank" className="day-btn day-btn-soft" title="For the projector: open it on the laptop driving it and press F">
+              <DayIcon name="expand" className="h-4 w-4" />
+              Hall screen
+            </Link>
+          </div>
         </div>
 
         {stats.length ? (

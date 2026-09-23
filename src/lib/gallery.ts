@@ -96,6 +96,9 @@ export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 /** Longest edge kept when the browser downscales, in pixels. */
 export const MAX_IMAGE_EDGE = 2000;
 
+/** A photo caption: long enough for "Team Falcon reaches the centre", short enough for the hall screen. */
+export const CAPTION_MAX = 140;
+
 export function isAllowedImageType(type: string): boolean {
   return (ALLOWED_IMAGE_TYPES as readonly string[]).includes(type);
 }

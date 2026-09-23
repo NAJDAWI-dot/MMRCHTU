@@ -74,6 +74,7 @@ export const SECTION_ROLES: Record<string, readonly AdminRole[]> = {
   "/day/hq/scoring": ["SCORING"],
   "/day/hq/announcements": ["MEDIA", "OPERATIONS"],
   "/day/hq/guides": ["MEDIA"],
+  "/day/hq/photos": ["MEDIA", "OPERATIONS"],
   "/day/hq/volunteers": ["OPERATIONS"],
   "/day/hq/access": ["MASTER"],
   "/admin/analytics": ["REGISTRATION"],

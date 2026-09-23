@@ -7,6 +7,7 @@ import { JourneyBadge, MatchCard, SectionTitle, SheetView, StatTile } from "@/co
 import { INSPECTION_LABELS, QUALIFIERS, ordinal, phaseInfo } from "@/lib/bracket";
 import { loadCompetition, publicMembers } from "@/lib/competition";
 import { clockTime } from "@/lib/day-mode";
+import { loadQueue } from "@/lib/day-queue";
 import { formatPoints, formatTime } from "@/lib/score-sheet";
 import { canViewDaySite, requireDayViewer } from "@/lib/day-access";
 
@@ -29,7 +30,20 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
   const team = state.byId.get(params.id);
   if (!team) notFound();
 
-  const members = await publicMembers(team.id);
+  const [members, queue] = await Promise.all([publicMembers(team.id), loadQueue()]);
+  const place = queue.active ? queue.placeOf(team.id) : null;
+  const eta = queue.etaOf(team.id);
+  const queueChip = !place
+    ? null
+    : place.kind === "now"
+      ? { text: "On the maze now", tone: "text-day-live bg-day-live/10" }
+      : place.kind === "on-deck"
+        ? { text: `On deck${eta ? ` · ${eta}` : ""}`, tone: "text-day-gold bg-day-gold/15" }
+        : place.kind === "in-hole"
+          ? { text: `In the hole${eta ? ` · ${eta}` : ""}`, tone: "text-day-plum bg-day-plum/10" }
+          : place.kind === "waiting"
+            ? { text: `${place.ahead} teams before this one${eta ? ` · ${eta}` : ""}`, tone: "text-day-ink bg-day-ink/[0.06]" }
+            : null;
   const nameOf = (id: string | null) => (id ? (state.byId.get(id)?.name ?? null) : null);
   const path = state.bracket
     .filter((m) => (m.teamAId === team.id || m.teamBId === team.id) && !m.void)
@@ -58,6 +72,7 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
   };
 
   const chips = [
+    queueChip,
     team.checkedIn
       ? { text: `Checked in${team.checkedInAt ? ` at ${clockTime(team.checkedInAt)}` : ""}`, tone: "text-day-good bg-day-good/10" }
       : { text: "Not checked in yet", tone: "text-day-muted bg-day-ink/[0.06]" },

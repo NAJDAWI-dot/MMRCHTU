@@ -2,15 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { removePhoto, storePhoto } from "@/lib/photo-storage";
-import {
-  SNIFF_BYTES,
-  checkUpload,
-  reorder,
-  sniffImageType,
-  storageKey,
-  uniqueSlug,
-} from "@/lib/gallery";
+import { removePhoto } from "@/lib/photo-storage";
+import { reorder, uniqueSlug } from "@/lib/gallery";
+import { addPhotos, type UploadResult } from "@/lib/gallery-upload";
 import { requireSection } from "@/lib/admin-access";
 
 function toDate(value: FormDataEntryValue | null): Date | null {
@@ -113,18 +107,7 @@ export async function deleteAlbum(formData: FormData) {
   revalidateGallery(album.slug);
 }
 
-export interface UploadResult {
-  added: number;
-  errors: string[];
-}
-
-/**
- * Uploads one or more images into an album.
- *
- * Each file is validated, stored, and recorded independently: one bad file in
- * a selection of thirty should not lose the other twenty-nine, so failures are
- * collected and reported rather than thrown.
- */
+/** Uploads one or more images into an album. See addPhotos for the rules. */
 export async function uploadPhotos(formData: FormData): Promise<UploadResult> {
   await requireSection("/admin/gallery");
 
@@ -134,63 +117,9 @@ export async function uploadPhotos(formData: FormData): Promise<UploadResult> {
   const album = await prisma.galleryAlbum.findUnique({ where: { id: albumId } });
   if (!album) throw new Error("That album no longer exists.");
 
-  const files = formData.getAll("photos").filter((f): f is File => f instanceof File);
-  if (files.length === 0) return { added: 0, errors: ["No files were selected."] };
-
-  const last = await prisma.galleryPhoto.findFirst({
-    where: { albumId },
-    orderBy: { sortOrder: "desc" },
-    select: { sortOrder: true },
-  });
-  let nextOrder = (last?.sortOrder ?? -1) + 1;
-
-  const errors: string[] = [];
-  let added = 0;
-
-  for (const [index, file] of files.entries()) {
-    const problem = checkUpload({ name: file.name, type: file.type, size: file.size });
-    if (problem) {
-      errors.push(`${file.name}: ${problem}`);
-      continue;
-    }
-
-    // Same byte check the public payment upload does. This one is behind an
-    // admin login so the threat is far smaller, but both paths reach the same
-    // storage under the same rules, and having them agree is what stops the
-    // safer of the two quietly becoming the way in.
-    const head = new Uint8Array(await file.slice(0, SNIFF_BYTES).arrayBuffer());
-    const imageType = sniffImageType(head);
-    if (!imageType) {
-      errors.push(`${file.name}: not a JPEG, PNG, WebP or AVIF image.`);
-      continue;
-    }
-
-    try {
-      // Unique without needing a round trip: the album is fixed, and no two
-      // files in one submission can share both index and timestamp.
-      const unique = `${Date.now().toString(36)}-${index}`;
-      const key = storageKey(album.slug, imageType, unique);
-      const stored = await storePhoto(key, file, imageType);
-
-      await prisma.galleryPhoto.create({
-        data: {
-          albumId,
-          url: stored.url,
-          storageKey: stored.key,
-          caption: "",
-          width: Number(formData.get(`width-${index}`)) || null,
-          height: Number(formData.get(`height-${index}`)) || null,
-          sortOrder: nextOrder++,
-        },
-      });
-      added++;
-    } catch (error) {
-      errors.push(`${file.name}: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
+  const result = await addPhotos(album, formData);
   revalidateGallery(album.slug);
-  return { added, errors };
+  return result;
 }
 
 export async function updatePhotoCaption(formData: FormData) {
