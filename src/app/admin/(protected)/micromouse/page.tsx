@@ -4,6 +4,7 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { Card } from "@/components/ui/Card";
 import { prisma } from "@/lib/prisma";
 import { AddReferenceForm, EditReferenceForm } from "./ReferenceForms";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Admin | Micro Mouse",
@@ -23,6 +24,7 @@ export const metadata: Metadata = {
  * every row.
  */
 export default async function AdminMicromousePage() {
+  await requireSection("/admin/micromouse");
   const references = await prisma.micromouseReference.findMany({
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });

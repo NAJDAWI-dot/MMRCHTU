@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { isDaySitePath } from "@/components/layout/ChromeGate";
 
 /**
  * Fades each route in as it arrives.
@@ -21,8 +22,13 @@ import { usePathname } from "next/navigation";
 export function PageTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
+  // Not on the day site. An element with a transform animation, even one that
+  // has finished at `transform: none`, becomes the containing block for every
+  // position: fixed descendant, so the day site's splash and alert pop-ups
+  // centred themselves on the whole page instead of on the screen. The day
+  // site fades its own content in, on an element that holds neither.
   return (
-    <div key={pathname} className="page-enter">
+    <div key={pathname} className={isDaySitePath(pathname) ? undefined : "page-enter"}>
       {children}
     </div>
   );

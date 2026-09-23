@@ -12,6 +12,10 @@ import {
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import { updateCompetitionDay } from "./actions";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { requireSection } from "@/lib/admin-access";
+import { slotsToText } from "@/lib/day-slots";
+import { prisma } from "@/lib/prisma";
+import { RunningOrderForm } from "./RunningOrderForm";
 
 export const metadata: Metadata = {
   title: "Admin | Competition Day",
@@ -22,7 +26,11 @@ const inputClass =
 const labelClass = "block text-xs font-medium text-ras-gray dark:text-white/70";
 
 export default async function AdminCompetitionDayPage() {
-  const config = await getCompetitionDayConfig();
+  await requireSection("/admin/competition-day");
+  const [config, slots] = await Promise.all([
+    getCompetitionDayConfig(),
+    prisma.daySlot.findMany({ orderBy: [{ startTime: "asc" }, { sortOrder: "asc" }] }),
+  ]);
   const current = parseStatus(config.status);
 
   return (
@@ -169,6 +177,15 @@ export default async function AdminCompetitionDayPage() {
           <Button type="submit">Save</Button>
         </div>
       </form>
+
+      <Card className="mt-8">
+        <h2 className="font-display font-bold text-ras-purple dark:text-white">Running order on the day</h2>
+        <p className="mt-1 text-sm text-ras-gray dark:text-white/65">
+          The day&rsquo;s timings. The competition day site&rsquo;s schedule follows this, marking what is on now, and the
+          Competition Day page lists it once published. Saved separately from the details above.
+        </p>
+        <RunningOrderForm initial={slotsToText(slots)} />
+      </Card>
     </div>
   );
 }

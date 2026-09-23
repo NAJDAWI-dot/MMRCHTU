@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { removePhoto, storePhoto } from "@/lib/photo-storage";
 import {
@@ -12,6 +11,7 @@ import {
   storageKey,
   uniqueSlug,
 } from "@/lib/gallery";
+import { requireSection } from "@/lib/admin-access";
 
 function toDate(value: FormDataEntryValue | null): Date | null {
   const str = String(value ?? "");
@@ -30,7 +30,7 @@ function revalidateGallery(slug?: string) {
 }
 
 export async function createAlbum(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/gallery");
 
   const title = String(formData.get("title") ?? "").trim();
   if (!title) throw new Error("An album title is required.");
@@ -51,7 +51,7 @@ export async function createAlbum(formData: FormData) {
 }
 
 export async function updateAlbum(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/gallery");
 
   const id = String(formData.get("id") ?? "");
   const title = String(formData.get("title") ?? "").trim();
@@ -88,7 +88,7 @@ export async function updateAlbum(formData: FormData) {
 }
 
 export async function deleteAlbum(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/gallery");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing album id.");
@@ -126,7 +126,7 @@ export interface UploadResult {
  * collected and reported rather than thrown.
  */
 export async function uploadPhotos(formData: FormData): Promise<UploadResult> {
-  await requireAdmin();
+  await requireSection("/admin/gallery");
 
   const albumId = String(formData.get("albumId") ?? "");
   if (!albumId) throw new Error("Missing album id.");
@@ -194,7 +194,7 @@ export async function uploadPhotos(formData: FormData): Promise<UploadResult> {
 }
 
 export async function updatePhotoCaption(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/gallery");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing photo id.");
@@ -209,7 +209,7 @@ export async function updatePhotoCaption(formData: FormData) {
 }
 
 export async function deletePhoto(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/gallery");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing photo id.");
@@ -235,7 +235,7 @@ export async function deletePhoto(formData: FormData) {
  * order quietly starts depending on insertion order instead.
  */
 export async function movePhoto(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/gallery");
 
   const id = String(formData.get("id") ?? "");
   const direction = String(formData.get("direction") ?? "");

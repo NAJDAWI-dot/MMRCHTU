@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   REFERENCE_NOTE_MAX,
@@ -10,6 +9,7 @@ import {
   parseReferenceUrl,
 } from "@/lib/references";
 import type { ActionState } from "./state";
+import { requireSection } from "@/lib/admin-access";
 
 /**
  * The reading list, edited.
@@ -73,7 +73,7 @@ export async function createReference(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireAdmin();
+  await requireSection("/admin/micromouse");
 
   const parsed = fields(formData);
   if ("error" in parsed) return { ok: false, message: parsed.error };
@@ -87,7 +87,7 @@ export async function updateReference(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireAdmin();
+  await requireSection("/admin/micromouse");
 
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, message: "That row has lost its id. Reload the page and try again." };
@@ -102,7 +102,7 @@ export async function updateReference(
 
 /** No validation to fail: either the row is there or somebody else deleted it. */
 export async function deleteReference(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/micromouse");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing reference id.");

@@ -13,6 +13,7 @@ import {
   toAmmanDateTimeLocal,
 } from "@/lib/open-day";
 import { updateOpenDay } from "./actions";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Admin | Open Day",
@@ -34,6 +35,7 @@ const PHASE_SUMMARY = {
 } as const;
 
 export default async function AdminOpenDayPage() {
+  await requireSection("/admin/open-day");
   const config = await getOpenDayConfig();
   const day = resolveOpenDayWindow(config);
   const phase = openDayPhase(day);

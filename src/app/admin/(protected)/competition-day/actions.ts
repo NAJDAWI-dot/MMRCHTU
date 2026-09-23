@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseStatus } from "@/lib/competition-day";
+import { requireSection } from "@/lib/admin-access";
+import { parseSlotLines } from "@/lib/day-slots";
+import { refreshDaySite } from "@/lib/day-refresh";
 
 /**
  * Reads the datetime-local field that drives the countdown.
@@ -19,7 +21,7 @@ function parseEventDate(value: FormDataEntryValue | null): Date | null {
 }
 
 export async function updateCompetitionDay(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/competition-day");
 
   const data = {
     status: parseStatus(formData.get("status")),
@@ -44,4 +46,44 @@ export async function updateCompetitionDay(formData: FormData) {
   // The site menu shows or hides the Competition Day link based on this status,
   // and the menu lives in the root layout — so the layout cache has to go too.
   revalidatePath("/", "layout");
+}
+
+export interface RunningOrderState {
+  ok: boolean;
+  message: string | null;
+}
+
+/**
+ * The day's running order, replaced whole from the text box: one line per
+ * item, "09:00 - 09:45 | Check-in | Main hall | Bring your robot". The day
+ * site's schedule and the competition day page both follow it.
+ *
+ * Refuses the lot if any line cannot be read, naming the lines, rather than
+ * saving a running order with a gap in it nobody noticed.
+ */
+export async function saveRunningOrder(_previous: RunningOrderState, formData: FormData): Promise<RunningOrderState> {
+  await requireSection("/admin/competition-day");
+
+  const { slots, bad } = parseSlotLines(String(formData.get("lines") ?? ""));
+  if (bad.length) {
+    return {
+      ok: false,
+      message: `Line${bad.length === 1 ? "" : "s"} ${bad.join(", ")} ${bad.length === 1 ? "does" : "do"} not start with a time. Nothing was saved.`,
+    };
+  }
+
+  await prisma.$transaction([
+    prisma.daySlot.deleteMany({}),
+    prisma.daySlot.createMany({ data: slots.map((slot, index) => ({ ...slot, sortOrder: index })) }),
+  ]);
+
+  revalidatePath("/competition-day");
+  revalidatePath("/admin/competition-day");
+  refreshDaySite();
+  return {
+    ok: true,
+    message: slots.length
+      ? `Saved ${slots.length} line${slots.length === 1 ? "" : "s"}. The day site's schedule follows it now.`
+      : "Cleared. The day site falls back to the season schedule's events for the day.",
+  };
 }

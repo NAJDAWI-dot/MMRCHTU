@@ -131,6 +131,13 @@ model Registration {
 
   members TeamMember[]
 
+  /// Competition day: check-in and inspection, qualifying runs, and the
+  /// knockout matches this team is drawn into. See src/lib/bracket.ts.
+  dayStatus      TeamDayStatus?
+  qualifyingRuns QualifyingRun[]
+  matchesAsA     KnockoutMatch[] @relation("MatchTeamA")
+  matchesAsB     KnockoutMatch[] @relation("MatchTeamB")
+
   @@index([status])
   @@index([paymentStatus])
   @@index([ambassadorId])
@@ -204,6 +211,12 @@ model AdminUser {
   /// token and compared on every request, so bumping it makes every token
   /// issued before now fail to verify.
   tokenVersion Int @default(0)
+
+  /// Which admin screens this account opens: a comma-separated list of the
+  /// roles in src/lib/roles.ts ("MASTER", "SCORING,MEDIA"). Master opens
+  /// everything. Every account that existed before roles did was made Master
+  /// by the migration, so nobody lost a screen they already used.
+  roles String @default("")
 }
 
 model ScheduleEvent {
@@ -430,7 +443,185 @@ model CompetitionDayConfig {
   // countdown simply does not appear until a date is set.
   eventDate DateTime?
 
+  // Day mode: while on, the homepage becomes the competition day site and the
+  // pages in DAY_MODE_HIDDEN_PAGES (src/lib/day-mode.ts) go dark. Off by
+  // default, so adding the column changes nothing until an admin flips it.
+  dayMode Boolean @default(false)
+
+  // Who can open the day site under /day. PRIVATE: only the admins listed in
+  // dayViewerIds. STAFF: any signed-in admin. PUBLIC: everyone, and the
+  // homepage hands over to it (dayMode is kept equal to PUBLIC).
+  dayAudience  String @default("PRIVATE")
+  dayViewerIds String @default("")
+
+  // Phase one, the qualifying round. Its format is not decided yet, so it is
+  // kept general: any number of runs per team, the best one counts, and which
+  // way is "best" is a setting. NOT_SET | OPEN | LOCKED.
+  qualifyingStatus    String @default("NOT_SET")
+  qualifyingDirection String @default("HIGHER")
+  qualifyingNote      String @default("")
+
+  // Head-to-head results use the same direction unless told otherwise.
+  matchDirection String @default("HIGHER")
+
+  // The phase 1 running order: when the first team runs, how long each slot
+  // is, and when the order was drawn.
+  runOrderStart   String    @default("")
+  runSlotMinutes  Int       @default(10)
+  runOrderDrawnAt DateTime?
+
   updatedAt DateTime @updatedAt
+}
+
+// A team's day: arrived, robot inspected, where it is parked. One row per
+// team, created the first time the check-in desk touches it.
+model TeamDayStatus {
+  registrationId String       @id
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  checkedInAt DateTime?
+  checkedInBy String    @default("")
+
+  // PENDING | PASSED | FAILED. See INSPECTION_STATES in src/lib/bracket.ts.
+  inspection     String @default("PENDING")
+  inspectionNote String @default("")
+
+  robotName String  @default("")
+  pit       String  @default("")
+  withdrawn Boolean @default(false)
+
+  // The registration desk's own record: which members turned up (ids of
+  // TeamMember rows, comma-separated), whether badges went out, and a note
+  // only the desk sees.
+  presentIds String  @default("")
+  badges     Boolean @default(false)
+  deskNote   String  @default("")
+
+  // Place in the phase 1 running order, 1-based, once it has been drawn.
+  runOrder Int?
+
+  updatedAt DateTime @updatedAt
+}
+
+// A team's phase 1 match sheet: the time of every run that reached the
+// centre. The score is worked out from them by the rulebook formula,
+// (successful runs / fastest time) * 1000, and kept here so nothing has to
+// recompute it to sort. A mouse that never reached the centre has no score and
+// is ranked by `remaining`, how many cells short of the centre it stopped.
+// Rows from before run times were recorded have a score and no times.
+model QualifyingRun {
+  id             String       @id @default(cuid())
+  registrationId String
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  score          Float?
+  runTimes       Float[]      @default([])
+  remaining      Float?
+  note           String       @default("")
+  recordedBy     String       @default("")
+  createdAt      DateTime     @default(now())
+
+  @@index([registrationId])
+}
+
+// A head-to-head match in the knockout. Round 2 is the round of 32, then 16,
+// quarter-finals, semi-finals and the final at round 6. Slot is the position
+// in the round; the winners of slots 2k and 2k+1 meet in slot k of the next.
+model KnockoutMatch {
+  id    String @id @default(cuid())
+  round Int
+  slot  Int
+
+  teamAId String?
+  teamA   Registration? @relation("MatchTeamA", fields: [teamAId], references: [id], onDelete: SetNull)
+  teamBId String?
+  teamB   Registration? @relation("MatchTeamB", fields: [teamBId], references: [id], onDelete: SetNull)
+  seedA   Int?
+  seedB   Int?
+
+  scoreA   Float?
+  scoreB   Float?
+  winnerId String?
+
+  // The same match sheet as qualifying, one per side: every successful run's
+  // time, and the distance short of the centre for a side that never got there.
+  timesA     Float[] @default([])
+  timesB     Float[] @default([])
+  remainingA Float?
+  remainingB Float?
+
+  // PENDING | LIVE | DONE
+  status      String    @default("PENDING")
+  scheduledAt DateTime?
+  arena       String    @default("")
+  updatedBy   String    @default("")
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([round, slot])
+}
+
+// Somebody helping on the day. Name, role and station are shown on the day
+// site; the phone number never is.
+model Volunteer {
+  id          String   @id @default(cuid())
+  name        String
+  role        String   @default("")
+  station     String   @default("")
+  shift       String   @default("")
+  phone       String   @default("")
+  isPublished Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isPublished, sortOrder])
+}
+
+// The long-form pages of the day site: competitors, volunteers, organizers,
+// venue. Plain text, blank lines between paragraphs, a line starting "## "
+// for a heading. Rendered as React children, never as markup.
+model DayGuide {
+  slug      String   @id
+  title     String
+  body      String   @default("")
+  updatedAt DateTime @updatedAt
+}
+
+// A short notice on the competition day site: "Round two starts at 14:00",
+// "Team Byte, please come to the inspection desk". Plain text, rendered as
+// React children, so an admin cannot inject markup. Pinned ones sit above the
+// rest; otherwise the newest is first.
+// One line of the competition day's running order, written on the Competition
+// Day screen. Times are clock times on the day ("09:00"), in Amman time, and
+// the date comes from CompetitionDayConfig.eventDate.
+model DaySlot {
+  id        String   @id @default(cuid())
+  startTime String
+  endTime   String   @default("")
+  title     String
+  location  String   @default("")
+  detail    String   @default("")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([startTime])
+}
+
+model DayAnnouncement {
+  id          String   @id @default(cuid())
+  title       String   @default("")
+  body        String
+  // An alert pops up over the day site, and once a visitor dismisses it,
+  // stays in the thin banner at the top until an admin edits or clears it.
+  isAlert     Boolean  @default(false)
+  // INFO | URGENT | GOOD
+  tone        String   @default("INFO")
+  isPinned    Boolean  @default(false)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isPublished, createdAt])
 }
 
 // The open day stand: when it runs, where it is, and where its clock appears.

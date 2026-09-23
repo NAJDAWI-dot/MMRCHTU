@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { createFaqEntry, updateFaqEntry, deleteFaqEntry, replyToQuestion, promoteQuestion } from "./actions";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Admin | FAQ",
@@ -14,6 +15,7 @@ const inputClass =
 const labelClass = "block text-xs font-medium text-ras-gray dark:text-white/70";
 
 export default async function AdminFaqPage() {
+  await requireSection("/admin/faq");
   const [entries, questions] = await Promise.all([
     prisma.faqEntry.findMany({ orderBy: { sortOrder: "asc" } }),
     prisma.faqQuestion.findMany({ where: { status: { not: "PROMOTED" } }, orderBy: { createdAt: "desc" } }),

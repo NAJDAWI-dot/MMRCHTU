@@ -23,6 +23,7 @@ import {
   updateDepartment,
   updateMember,
 } from "./actions";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Admin | Team",
@@ -241,6 +242,7 @@ function Section({
 }
 
 export default async function AdminTeamPage() {
+  await requireSection("/admin/team");
   const [departments, members] = await Promise.all([
     prisma.committeeDepartment.findMany(),
     prisma.committeeMember.findMany(),

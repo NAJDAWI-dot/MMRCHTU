@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminApi } from "@/lib/auth";
+import { requireSectionApi } from "@/lib/admin-access";
 import { prisma } from "@/lib/prisma";
 import { exportTokenMatches } from "@/lib/export-token";
 import {
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
 
   // Either credential is enough, and the session is tried first so the admin
   // download button never needs to know the token exists.
-  const admin = await requireAdminApi();
+  const admin = await requireSectionApi("/api/registrations/export");
   const authorised =
     admin !== null ||
     exportTokenMatches(url.searchParams.get("token"), process.env.REGISTRATIONS_EXPORT_TOKEN);

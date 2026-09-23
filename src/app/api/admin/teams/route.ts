@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminApi } from "@/lib/auth";
+import { requireSectionApi } from "@/lib/admin-access";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -22,7 +22,7 @@ const MIN_QUERY = 2;
 const LIMIT = 6;
 
 export async function GET(request: Request) {
-  const admin = await requireAdminApi();
+  const admin = await requireSectionApi("/api/admin/teams");
   if (!admin) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }

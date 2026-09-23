@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { createEvent, updateEvent, deleteEvent } from "./actions";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Admin | Schedule",
@@ -20,6 +21,7 @@ const inputClass =
 const labelClass = "block text-xs font-medium text-ras-gray dark:text-white/70";
 
 export default async function AdminSchedulePage() {
+  await requireSection("/admin/schedule");
   const events = await prisma.scheduleEvent.findMany({ orderBy: { sortOrder: "asc" } });
 
   return (

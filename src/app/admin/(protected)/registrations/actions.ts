@@ -1,13 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { removePhoto } from "@/lib/photo-storage";
 import { parseRegistrationStatus } from "@/lib/registration-status";
+import { requireSection } from "@/lib/admin-access";
 
 export async function updateRegistrationStatus(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/registrations");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing registration id.");
@@ -23,6 +23,9 @@ export async function updateRegistrationStatus(formData: FormData) {
   await prisma.registration.update({ where: { id }, data: { status } });
 
   revalidatePath("/admin/registrations");
+  // The day site lists confirmed teams, so confirming one on the morning puts
+  // it on the start line without waiting for the page's timer.
+  revalidatePath("/");
 }
 
 // Payment state is deliberately not writable from here. It has exactly one
@@ -51,7 +54,7 @@ export async function updateRegistrationStatus(formData: FormData) {
  * and the log is what makes the leftover findable.
  */
 export async function deleteRegistration(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/registrations");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing registration id.");
@@ -124,4 +127,5 @@ export async function deleteRegistration(formData: FormData) {
 
   revalidatePath("/admin/registrations");
   revalidatePath("/admin/payments");
+  revalidatePath("/");
 }

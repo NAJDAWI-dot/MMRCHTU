@@ -8,6 +8,7 @@ import { PaymentBadge } from "@/components/payment/PaymentBadge";
 import { siteOrigin } from "@/lib/site-url";
 import { setAmbassadorStatus } from "./actions";
 import { CopyLink, CreateAmbassadorForm, RemoveAmbassador } from "./AmbassadorControls";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Admin | Ambassadors",
@@ -27,6 +28,7 @@ function requestOrigin(): string {
 }
 
 export default async function AdminAmbassadorsPage() {
+  await requireSection("/admin/ambassadors");
   const [ambassadors, totalTeams, unmatched] = await Promise.all([
     prisma.ambassador.findMany({
       include: {

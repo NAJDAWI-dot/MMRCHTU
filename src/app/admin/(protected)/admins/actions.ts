@@ -3,9 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { requireAdmin, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { SESSION_COOKIE_NAME } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
+import { requireSection } from "@/lib/admin-access";
+import { requireAdmin } from "@/lib/auth";
+import { parseRoles, serializeRoles } from "@/lib/roles";
 
 export interface AdminFormState {
   status: "idle" | "error";
@@ -16,7 +19,7 @@ export async function createAdmin(
   _prevState: AdminFormState,
   formData: FormData,
 ): Promise<AdminFormState> {
-  await requireAdmin();
+  await requireSection("/admin/admins");
 
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
@@ -33,8 +36,13 @@ export async function createAdmin(
     return { status: "error", error: "That username is already taken." };
   }
 
+  const roles = serializeRoles(formData.getAll("roles").map(String));
+  if (!roles) {
+    return { status: "error", error: "Pick at least one role, or the account opens nothing but the dashboard." };
+  }
+
   await prisma.adminUser.create({
-    data: { username, passwordHash: await hashPassword(password) },
+    data: { username, passwordHash: await hashPassword(password), roles },
   });
 
   revalidatePath("/admin/admins");
@@ -56,6 +64,7 @@ export async function createAdmin(
  * different feature with a different set of questions attached to it.
  */
 export async function signOutEverywhere() {
+  // Your own sessions only, so any role may do it.
   const admin = await requireAdmin();
 
   await prisma.adminUser.update({
@@ -71,7 +80,7 @@ export async function signOutEverywhere() {
 }
 
 export async function deleteAdmin(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/admins");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing admin id.");
@@ -81,6 +90,41 @@ export async function deleteAdmin(formData: FormData) {
     throw new Error("Cannot delete the last remaining admin account.");
   }
 
+  // Nor the last Master, for the same reason updateRoles refuses to demote it.
+  const rows = await prisma.adminUser.findMany({ select: { id: true, roles: true } });
+  const target = rows.find((row) => row.id === id);
+  const otherMasters = rows.filter((row) => row.id !== id && parseRoles(row.roles).includes("MASTER"));
+  if (target && parseRoles(target.roles).includes("MASTER") && otherMasters.length === 0) {
+    redirect("/admin/admins?error=last-master");
+  }
+
   await prisma.adminUser.delete({ where: { id } });
   revalidatePath("/admin/admins");
+}
+
+/**
+ * Sets which desks an account opens. Master only.
+ *
+ * Refuses to take Master away from the last account holding it: with no
+ * Master left there is nobody who can open this screen to put it back.
+ */
+export async function updateRoles(formData: FormData) {
+  const actor = await requireSection("/admin/admins");
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) throw new Error("Missing admin id.");
+  const roles = serializeRoles(formData.getAll("roles").map(String));
+
+  if (!parseRoles(roles).includes("MASTER")) {
+    const masters = await prisma.adminUser.findMany({ select: { id: true, roles: true } });
+    const others = masters.filter((row) => row.id !== id && parseRoles(row.roles).includes("MASTER"));
+    if (others.length === 0) {
+      redirect("/admin/admins?error=last-master");
+    }
+  }
+
+  await prisma.adminUser.update({ where: { id }, data: { roles } });
+  revalidatePath("/admin/admins");
+  // Taking your own Master away should land you somewhere you can still open.
+  if (id === actor.id && !parseRoles(roles).includes("MASTER")) redirect("/admin");
 }

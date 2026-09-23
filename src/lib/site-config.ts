@@ -36,6 +36,18 @@ const COMPETITION_DAY_FALLBACK: CompetitionDayConfig = {
   venue: "",
   details: "",
   eventDate: null,
+  dayMode: false,
+  // Only the admins who are named see the day site until someone decides
+  // otherwise, and nobody is named yet.
+  dayAudience: "PRIVATE",
+  dayViewerIds: "",
+  qualifyingStatus: "NOT_SET",
+  qualifyingDirection: "HIGHER",
+  qualifyingNote: "",
+  matchDirection: "HIGHER",
+  runOrderStart: "",
+  runSlotMinutes: 10,
+  runOrderDrawnAt: null,
   updatedAt: NEVER_SAVED,
 };
 

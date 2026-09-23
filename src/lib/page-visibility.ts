@@ -1,8 +1,9 @@
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, draftMode } from "next/headers";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { SESSION_COOKIE_NAME, verifySessionSignature } from "@/lib/auth";
+import { withDayMode } from "@/lib/day-mode";
 
 /**
  * Reading admin-controlled page visibility, and enforcing it.
@@ -20,11 +21,35 @@ import { SESSION_COOKIE_NAME, verifySessionSignature } from "@/lib/auth";
  * beats a query per page.
  */
 export const hiddenPageHrefs = cache(async (): Promise<Set<string>> => {
-  const rows = await prisma.pageVisibility.findMany({
-    where: { isHidden: true },
-    select: { href: true },
+  const [rows, day] = await Promise.all([
+    prisma.pageVisibility.findMany({
+      where: { isHidden: true },
+      select: { href: true },
+    }),
+    dayModeOn(),
+  ]);
+  // Day mode's pages join the set here, once, so the menu, the homepage cards
+  // and the guard on each page all follow the switch without any of them
+  // having to know it exists. The Pages tab reads its own rows directly, so
+  // an admin's own switches there are left exactly as they set them.
+  return withDayMode(
+    rows.map((row) => row.href),
+    day,
+  );
+});
+
+/**
+ * Whether the site is in competition day mode.
+ *
+ * A read of one boolean off a singleton row, cached per request like the set
+ * above. No row yet means the schema default, which is off.
+ */
+export const dayModeOn = cache(async (): Promise<boolean> => {
+  const row = await prisma.competitionDayConfig.findUnique({
+    where: { id: "singleton" },
+    select: { dayMode: true },
   });
-  return new Set(rows.map((row) => row.href));
+  return row?.dayMode ?? false;
 });
 
 /**
@@ -36,10 +61,11 @@ export const hiddenPageHrefs = cache(async (): Promise<Set<string>> => {
  * which additionally confirms the AdminUser row still exists.
  *
  * Reading cookies makes the render dynamic, which is why it is called only once
- * a page is already known to be hidden — a visible page stays statically
- * revalidated exactly as before.
+ * a page is already known to be hidden, and then only inside draft mode (see
+ * guardHiddenPage) — a visible page stays statically revalidated exactly as
+ * before. Dynamic routes such as the day preview may call it directly.
  */
-async function viewerIsAdmin(): Promise<boolean> {
+export async function viewerIsAdmin(): Promise<boolean> {
   try {
     return verifySessionSignature(cookies().get(SESSION_COOKIE_NAME)?.value) !== null;
   } catch {
@@ -64,6 +90,12 @@ async function viewerIsAdmin(): Promise<boolean> {
 export async function guardHiddenPage(href: string): Promise<void> {
   const hidden = await hiddenPageHrefs();
   if (!hidden.has(href)) return;
-  if (await viewerIsAdmin()) return;
+  // Draft mode first, and the cookie only inside it. Most hideable pages are
+  // built static, and a static page that reads cookies at runtime is a 500
+  // for everyone ("Page changed from static to dynamic at runtime"), which is
+  // what hiding a page after a deploy used to produce. Admin login turns draft
+  // mode on for that browser, which renders pages fresh for it and makes the
+  // cookie read legal; every other visitor gets the cached "not found".
+  if (draftMode().isEnabled && (await viewerIsAdmin())) return;
   notFound();
 }

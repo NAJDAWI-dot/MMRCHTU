@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { cookies, headers, draftMode } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, signSession, sessionCookieOptions, SESSION_COOKIE_NAME } from "@/lib/auth";
@@ -86,5 +86,10 @@ export async function loginAdmin(
     signSession(admin.id, admin.tokenVersion),
     sessionCookieOptions(),
   );
+  // Lets this browser see pages hidden from visitors. Hidden pages are built
+  // static, and a static page may not start reading cookies at runtime; draft
+  // mode is Next's own way of rendering them fresh for one browser, and the
+  // guard still checks the session itself. See guardHiddenPage.
+  draftMode().enable();
   redirect("/admin");
 }

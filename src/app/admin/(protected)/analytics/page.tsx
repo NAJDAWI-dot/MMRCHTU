@@ -15,6 +15,7 @@ import {
 } from "@/lib/analytics";
 import { BarList, DayChart, Empty, Panel, StatTile } from "./AnalyticsCharts";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Analytics",
@@ -24,6 +25,7 @@ export const metadata: Metadata = {
 const TREND_DAYS = 28;
 
 export default async function AnalyticsPage() {
+  await requireSection("/admin/analytics");
   // Rows rather than groupBy: the dataset is small enough that one pass of
   // each table is cheaper than several round trips, and it lets the shaping
   // live in tested pure functions instead of in SQL.

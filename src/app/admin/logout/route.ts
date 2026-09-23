@@ -1,4 +1,4 @@
-import { cookies, headers } from "next/headers";
+import { cookies, draftMode, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { SESSION_COOKIE_NAME } from "@/lib/auth";
 
@@ -26,5 +26,7 @@ export async function POST() {
   }
 
   cookies().delete(SESSION_COOKIE_NAME);
+  // And stop rendering hidden pages fresh for this browser. See loginAdmin.
+  draftMode().disable();
   redirect("/admin/login");
 }

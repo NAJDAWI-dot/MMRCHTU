@@ -8,6 +8,7 @@ import { isStorageConfigured } from "@/lib/photo-storage";
 import { sortAlbums } from "@/lib/gallery";
 import { createAlbum } from "./actions";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Gallery",
@@ -17,6 +18,7 @@ const FIELD =
   "mt-1 w-full rounded-md border border-ras-gray/30 bg-transparent px-3 py-2 text-sm text-ras-purple placeholder:text-ras-gray/60 dark:text-white dark:placeholder:text-white/40";
 
 export default async function AdminGalleryPage() {
+  await requireSection("/admin/gallery");
   const albums = await prisma.galleryAlbum.findMany({
     include: { _count: { select: { photos: true } } },
   });

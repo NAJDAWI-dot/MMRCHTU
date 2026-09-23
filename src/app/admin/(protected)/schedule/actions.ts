@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireSection } from "@/lib/admin-access";
 
 function toDate(value: FormDataEntryValue | null): Date | null {
   const str = String(value ?? "");
@@ -12,7 +12,7 @@ function toDate(value: FormDataEntryValue | null): Date | null {
 }
 
 export async function createEvent(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/schedule");
 
   const startsAt = toDate(formData.get("startsAt"));
   if (!startsAt) throw new Error("A valid start date/time is required.");
@@ -29,11 +29,13 @@ export async function createEvent(formData: FormData) {
   });
 
   revalidatePath("/schedule");
+  // The day site's running order, while day mode is on.
+  revalidatePath("/");
   revalidatePath("/admin/schedule");
 }
 
 export async function updateEvent(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/schedule");
 
   const id = String(formData.get("id") ?? "");
   const startsAt = toDate(formData.get("startsAt"));
@@ -52,11 +54,13 @@ export async function updateEvent(formData: FormData) {
   });
 
   revalidatePath("/schedule");
+  // The day site's running order, while day mode is on.
+  revalidatePath("/");
   revalidatePath("/admin/schedule");
 }
 
 export async function deleteEvent(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/schedule");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing event id.");
@@ -64,5 +68,7 @@ export async function deleteEvent(formData: FormData) {
   await prisma.scheduleEvent.delete({ where: { id } });
 
   revalidatePath("/schedule");
+  // The day site's running order, while day mode is on.
+  revalidatePath("/");
   revalidatePath("/admin/schedule");
 }

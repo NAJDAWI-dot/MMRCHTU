@@ -5,8 +5,10 @@ import { usePathname } from "next/navigation";
 import { AdminIcon } from "@/components/admin/AdminIcons";
 import { ADMIN_LINKS, isActiveLink } from "@/lib/admin-nav";
 
-export function AdminNav() {
+/** `allowedHrefs`: the screens this admin's roles open. See CommandPalette. */
+export function AdminNav({ allowedHrefs }: { allowedHrefs?: string[] } = {}) {
   const pathname = usePathname() ?? "";
+  const links = allowedHrefs ? ADMIN_LINKS.filter((link) => allowedHrefs.includes(link.href)) : ADMIN_LINKS;
 
   return (
     /*
@@ -18,7 +20,7 @@ export function AdminNav() {
       aria-label="Admin"
       className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 md:mx-0 md:flex-col md:overflow-visible md:px-0 md:pb-0"
     >
-      {ADMIN_LINKS.map((link) => {
+      {links.map((link) => {
         const active = isActiveLink(link.href, pathname);
         return (
           <Link

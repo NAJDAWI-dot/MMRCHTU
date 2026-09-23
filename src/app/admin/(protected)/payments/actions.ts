@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   isPaymentStatus,
@@ -11,6 +10,7 @@ import {
   type PaymentStatus,
 } from "@/lib/payment";
 import type { ActionState } from "./state";
+import { requireSection } from "@/lib/admin-access";
 
 /**
  * A price typed in dinars, as fils.
@@ -24,7 +24,7 @@ function priceOrFallback(raw: FormDataEntryValue | null, fallback: number): numb
 }
 
 export async function updatePaymentConfig(formData: FormData) {
-  await requireAdmin();
+  await requireSection("/admin/payments");
 
   const current = await prisma.paymentConfig.findUnique({ where: { id: "singleton" } });
 
@@ -79,7 +79,7 @@ export async function updatePaymentConfig(formData: FormData) {
  * different kinds of evidence. Payment state has exactly one writer, and this
  * is it — the three exported actions below all go through `applyPaymentStatus`.
  */
-type Admin = Awaited<ReturnType<typeof requireAdmin>>;
+type Admin = Awaited<ReturnType<typeof requireSection>>;
 
 interface WriteOptions {
   /**
@@ -153,7 +153,7 @@ export async function updatePaymentStatus(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const admin = await requireAdmin();
+  const admin = await requireSection("/admin/payments");
 
   const id = String(formData.get("id") ?? "");
   const paymentStatus = String(formData.get("paymentStatus") ?? "");
@@ -182,7 +182,7 @@ export async function updatePaymentStatus(
  * the following team instead of back where it started.
  */
 export async function verifyPayment(formData: FormData): Promise<void> {
-  const admin = await requireAdmin();
+  const admin = await requireSection("/admin/payments");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing registration id.");
@@ -202,7 +202,7 @@ export async function verifyPayment(formData: FormData): Promise<void> {
  * and it sends the admin back with a message rather than throwing.
  */
 export async function rejectPayment(formData: FormData): Promise<void> {
-  const admin = await requireAdmin();
+  const admin = await requireSection("/admin/payments");
 
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("Missing registration id.");

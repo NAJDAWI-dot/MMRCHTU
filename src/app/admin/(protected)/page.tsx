@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
 import { AdminGreeting } from "@/components/admin/AdminGreeting";
 import { AdminIcon, type AdminIconName } from "@/components/admin/AdminIcons";
+import { redirect } from "next/navigation";
+import { requireSection } from "@/lib/admin-access";
+import { daySiteIsPublic } from "@/lib/day-access";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard",
@@ -25,8 +27,13 @@ interface Attention {
   many: string;
 }
 
-export default async function AdminDashboardPage() {
-  const admin = await requireAdmin();
+export default async function AdminDashboardPage({ searchParams }: { searchParams?: { classic?: string } }) {
+  const admin = await requireSection("/admin");
+
+  // On the day itself, the admin is Day HQ. Once the day site is open to
+  // everyone, landing here goes there instead; ?classic=1, linked from HQ's
+  // header, keeps this dashboard one click away for everything else.
+  if (!searchParams?.classic && (await daySiteIsPublic())) redirect("/day/hq");
 
   const [
     registrationCount,

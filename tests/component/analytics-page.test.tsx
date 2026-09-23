@@ -22,6 +22,10 @@ const db = {
 };
 
 vi.mock("@/lib/prisma", () => ({ prisma: db }));
+// The page checks its own role now; the check itself is tested in roles.test.ts.
+vi.mock("@/lib/admin-access", () => ({
+  requireSection: vi.fn(async () => ({ id: "a1", username: "admin", roles: "MASTER" })),
+}));
 
 const { default: AnalyticsPage } = await import("@/app/admin/(protected)/analytics/page");
 

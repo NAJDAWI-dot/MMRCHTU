@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { downloadUrlFor, isStorageConfigured } from "@/lib/photo-storage";
 import { PhotoUploader } from "../PhotoUploader";
 import { deleteAlbum, deletePhoto, movePhoto, updateAlbum, updatePhotoCaption } from "../actions";
+import { requireSection } from "@/lib/admin-access";
 
 export const metadata: Metadata = {
   title: "Manage album",
@@ -24,6 +25,7 @@ function dateValue(date: Date | null): string {
 }
 
 export default async function AlbumPage({ params }: { params: { id: string } }) {
+  await requireSection("/admin/gallery");
   const album = await prisma.galleryAlbum.findUnique({
     where: { id: params.id },
     include: { photos: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] } },
