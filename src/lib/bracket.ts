@@ -121,7 +121,7 @@ export interface Standing {
   official: number | null;
   /** Every successful run's time, in the order they were run. */
   times: number[];
-  /** Cells short of the centre, for a team that never reached it. */
+  /** Cells short of the centre (100 less the furthest cell), for a team that never reached it. */
   remaining: number | null;
   /** Every run, successful or not, in order. */
   log: RunEntry[];
@@ -298,7 +298,7 @@ export interface MatchInput {
   scoreA: number | null;
   scoreB: number | null;
   winnerId: string | null;
-  /** Each side's successful run times and distance short, when entered. */
+  /** Each side's successful run times and cells short of the centre, when entered. */
   timesA?: number[];
   timesB?: number[];
   remainingA?: number | null;

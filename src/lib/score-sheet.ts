@@ -9,12 +9,13 @@ import { RULES, finalScore } from "@/lib/rules";
  *
  * where the official time is the team's fastest successful run. The desk
  * writes down every run, successful or not: a time for each one that reached
- * the centre, and for one that did not, how far short it stopped (and its time,
- * if anyone took it). The score, the run count and the official time all come
- * out of this file. Failed runs add nothing to the score, so a team with some
- * of each is scored on its successful ones alone. A mouse that never reached
- * the centre has no score at all; the rulebook ranks those by how far short of
- * the centre they stopped, lowest first, and below every mouse that did.
+ * the centre, and for one that did not, the cell it got to. Every maze has 100
+ * cells and the centre is the 100th, so a failed run reached cell 1 to 99. The
+ * score, the run count and the official time all come out of this file. Failed
+ * runs add nothing to the score, so a team with some of each is scored on its
+ * successful ones alone. A mouse that never reached the centre has no score at
+ * all; the rulebook ranks those by how far short of the centre they stopped,
+ * so the furthest cell first, and below every mouse that did.
  *
  * Pure: the scoring desk, the public pages and the tests all use it.
  */
@@ -22,21 +23,23 @@ import { RULES, finalScore } from "@/lib/rules";
 /** The whole match, in seconds. No run, and no set of runs, can be longer. */
 export const MATCH_SECONDS = RULES.matchMinutes * 60;
 
+/** Cells in every maze, counted to the centre: reaching cell 100 is reaching the centre. */
+export const MAZE_CELLS = 100;
+
 /**
- * One run, as the judge wrote it down. A successful run always has a time. A
- * failed one has how many cells short of the centre it stopped, and its time,
- * when either was taken.
+ * One run, as the judge wrote it down. A successful run has its time; a failed
+ * one has the cell it reached, 1 to 99, when that was written down.
  */
 export interface RunEntry {
   ok: boolean;
   time: number | null;
-  short: number | null;
+  cell: number | null;
 }
 
 export interface SheetInput {
   /** Seconds, one per run that reached the centre, in the order they were run. */
   times: number[];
-  /** Cells short of the centre, for a mouse with no successful run. */
+  /** Cells short of the centre (100 less the cell reached), for a mouse with no successful run. */
   remaining: number | null;
   /**
    * Every run in order, successful or not. When it has any, `times` and
@@ -49,7 +52,10 @@ export interface SheetInput {
 export interface SheetResult {
   /** The successful runs' times, in the order they were run. */
   times: number[];
-  /** The fewest cells short of the centre, for a mouse with no successful run. */
+  /**
+   * The fewest cells short of the centre (100 less the furthest cell reached),
+   * for a mouse with no successful run. What the ranking compares.
+   */
   remaining: number | null;
   /** Every run, in order. */
   log: RunEntry[];
@@ -64,22 +70,28 @@ export interface SheetResult {
 }
 
 const isTime = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value > 0;
-const isCells = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0;
+const isCells = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= MAZE_CELLS;
+const isCell = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value) && value >= 0 && value < MAZE_CELLS;
+
+/** The cell a mouse got to, from how many cells short of the centre it stopped. */
+export const cellFromShort = (short: number): number => MAZE_CELLS - short;
 
 /**
  * A log as stored (JSON, so anything) made safe: entries that are not runs are
- * dropped, and a "successful" run with no time is not one.
+ * dropped, and a "successful" run with no time is not one. A failed run from
+ * before cells were written down as a cell number (it had `short`, cells short
+ * of the centre) is read as the cell that makes.
  */
 export function cleanLog(raw: unknown): RunEntry[] {
   if (!Array.isArray(raw)) return [];
   const log: RunEntry[] = [];
   for (const item of raw) {
     if (!item || typeof item !== "object") continue;
-    const { ok, time, short } = item as Record<string, unknown>;
+    const { ok, time, cell, short } = item as Record<string, unknown>;
     if (ok === true) {
-      if (isTime(time)) log.push({ ok: true, time, short: null });
+      if (isTime(time)) log.push({ ok: true, time, cell: null });
     } else if (ok === false) {
-      log.push({ ok: false, time: isTime(time) ? time : null, short: isCells(short) ? short : null });
+      log.push({ ok: false, time: null, cell: isCell(cell) ? cell : isCells(short) ? cellFromShort(short) : null });
     }
   }
   return log;
@@ -87,8 +99,8 @@ export function cleanLog(raw: unknown): RunEntry[] {
 
 /** The log that a sheet from before failed runs were recorded stands for. */
 function legacyLog(times: number[], remaining: number | null): RunEntry[] {
-  const log: RunEntry[] = times.filter(isTime).map((time) => ({ ok: true, time, short: null }));
-  if (!log.length && isCells(remaining)) log.push({ ok: false, time: null, short: remaining });
+  const log: RunEntry[] = times.filter(isTime).map((time) => ({ ok: true, time, cell: null }));
+  if (!log.length && isCells(remaining)) log.push({ ok: false, time: null, cell: cellFromShort(remaining) });
   return log;
 }
 
@@ -96,7 +108,7 @@ export function scoreSheet({ times, remaining, log: rawLog }: SheetInput): Sheet
   const stored = cleanLog(rawLog);
   const log = stored.length ? stored : legacyLog(times, remaining);
   const clean = log.filter((run) => run.ok).map((run) => run.time!);
-  const shorts = log.filter((run) => !run.ok && run.short !== null).map((run) => run.short!);
+  const cells = log.filter((run) => !run.ok && run.cell !== null).map((run) => run.cell!);
   const official = clean.length ? Math.min(...clean) : null;
   const score = official === null ? null : finalScore(clean.length, official);
   return {
@@ -107,7 +119,7 @@ export function scoreSheet({ times, remaining, log: rawLog }: SheetInput): Sheet
     official,
     score,
     // Only meaningful without a successful run; one that got there is not ranked by it.
-    remaining: clean.length || !shorts.length ? null : Math.min(...shorts),
+    remaining: clean.length || !cells.length ? null : MAZE_CELLS - Math.max(...cells),
   };
 }
 
@@ -143,7 +155,8 @@ export function outcomeText(sheet: Pick<SheetResult, "runs" | "failed">): string
  *
  * Any score beats no score. Between scores the higher wins, and on an exact tie
  * the faster official time. Between mice that never reached the centre, the
- * one that stopped closer wins, and one with no distance recorded comes last.
+ * one that got to the further cell wins, and one with no cell recorded comes
+ * last.
  */
 export function compareResults(
   a: Pick<SheetResult, "score" | "official" | "remaining">,
@@ -187,15 +200,21 @@ export function parseRunTime(value: unknown): number | null {
   return Math.round(seconds * 1000) / 1000;
 }
 
-/** A distance short of the centre, in cells: zero or more, halves allowed. */
-export function parseRemaining(value: unknown): number | null {
-  const raw = String(value ?? "").trim().replace(",", ".");
-  if (!raw) return null;
-  const cells = Number(raw);
-  return Number.isFinite(cells) && cells >= 0 && cells < 1000 ? cells : null;
+/**
+ * The cell a failed run reached: a whole number from 1 to 99, typed as "72" or
+ * "cell 72". Cell 100 is the centre, which is a successful run, not a failed one.
+ */
+export function parseCell(value: unknown): number | null {
+  const raw = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/^cell\s*/, "");
+  if (!/^\d{1,3}$/.test(raw)) return null;
+  const cell = Number(raw);
+  return cell >= 1 && cell < MAZE_CELLS ? cell : null;
 }
 
-export type SheetProblem = "bad-time" | "bad-short" | "too-long";
+export type SheetProblem = "bad-time" | "bad-cell" | "too-long";
 
 /** A run's result as typed: "yes", "Success" or "✓" is successful; "no", "Fail" or "✗" is not. */
 export function parseRunResult(value: unknown): boolean | null {
@@ -213,8 +232,9 @@ export function checkLog(log: RunEntry[]): SheetProblem | null {
 }
 
 /**
- * A sheet from form fields: one time, one result and one cells-short field per
- * run, in order. A missing result counts as successful.
+ * A sheet from form fields: one time, one result and one cell field per run,
+ * in order. A missing result counts as successful. A successful run is read by
+ * its time and a failed one by its cell; the other field is ignored.
  *
  * A successful row with no time is a spare row and is skipped, so the form can
  * offer one. A failed row counts even when empty: the judge said a run
@@ -225,22 +245,22 @@ export function checkLog(log: RunEntry[]): SheetProblem | null {
 export function sheetFromFields(
   times: unknown[],
   results: unknown[] = [],
-  shorts: unknown[] = [],
+  cells: unknown[] = [],
 ): { ok: true; sheet: SheetResult } | { ok: false; problem: SheetProblem } {
   const log: RunEntry[] = [];
   for (let index = 0; index < times.length; index++) {
     const ok = parseRunResult(results[index]) ?? true;
-    const timeText = String(times[index] ?? "").trim();
-    const shortText = String(shorts[index] ?? "").trim();
-    const time = timeText ? parseRunTime(timeText) : null;
-    if (timeText && time === null) return { ok: false, problem: "bad-time" };
     if (ok) {
-      if (time !== null) log.push({ ok: true, time, short: null });
+      const timeText = String(times[index] ?? "").trim();
+      const time = timeText ? parseRunTime(timeText) : null;
+      if (timeText && time === null) return { ok: false, problem: "bad-time" };
+      if (time !== null) log.push({ ok: true, time, cell: null });
       continue;
     }
-    const short = shortText ? parseRemaining(shortText) : null;
-    if (shortText && short === null) return { ok: false, problem: "bad-short" };
-    log.push({ ok: false, time, short });
+    const cellText = String(cells[index] ?? "").trim();
+    const cell = cellText ? parseCell(cellText) : null;
+    if (cellText && cell === null) return { ok: false, problem: "bad-cell" };
+    log.push({ ok: false, time: null, cell });
   }
   const problem = checkLog(log);
   if (problem) return { ok: false, problem };
@@ -276,13 +296,14 @@ export function workingOf(sheet: Pick<SheetResult, "runs" | "official" | "score"
     const tries = failed > 1 ? ` in ${failed} runs` : "";
     return sheet.remaining === null
       ? `No run reached the centre${tries}.`
-      : `No run reached the centre${tries}. The closest stopped ${formatCells(sheet.remaining)} short.`;
+      : `No run reached the centre${tries}. The furthest reached ${formatReached(sheet.remaining)} of ${MAZE_CELLS}.`;
   }
   const sum = `${sheet.runs} ${failed ? "successful " : ""}${sheet.runs === 1 ? "run" : "runs"} ÷ ${formatTime(sheet.official)} × 1000 = ${formatPoints(sheet.score)}`;
   return failed ? `${sum}. ${failed === 1 ? "The failed run does" : `The ${failed} failed runs do`} not count.` : sum;
 }
 
-export function formatCells(cells: number): string {
-  const text = Number.isInteger(cells) ? String(cells) : String(Math.round(cells * 10) / 10);
-  return `${text} ${cells === 1 ? "cell" : "cells"}`;
+/** "cell 72": the furthest cell, from how many cells short of the centre a mouse stopped. */
+export function formatReached(remaining: number): string {
+  const cell = cellFromShort(remaining);
+  return `cell ${Number.isInteger(cell) ? cell : Math.round(cell * 10) / 10}`;
 }

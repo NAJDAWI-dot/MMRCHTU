@@ -44,8 +44,7 @@ export async function saveScoringSettings(_previous: DeskState, formData: FormDa
 
 /**
  * A team's qualifying match sheet: every run, successful or not, with the time
- * of each one that reached the centre and how far short each failed one
- * stopped. The score is worked out here from those, never typed, so it cannot
+ * of each one that reached the centre and the cell each failed one got to. The score is worked out here from those, never typed, so it cannot
  * disagree with them.
  *
  * One sheet per team. Saving again replaces it, which is how a judge corrects
@@ -63,7 +62,7 @@ export async function saveSheet(_previous: DeskState, formData: FormData): Promi
   if (!team) return { ok: false, message: "Pick a team from the list." };
   if (!team.eligible) return { ok: false, message: `${team.name} cannot qualify: ${team.withdrawn ? "withdrawn" : "failed inspection"}.` };
 
-  const parsed = sheetFromFields(formData.getAll("time"), formData.getAll("result"), formData.getAll("short"));
+  const parsed = sheetFromFields(formData.getAll("time"), formData.getAll("result"), formData.getAll("cell"));
   if (!parsed.ok) return { ok: false, message: PROBLEMS[parsed.problem] };
   const sheet = parsed.sheet;
   const note = String(formData.get("note") ?? "").trim().slice(0, 200);
@@ -319,8 +318,8 @@ export async function saveMatch(_previous: DeskState, formData: FormData): Promi
     return { ok: false, message: "Draw the bracket before entering results." };
   }
 
-  const a = sheetFromFields(formData.getAll("timesA"), formData.getAll("resultA"), formData.getAll("shortA"));
-  const b = sheetFromFields(formData.getAll("timesB"), formData.getAll("resultB"), formData.getAll("shortB"));
+  const a = sheetFromFields(formData.getAll("timesA"), formData.getAll("resultA"), formData.getAll("cellA"));
+  const b = sheetFromFields(formData.getAll("timesB"), formData.getAll("resultB"), formData.getAll("cellB"));
   if (!a.ok) return { ok: false, message: PROBLEMS[a.problem] };
   if (!b.ok) return { ok: false, message: PROBLEMS[b.problem] };
 

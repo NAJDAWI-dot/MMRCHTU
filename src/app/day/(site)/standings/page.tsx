@@ -6,7 +6,7 @@ import { DayIcon } from "@/components/day-site/icons";
 import { Empty, PageHead, SheetView, StatTile } from "@/components/day-site/ui";
 import { QUALIFIERS, QUALIFYING_STATUS_LABELS, type Standing } from "@/lib/bracket";
 import { loadCompetition } from "@/lib/competition";
-import { formatCells, formatPoints, formatTime } from "@/lib/score-sheet";
+import { formatPoints, formatReached, formatTime } from "@/lib/score-sheet";
 import { requireDayViewer } from "@/lib/day-access";
 
 export const revalidate = 30;
@@ -40,7 +40,7 @@ function Row({ row, locked }: { row: Standing; locked: boolean }) {
                 ? row.runs
                   ? `${row.failed ? `${row.runs} of ${row.runs + row.failed} runs` : `${row.runs} run${row.runs === 1 ? "" : "s"}`} · ${formatTime(row.official)}`
                   : row.remaining !== null
-                    ? `No run reached the centre · closest ${formatCells(row.remaining)} short`
+                    ? `No run reached the centre · furthest ${formatReached(row.remaining)}`
                     : "No run reached the centre"
                 : row.eligible
                   ? "Yet to run"
@@ -57,7 +57,7 @@ function Row({ row, locked }: { row: Standing; locked: boolean }) {
         </span>
         <span className="day-num hidden text-right text-day-ink sm:block">{row.recorded ? row.runs : "–"}</span>
         <span className="day-num hidden text-right text-day-muted sm:block">
-          {row.official !== null ? formatTime(row.official) : row.remaining !== null ? formatCells(row.remaining) : "–"}
+          {row.official !== null ? formatTime(row.official) : row.remaining !== null ? formatReached(row.remaining) : "–"}
         </span>
         <span className={`day-num day-display text-right text-2xl ${row.rank === 1 ? "text-day-gold" : "text-day-ink"}`}>{formatPoints(row.best)}</span>
         <DayIcon name="more" className="hidden h-4 w-4 text-day-faint transition-transform group-open:rotate-90 sm:block" />
