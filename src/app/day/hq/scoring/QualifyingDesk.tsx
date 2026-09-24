@@ -6,7 +6,7 @@ import { DayIcon } from "@/components/day-site/icons";
 import { RunChips } from "@/components/day-site/RunChips";
 import { formatPoints, formatReached, formatTime, outcomeText, type RunEntry } from "@/lib/score-sheet";
 import { DeskForm, Submit } from "../DeskKit";
-import { deleteSheet, saveSheet } from "./actions";
+import { deleteSheet, saveSheet, setQualifyOverride } from "./actions";
 import { MatchClock, RunTimes } from "./RunTimes";
 
 export interface DeskTeam {
@@ -20,6 +20,8 @@ export interface DeskTeam {
   slot: string;
   rank: number | null;
   qualified: boolean;
+  /** The judges' say: through or out whatever the table says, or "" for the table. */
+  override: "" | "IN" | "OUT";
   sheet: {
     /** Every run, successful or not, in order. */
     log: RunEntry[];
@@ -169,9 +171,18 @@ export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: b
                           : item.checkedIn
                             ? "Waiting to run"
                             : "Not checked in"}
-                    {item.rank ? ` · ${item.qualified ? "in the top 32" : "outside the top 32"}` : ""}
+                    {item.override === "IN"
+                      ? " · through by the judges' decision"
+                      : item.override === "OUT"
+                        ? " · kept out by the judges' decision"
+                        : item.rank
+                          ? ` · ${item.qualified ? "in the top 32" : "outside the top 32"}`
+                          : ""}
                   </p>
                 </div>
+                {item.qualified ? (
+                  <span className="rounded-full bg-day-good/15 px-2 py-0.5 text-[11px] font-bold text-day-good">Through</span>
+                ) : null}
                 {item.rank ? <span className="day-num rounded-full bg-day-ink/[0.06] px-2 py-0.5 text-xs font-bold text-day-muted">#{item.rank}</span> : null}
                 <span className="day-num day-display w-16 text-right text-2xl text-day-ink">{item.sheet ? formatPoints(item.sheet.score) : ""}</span>
               </div>
@@ -198,6 +209,36 @@ export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: b
                       </button>
                     </form>
                   ) : null}
+                  <form action={setQualifyOverride} className="ml-auto flex overflow-hidden rounded-xl ring-1 ring-day-line/[0.12]" aria-label={`Who decides whether ${item.name} goes through`}>
+                    <input type="hidden" name="teamId" value={item.id} />
+                    {(
+                      [
+                        ["", "Table"],
+                        ["IN", "Through"],
+                        ["OUT", "Out"],
+                      ] as const
+                    ).map(([value, text]) => (
+                      <button
+                        key={value || "table"}
+                        type="submit"
+                        name="override"
+                        value={value}
+                        aria-pressed={item.override === value}
+                        title={value === "" ? "The table decides" : value === "IN" ? "Through, whatever its place" : "Out, whatever its place"}
+                        className={`px-2.5 py-1 text-xs font-semibold transition-colors ${
+                          item.override === value
+                            ? value === "OUT"
+                              ? "bg-day-live text-day-on-ink"
+                              : value === "IN"
+                                ? "bg-day-good text-day-on-ink"
+                                : "bg-day-ink text-day-on-ink"
+                            : "text-day-muted hover:bg-day-ink/[0.06]"
+                        }`}
+                      >
+                        {text}
+                      </button>
+                    ))}
+                  </form>
                 </div>
               ) : null}
             </li>

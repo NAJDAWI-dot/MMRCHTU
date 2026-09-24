@@ -3,9 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Crest } from "@/components/day-site/Crest";
 import { DayIcon, type DayIconName } from "@/components/day-site/icons";
+import { FollowButton } from "@/components/day-site/Follow";
 import { JourneyBadge, MatchCard, SectionTitle, SheetView, StatTile } from "@/components/day-site/ui";
 import { INSPECTION_LABELS, QUALIFIERS, ordinal, phaseInfo } from "@/lib/bracket";
-import { loadCompetition, publicMembers } from "@/lib/competition";
+import { publicMembers } from "@/lib/competition";
+import { loadPublicCompetition } from "@/lib/public-competition";
 import { clockTime } from "@/lib/day-mode";
 import { loadQueue } from "@/lib/day-queue";
 import { formatPoints, formatTime } from "@/lib/score-sheet";
@@ -15,7 +17,7 @@ export const revalidate = 30;
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   if (!(await canViewDaySite())) return { title: "Team" };
-  const state = await loadCompetition();
+  const state = await loadPublicCompetition();
   return { title: state.byId.get(params.id)?.name ?? "Team" };
 }
 
@@ -26,7 +28,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
  */
 export default async function DayTeamPage({ params }: { params: { id: string } }) {
   await requireDayViewer();
-  const state = await loadCompetition();
+  const state = await loadPublicCompetition();
   const team = state.byId.get(params.id);
   if (!team) notFound();
 
@@ -58,7 +60,11 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
       : { tone: "ink", icon: "flag", title: "Did not qualify", body: `Only the top ${QUALIFIERS} from qualifying went through.` }
     : !team.eligible
       ? { tone: "live", icon: "close", title: "Not eligible to qualify", body: team.withdrawn ? "This team has withdrawn." : "This team did not pass the robot inspection." }
-      : standing?.rank
+      : standing?.recorded && standing.rank === null
+        ? standing.qualified
+          ? { tone: "good", icon: "check", title: "Going through", body: "Into the knockout. The scores are announced soon." }
+          : { tone: "ink", icon: "lock", title: "Has run", body: "The results are announced soon. This page updates the moment they are." }
+        : standing?.rank
         ? standing.qualified
           ? { tone: "gold", icon: "trophy", title: "On course to qualify", body: `${ordinal(standing.rank)} right now, inside the top ${QUALIFIERS}. Nothing is final until qualifying closes.` }
           : { tone: "live", icon: "timer", title: `Outside the top ${QUALIFIERS} for now`, body: `${ordinal(standing.rank)} right now.` }
@@ -105,6 +111,7 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
             </h1>
             <div className="day-line-in mt-6 flex flex-wrap justify-center gap-2 md:justify-start" style={{ ["--i" as string]: 3 }}>
               <JourneyBadge journey={team.journey} size="lg" />
+              <FollowButton id={team.id} name={team.name} />
               {chips.map((chip) => (
                 <span key={chip.text} className={`rounded-full px-4 py-1.5 text-sm font-semibold ${chip.tone}`}>
                   {chip.text}

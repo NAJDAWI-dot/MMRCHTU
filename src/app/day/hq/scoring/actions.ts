@@ -14,6 +14,7 @@ import {
   QUALIFIERS,
   changedMatches,
   matchesInRound,
+  parseQualifyOverride,
   parseQualifyingStatus,
   phaseInfo,
   resolveBracket,
@@ -83,6 +84,26 @@ export async function saveSheet(_previous: DeskState, formData: FormData): Promi
     ok: true,
     message: `${team.name}: ${sheet.score !== null ? `${formatPoints(sheet.score)} points (${workingOf(sheet)})` : workingOf(sheet)}`,
   };
+}
+
+/**
+ * The judges' say on whether a team goes through from qualifying: "IN" or
+ * "OUT" whatever its place, or "" to leave it to the table. Only while the
+ * bracket is not drawn; after that, reopen qualifying to change who is in it.
+ */
+export async function setQualifyOverride(formData: FormData) {
+  await requireSection(SECTION);
+  const state = await loadCompetition();
+  if (state.qualifyingStatus === "LOCKED") return;
+  const team = state.byId.get(String(formData.get("teamId") ?? ""));
+  if (!team) return;
+  const qualifyOverride = parseQualifyOverride(formData.get("override"));
+  await prisma.teamDayStatus.upsert({
+    where: { registrationId: team.id },
+    update: { qualifyOverride },
+    create: { registrationId: team.id, qualifyOverride },
+  });
+  refreshDaySite();
 }
 
 export async function deleteSheet(formData: FormData) {
@@ -332,7 +353,8 @@ export async function saveMatch(_previous: DeskState, formData: FormData): Promi
   const status = String(formData.get("status") ?? "PENDING").toUpperCase() === "LIVE" ? "LIVE" : "PENDING";
   const arena = String(formData.get("arena") ?? "").trim().slice(0, 60);
 
-  const plan = planMatchResult(rows, target, a.sheet, b.sheet, picked);
+  // A team picked here is the judges' decision: it goes through whatever the sheets say.
+  const plan = planMatchResult(rows, target, a.sheet, b.sheet, picked, !!picked);
   if (!plan.ok) return { ok: false, message: plan.message };
   if (plan.later.length > 0 && formData.get("clearLater") !== "yes") {
     const where = plan.later.map((match) => phaseInfo(match.round).name).join(", ");
@@ -366,6 +388,7 @@ export async function saveMatch(_previous: DeskState, formData: FormData): Promi
           runLogA: logJson(match.runLogA),
           runLogB: logJson(match.runLogB),
           winnerId: match.winnerId,
+          winnerOverride: match.winnerOverride,
           status: statusFor(match.winnerId, row.status, isTarget),
           ...(isTarget ? own : {}),
         },
@@ -378,7 +401,14 @@ export async function saveMatch(_previous: DeskState, formData: FormData): Promi
   ]);
 
   refreshDaySite();
-  return { ok: true, message: plan.target.winnerId ? "Result saved. The winner is through." : "Saved." };
+  return {
+    ok: true,
+    message: plan.target.winnerOverride
+      ? "Saved. The judges' pick is through, whatever the sheets say."
+      : plan.target.winnerId
+        ? "Result saved. The winner is through."
+        : "Saved.",
+  };
 }
 
 // ------------------------------------------------------ import from a file
@@ -459,7 +489,7 @@ export async function importScores(_previous: DeskState, formData: FormData): Pr
       }
     }
     if (bad) continue;
-    const plan = planMatchResult(rows, target, a, b, target.winnerId);
+    const plan = planMatchResult(rows, target, a, b, target.winnerId, target.winnerOverride);
     if (!plan.ok) {
       errors.push(`Line ${line}: ${where}. ${plan.message}`);
       continue;
@@ -520,6 +550,7 @@ export async function importScores(_previous: DeskState, formData: FormData): Pr
           runLogA: logJson(match.runLogA),
           runLogB: logJson(match.runLogB),
           winnerId: match.winnerId,
+          winnerOverride: match.winnerOverride,
           status: row.status,
           updatedBy: admin.username,
         },

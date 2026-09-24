@@ -483,6 +483,16 @@ model CompetitionDayConfig {
   // site and the hall screen. Empty until someone starts it.
   dayAlbumId String @default("")
 
+  // What the public day site and hall screen hold back, by phase (1 is
+  // qualifying, 2 to 6 the knockout rounds), comma-separated. hiddenResults:
+  // scores, run times and places. hiddenAdvance: who went through from that
+  // phase. The desks always see everything.
+  hiddenResults String @default("")
+  hiddenAdvance String @default("")
+  // The last thing revealed, "phase|kind|epoch ms" ("all|all|..." for
+  // everything at once): the hall screen plays it, and the day site says so.
+  lastReveal    String @default("")
+
   updatedAt DateTime @updatedAt
 }
 
@@ -516,6 +526,10 @@ model TeamDayStatus {
   // hand or imported rather than worked out from the order. Empty: the start
   // plus a slot length per place.
   slotTime String @default("")
+
+  // The judges' say on qualifying, over the table: "IN" goes through to the
+  // knockout whatever its place, "OUT" does not. Empty: the table decides.
+  qualifyOverride String @default("")
 
   updatedAt DateTime @updatedAt
 }
@@ -572,6 +586,9 @@ model KnockoutMatch {
   // Every run of each side, successful or not, as on the qualifying sheet.
   runLogA    Json    @default("[]")
   runLogB    Json    @default("[]")
+
+  // The winner was set by the judges and stands whatever the sheets say.
+  winnerOverride Boolean @default(false)
 
   // PENDING | LIVE | DONE
   status      String    @default("PENDING")

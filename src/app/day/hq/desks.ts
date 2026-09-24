@@ -6,6 +6,8 @@ export const DESKS: readonly { href: string; label: string; blurb: string; icon:
   { href: "/day/hq/check-in", label: "Check-in", blurb: "Arrivals, members, badges, inspection and pits.", icon: "badge" },
   { href: "/day/hq/scoring", label: "Qualifying", blurb: "Enter each team's run times; the score works itself out.", icon: "timer" },
   { href: "/day/hq/scoring/bracket", label: "Bracket", blurb: "Draw the top 32 and enter every match.", icon: "bracket" },
+  { href: "/day/judge", label: "Judge", blurb: "The tablet at the maze: big buttons, the clock, and saves that wait out a lost connection.", icon: "flag" },
+  { href: "/day/hq/scoring/reveal", label: "Reveal", blurb: "Choose which results the day site and the hall screen show, and when.", icon: "eye" },
   { href: "/day/hq/announcements", label: "Announcements", blurb: "News, and alerts that pop up on every screen.", icon: "megaphone" },
   { href: "/day/hq/photos", label: "Photos", blurb: "Add photos from the hall; they go live on the day site and the screen.", icon: "camera" },
   { href: "/day/hq/sponsors", label: "Sponsors", blurb: "Sponsors and their logos, for the sponsors slide on the hall screen.", icon: "star" },

@@ -1,9 +1,11 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { getCompetitionDayConfig } from "@/lib/site-config";
+import type { Reveal } from "@/lib/reveal";
 import {
   journeyOf,
   parseInspection,
+  parseQualifyOverride,
   parseQualifyingStatus,
   resolveBracket,
   standings,
@@ -71,6 +73,8 @@ export interface CompetitionState {
   /** Whether the round of 32 has been drawn. */
   drawn: boolean;
   byId: Map<string, Competitor>;
+  /** What is held back from the public, on the public version of this state. */
+  reveal?: Reveal;
 }
 
 export const loadCompetition = cache(async (): Promise<CompetitionState> => {
@@ -99,7 +103,7 @@ export const loadCompetition = cache(async (): Promise<CompetitionState> => {
   const table = standings(
     teams.map((team) => ({ id: team.id, name: team.teamName.trim() })),
     runs,
-    { ineligible },
+    { ineligible, overrides: new Map(teams.map((team) => [team.id, parseQualifyOverride(team.dayStatus?.qualifyOverride)])) },
   );
   const bracket = resolveBracket(matches, matchDirection).matches.map((match) => {
     const stored = matches.find((row) => row.round === match.round && row.slot === match.slot);

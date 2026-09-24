@@ -3,9 +3,9 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { Crest } from "@/components/day-site/Crest";
 import { DayIcon } from "@/components/day-site/icons";
-import { Empty, PageHead, SheetView, StatTile } from "@/components/day-site/ui";
+import { Empty, HeldBack, PageHead, SheetView, StatTile } from "@/components/day-site/ui";
 import { QUALIFIERS, QUALIFYING_STATUS_LABELS, type Standing } from "@/lib/bracket";
-import { loadCompetition } from "@/lib/competition";
+import { loadPublicCompetition } from "@/lib/public-competition";
 import { formatPoints, formatReached, formatTime } from "@/lib/score-sheet";
 import { requireDayViewer } from "@/lib/day-access";
 
@@ -18,7 +18,7 @@ const PODIUM = ["bg-day-gold text-day-on-ink", "bg-day-ink/70 text-day-on-ink", 
 function Row({ row, locked }: { row: Standing; locked: boolean }) {
   const podium = row.rank && row.rank <= 3 ? PODIUM[row.rank - 1] : null;
   return (
-    <details className={`group border-b border-day-line/[0.06] last:border-0 ${row.rank && !row.qualified ? "opacity-70" : ""}`}>
+    <details data-team={row.teamId} className={`group border-b border-day-line/[0.06] last:border-0 ${row.rank && !row.qualified ? "opacity-70" : ""}`}>
       <summary className="grid cursor-pointer list-none grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3.5 transition-colors hover:bg-day-ink/[0.03] sm:grid-cols-[3rem_minmax(0,1fr)_5rem_7rem_6rem_1.5rem] sm:px-6 [&::-webkit-details-marker]:hidden">
         <span>
           {row.rank ? (
@@ -77,7 +77,7 @@ function Row({ row, locked }: { row: Standing; locked: boolean }) {
 /** Phase 1: the qualifying table as a timing sheet, and the line the top 32 have to clear. */
 export default async function DayStandingsPage() {
   await requireDayViewer();
-  const state = await loadCompetition();
+  const state = await loadPublicCompetition();
   const ranked = state.table.filter((row) => row.rank !== null);
   const unranked = state.table.filter((row) => row.rank === null);
   const cut = ranked[Math.min(QUALIFIERS, ranked.length) - 1];
@@ -93,6 +93,8 @@ export default async function DayStandingsPage() {
           `Eight minutes each on the maze. Score = successful runs ÷ official time × 1000, the official time being the fastest run. The top ${QUALIFIERS} go through.`
         }
       />
+
+      <HeldBack reveal={state.reveal} phases={[1]} />
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatTile label="Have run" icon="timer" value={state.table.filter((row) => row.recorded).length} hint={`of ${state.table.length} teams`} index={0} />

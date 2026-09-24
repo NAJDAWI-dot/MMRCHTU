@@ -83,6 +83,7 @@ function TeamCard({ team }: { team: TeamCardData }) {
   return (
     <Link
       href={`/day/teams/${team.id}`}
+      data-team={team.id}
       onPointerMove={tilt}
       onPointerLeave={untilt}
       className={`day-card group relative flex h-full flex-col overflow-hidden transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-[var(--day-shadow-lift)] ${

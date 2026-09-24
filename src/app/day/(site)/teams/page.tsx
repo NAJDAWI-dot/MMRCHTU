@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { TeamGrid } from "@/components/day-site/TeamGrid";
 import { Empty, PageHead } from "@/components/day-site/ui";
-import { loadCompetition } from "@/lib/competition";
+import { loadPublicCompetition } from "@/lib/public-competition";
 import { prisma } from "@/lib/prisma";
 import { formatPoints, formatTime } from "@/lib/score-sheet";
 import { requireDayViewer } from "@/lib/day-access";
+import { FollowPicker } from "@/components/day-site/Follow";
 
 export const revalidate = 30;
 export const metadata: Metadata = { title: "Teams" };
@@ -18,7 +19,7 @@ function universityOf(names: string[]): string {
 
 export default async function DayTeamsPage() {
   await requireDayViewer();
-  const state = await loadCompetition();
+  const state = await loadPublicCompetition();
   const members = await prisma.teamMember.findMany({
     where: { registrationId: { in: state.competitors.map((team) => team.id) } },
     select: { registrationId: true, university: true },
@@ -35,6 +36,7 @@ export default async function DayTeamsPage() {
         title="The teams"
         lead="Tap a team to see its members, every run it made, its score and whether it has qualified."
       />
+      {state.competitors.length ? <FollowPicker teams={state.competitors.map((team) => ({ id: team.id, name: team.name }))} /> : null}
       {state.competitors.length ? (
         <TeamGrid
           teams={state.competitors.map((team) => ({

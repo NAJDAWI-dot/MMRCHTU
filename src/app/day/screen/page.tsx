@@ -3,7 +3,8 @@ import { Crest } from "@/components/day-site/Crest";
 import { SponsorLogo } from "@/components/day-site/SponsorLogo";
 import { DayIcon } from "@/components/day-site/icons";
 import { QUALIFIERS, matchesInRound, phaseInfo } from "@/lib/bracket";
-import { loadCompetition, type BracketMatch } from "@/lib/competition";
+import { type BracketMatch } from "@/lib/competition";
+import { loadPublicCompetition } from "@/lib/public-competition";
 import { requireDayViewer } from "@/lib/day-access";
 import { clockTime, postedAgo } from "@/lib/day-mode";
 import { loadDayPhotos } from "@/lib/day-photos";
@@ -15,6 +16,9 @@ import { finalPlacings, roundLeaderboard, type RoundResult } from "@/lib/screen-
 import { groupByTier } from "@/lib/sponsors";
 import { formatPoints, formatReached, formatTime } from "@/lib/score-sheet";
 import { HallScreen, type ScreenPanel } from "./HallScreen";
+import { recentReveal } from "@/lib/reveal";
+import { revealShow } from "@/lib/reveal-show";
+import { getCompetitionDayConfig } from "@/lib/site-config";
 
 export const revalidate = 30;
 export const metadata: Metadata = { title: "Hall screen", robots: { index: false } };
@@ -30,13 +34,14 @@ export const metadata: Metadata = { title: "Hall screen", robots: { index: false
  */
 export default async function HallScreenPage() {
   await requireDayViewer();
-  const [state, site, queue, gallery, shell, sponsors] = await Promise.all([
-    loadCompetition(),
+  const [state, site, queue, gallery, shell, sponsors, config] = await Promise.all([
+    loadPublicCompetition(),
     loadDaySite(),
     loadQueue(),
     loadDayPhotos(5),
     loadDayShell(),
     prisma.sponsor.findMany({ where: { isPublished: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], select: { id: true, name: true, tier: true, logoUrl: true } }),
+    getCompetitionDayConfig(),
   ]);
   const nameOf = (id: string | null) => (id ? (state.byId.get(id)?.name ?? null) : null);
 
@@ -503,6 +508,7 @@ export default async function HallScreenPage() {
       phaseLine={phaseLine}
       alert={alert ? { title: alert.title, body: alert.body, tone: alert.tone } : null}
       followUrl={shell.isPublic ? "mmrchtu.tech" : "mmrchtu.tech/day"}
+      reveal={revealShow(state, recentReveal(config.lastReveal, Date.now()))}
     />
   );
 }

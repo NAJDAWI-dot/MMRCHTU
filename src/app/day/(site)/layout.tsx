@@ -7,6 +7,13 @@ import { ChapterLogo, DayHeader } from "@/components/day-site/DayNav";
 import { DAY_SPLASH_SCRIPT, DaySplash } from "@/components/day-site/DaySplash";
 import { canViewDaySite } from "@/lib/day-access";
 import { loadDayShell } from "@/lib/day-shell";
+import { FollowDock } from "@/components/day-site/Follow";
+import { loadQueue } from "@/lib/day-queue";
+import { followCards } from "@/lib/follow";
+import { loadPublicCompetition } from "@/lib/public-competition";
+import { JustRevealed } from "@/components/day-site/JustRevealed";
+import { recentReveal } from "@/lib/reveal";
+import { getCompetitionDayConfig } from "@/lib/site-config";
 
 /**
  * The public day site's frame.
@@ -17,7 +24,7 @@ import { loadDayShell } from "@/lib/day-shell";
  */
 export default async function DaySiteLayout({ children }: { children: React.ReactNode }) {
   if (!(await canViewDaySite())) notFound();
-  const { alerts, isPublic } = await loadDayShell();
+  const [{ alerts, isPublic }, state, queue, config] = await Promise.all([loadDayShell(), loadPublicCompetition(), loadQueue(), getCompetitionDayConfig()]);
 
   return (
     <>
@@ -28,6 +35,8 @@ export default async function DaySiteLayout({ children }: { children: React.Reac
       <DayAutoRefresh />
       <DayAlerts alerts={alerts} />
       <DayHeader isPublic={isPublic} />
+      <JustRevealed last={recentReveal(config.lastReveal, Date.now())} />
+      <FollowDock cards={followCards(state, queue)} />
 
       <main id="main" className="day-enter mx-auto max-w-7xl px-4 pb-32 pt-8 sm:px-6 sm:pt-12 lg:pb-24">
         {children}
