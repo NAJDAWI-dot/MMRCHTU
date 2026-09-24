@@ -38,9 +38,9 @@ function Row({ row, locked }: { row: Standing; locked: boolean }) {
             <span className="block text-xs text-day-muted sm:hidden">
               {row.recorded
                 ? row.runs
-                  ? `${row.runs} run${row.runs === 1 ? "" : "s"} · ${formatTime(row.official)}`
+                  ? `${row.failed ? `${row.runs} of ${row.runs + row.failed} runs` : `${row.runs} run${row.runs === 1 ? "" : "s"}`} · ${formatTime(row.official)}`
                   : row.remaining !== null
-                    ? `Stopped ${formatCells(row.remaining)} short`
+                    ? `No run reached the centre · closest ${formatCells(row.remaining)} short`
                     : "No run reached the centre"
                 : row.eligible
                   ? "Yet to run"
@@ -64,7 +64,7 @@ function Row({ row, locked }: { row: Standing; locked: boolean }) {
       </summary>
       <div className="grid gap-4 px-4 pb-5 sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:px-6">
         <span className="hidden sm:block" />
-        {row.recorded ? <SheetView times={row.times} remaining={row.remaining} score={row.best} /> : <p className="text-sm text-day-muted">No match sheet yet.</p>}
+        {row.recorded ? <SheetView times={row.times} remaining={row.remaining} log={row.log} score={row.best} /> : <p className="text-sm text-day-muted">No match sheet yet.</p>}
         <Link href={`/day/teams/${row.teamId}`} className="day-btn day-btn-soft day-btn-sm self-start">
           Team page
           <DayIcon name="arrow" className="h-4 w-4" />

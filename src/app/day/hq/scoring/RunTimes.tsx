@@ -2,33 +2,54 @@
 
 import { useEffect, useRef, useState } from "react";
 import { DayIcon } from "@/components/day-site/icons";
-import { MATCH_SECONDS, formatPoints, formatTime, parseRunTime, scoreSheet, workingOf } from "@/lib/score-sheet";
+import {
+  MATCH_SECONDS,
+  formatPoints,
+  formatTime,
+  outcomeText,
+  parseRemaining,
+  parseRunTime,
+  scoreSheet,
+  workingOf,
+  type RunEntry,
+} from "@/lib/score-sheet";
+
+type Row = { ok: boolean; time: string; short: string };
+
+const rowOf = (run: RunEntry): Row => ({
+  ok: run.ok,
+  time: run.time === null ? "" : String(run.time),
+  short: run.short === null ? "" : String(run.short),
+});
 
 /**
- * One side's match sheet, as the judge fills it in: a row per run that
- * reached the centre, a stopwatch to time one, and the score worked out live
- * underneath exactly as the server will work it out, from the same code.
+ * One side's match sheet, as the judge fills it in: a row per run, each
+ * marked as reaching the centre or not, a stopwatch to time one, and the score
+ * worked out live underneath exactly as the server will work it out, from the
+ * same code.
  *
- * Posts every row as `${name}` and the distance short as `${remainingName}`;
- * blank rows are ignored on the server, so a spare row costs nothing.
+ * A successful run needs its time. A failed one takes how many cells short of
+ * the centre it stopped, and its time if anyone took it. Every row posts one
+ * `${name}` (the time), one `${resultName}` ("yes" or "no") and one
+ * `${shortName}`, so the server can line them up; a successful row with no
+ * time is ignored there, so a spare row costs nothing.
  */
 export function RunTimes({
   name,
-  remainingName,
-  initialTimes,
-  initialRemaining,
+  resultName,
+  shortName,
+  initialLog,
   compact = false,
   label,
 }: {
   name: string;
-  remainingName: string;
-  initialTimes: number[];
-  initialRemaining: number | null;
+  resultName: string;
+  shortName: string;
+  initialLog: RunEntry[];
   compact?: boolean;
   label?: string;
 }) {
-  const [rows, setRows] = useState<string[]>(() => (initialTimes.length ? initialTimes.map(String) : [""]));
-  const [remaining, setRemaining] = useState(initialRemaining === null ? "" : String(initialRemaining));
+  const [rows, setRows] = useState<Row[]>(() => (initialLog.length ? initialLog.map(rowOf) : [{ ok: true, time: "", short: "" }]));
   const [started, setStarted] = useState<number | null>(null);
   const [now, setNow] = useState(0);
   const listRef = useRef<HTMLOListElement>(null);
@@ -39,32 +60,47 @@ export function RunTimes({
     return () => window.clearInterval(timer);
   }, [started]);
 
-  const parsed = rows.map((row) => (row.trim() ? parseRunTime(row) : null));
-  const bad = rows.map((row, i) => !!row.trim() && parsed[i] === null);
-  const times = parsed.filter((time): time is number => time !== null);
-  const sheet = scoreSheet({ times, remaining: remaining.trim() ? Number(remaining.replace(",", ".")) : null });
-  const total = times.reduce((sum, time) => sum + time, 0);
+  const parsed = rows.map((row) => ({
+    time: row.time.trim() ? parseRunTime(row.time) : null,
+    short: row.short.trim() ? parseRemaining(row.short) : null,
+  }));
+  const badTime = rows.map((row, i) => !!row.time.trim() && parsed[i]!.time === null);
+  const badShort = rows.map((row, i) => !row.ok && !!row.short.trim() && parsed[i]!.short === null);
+  // The runs as the server will read them: successful rows with a time, and every failed row.
+  const log = rows.flatMap((row, i): RunEntry[] => {
+    const { time, short } = parsed[i]!;
+    if (row.ok) return time !== null ? [{ ok: true, time, short: null }] : [];
+    return [{ ok: false, time, short }];
+  });
+  const sheet = scoreSheet({ times: [], remaining: null, log });
+  const total = log.reduce((sum, run) => sum + (run.time ?? 0), 0);
+  const officialIndex = sheet.official === null ? -1 : rows.findIndex((row, i) => row.ok && parsed[i]!.time === sheet.official);
 
-  const focusLast = () => window.setTimeout(() => listRef.current?.querySelector<HTMLInputElement>("li:last-child input")?.focus(), 0);
-  const addRow = (value = "") => {
+  const focusLast = (selector: string) =>
+    window.setTimeout(() => listRef.current?.querySelector<HTMLInputElement>(`li:last-child ${selector}`)?.focus(), 0);
+  const addRow = (row: Row = { ok: true, time: "", short: "" }) => {
     setRows((current) => {
       // Fill an empty last row before adding another.
-      if (current.length && !current[current.length - 1]!.trim()) return [...current.slice(0, -1), value];
-      return [...current, value];
+      const last = current[current.length - 1];
+      if (last && last.ok && !last.time.trim()) return [...current.slice(0, -1), row];
+      return [...current, row];
     });
-    if (!value) focusLast();
+    if (!row.time) focusLast("input[data-field=time]");
+    else if (!row.ok) focusLast("input[data-field=short]");
   };
+  const update = (index: number, change: Partial<Row>) =>
+    setRows((current) => current.map((row, i) => (i === index ? { ...row, ...change } : row)));
 
-  const stopwatch = () => {
-    if (started === null) {
-      const t = performance.now();
-      setStarted(t);
-      setNow(t);
-      return;
-    }
+  const startWatch = () => {
+    const t = performance.now();
+    setStarted(t);
+    setNow(t);
+  };
+  const stopWatch = (ok: boolean) => {
+    if (started === null) return;
     const seconds = Math.round((performance.now() - started) / 10) / 100;
     setStarted(null);
-    if (seconds > 0) addRow(String(seconds));
+    if (seconds > 0) addRow({ ok, time: String(seconds), short: "" });
   };
 
   return (
@@ -72,42 +108,97 @@ export function RunTimes({
       {label ? <p className="day-kicker">{label}</p> : null}
       <ol ref={listRef} className="space-y-2">
         {rows.map((row, index) => {
-          const best = sheet.official !== null && parsed[index] === sheet.official && parsed.indexOf(sheet.official) === index;
+          const best = index === officialIndex;
+          const run = `Run ${index + 1}`;
           return (
-            <li key={index} className="flex items-center gap-2">
-              <span className="day-num w-9 shrink-0 text-right text-xs font-bold text-day-faint">R{index + 1}</span>
-              <div className="relative flex-1">
-                <input
-                  name={name}
-                  value={row}
-                  inputMode="decimal"
-                  autoComplete="off"
-                  aria-label={`Run ${index + 1} time`}
-                  aria-invalid={bad[index] || undefined}
-                  placeholder="Seconds, e.g. 25.41"
-                  onChange={(event) => setRows((current) => current.map((value, i) => (i === index ? event.target.value : value)))}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      addRow();
-                    }
-                  }}
-                  className={`day-input day-num pr-20 ${bad[index] ? "border-day-live/60" : best ? "border-day-gold/60 bg-day-gold/[0.06]" : ""}`}
-                />
-                {best ? (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-day-gold/15 px-2 py-0.5 text-[10px] font-bold text-day-gold">Official</span>
-                ) : bad[index] ? (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-day-live">Not a time</span>
-                ) : null}
+            <li key={index} className={`rounded-xl ${row.ok ? "" : "bg-day-live/[0.05] p-1.5 ring-1 ring-day-live/20"}`}>
+              <div className="flex items-center gap-2">
+                <span className="day-num w-7 shrink-0 text-right text-xs font-bold text-day-faint">R{index + 1}</span>
+                <input type="hidden" name={resultName} value={row.ok ? "yes" : "no"} />
+                <div className="flex shrink-0 overflow-hidden rounded-xl ring-1 ring-day-line/[0.12]" role="group" aria-label={`${run} result`}>
+                  <button
+                    type="button"
+                    aria-pressed={row.ok}
+                    aria-label={`${run} reached the centre`}
+                    title="Reached the centre"
+                    onClick={() => update(index, { ok: true, short: "" })}
+                    className={`grid h-11 w-10 place-items-center transition-colors ${row.ok ? "bg-day-good text-day-on-ink" : "text-day-faint hover:bg-day-good/10"}`}
+                  >
+                    <DayIcon name="check" className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={!row.ok}
+                    aria-label={`${run} failed`}
+                    title="Failed: did not reach the centre"
+                    onClick={() => update(index, { ok: false })}
+                    className={`grid h-11 w-10 place-items-center transition-colors ${!row.ok ? "bg-day-live text-day-on-ink" : "text-day-faint hover:bg-day-live/10"}`}
+                  >
+                    <DayIcon name="close" className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="relative min-w-0 flex-1">
+                  <input
+                    name={name}
+                    data-field="time"
+                    value={row.time}
+                    inputMode="decimal"
+                    autoComplete="off"
+                    aria-label={`${run} time`}
+                    aria-invalid={badTime[index] || undefined}
+                    placeholder={row.ok ? "e.g. 25.41" : "Time, if taken"}
+                    onChange={(event) => update(index, { time: event.target.value })}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        addRow();
+                      }
+                    }}
+                    className={`day-input day-num ${badTime[index] || (best && !compact) ? "pr-20" : best ? "pr-8" : ""} ${badTime[index] ? "border-day-live/60" : best ? "border-day-gold/60 bg-day-gold/[0.06]" : ""}`}
+                  />
+                  {badTime[index] ? (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-day-live">Not a time</span>
+                  ) : best && compact ? (
+                    // Too narrow for the word: a star, and the word for screen readers.
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-day-gold" title="Official time">
+                      <span aria-hidden="true">★</span>
+                      <span className="sr-only">Official time</span>
+                    </span>
+                  ) : best ? (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-day-gold/15 px-2 py-0.5 text-[10px] font-bold text-day-gold">Official</span>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  aria-label={`Remove run ${index + 1}`}
+                  onClick={() => setRows((current) => (current.length > 1 ? current.filter((_, i) => i !== index) : [{ ok: true, time: "", short: "" }]))}
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-day-faint transition-colors hover:bg-day-live/10 hover:text-day-live"
+                >
+                  <DayIcon name="close" className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                type="button"
-                aria-label={`Remove run ${index + 1}`}
-                onClick={() => setRows((current) => (current.length > 1 ? current.filter((_, i) => i !== index) : [""]))}
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-day-faint transition-colors hover:bg-day-live/10 hover:text-day-live"
-              >
-                <DayIcon name="close" className="h-4 w-4" />
-              </button>
+              {row.ok ? (
+                <input type="hidden" name={shortName} value="" />
+              ) : (
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 pl-9">
+                  <label className="text-xs font-semibold text-day-live" htmlFor={`${shortName}-${index}`}>
+                    Failed · cells short of the centre
+                  </label>
+                  <input
+                    id={`${shortName}-${index}`}
+                    name={shortName}
+                    data-field="short"
+                    value={row.short}
+                    inputMode="decimal"
+                    autoComplete="off"
+                    aria-invalid={badShort[index] || undefined}
+                    placeholder="e.g. 3"
+                    onChange={(event) => update(index, { short: event.target.value })}
+                    className={`day-input day-num h-9 w-24 py-1 ${badShort[index] ? "border-day-live/60" : ""}`}
+                  />
+                  {badShort[index] ? <span className="text-[11px] font-semibold text-day-live">Not a number of cells</span> : null}
+                </div>
+              )}
             </li>
           );
         })}
@@ -118,41 +209,33 @@ export function RunTimes({
           <DayIcon name="plus" className="h-4 w-4" />
           Add a run
         </button>
-        <button
-          type="button"
-          onClick={stopwatch}
-          className={`day-btn day-btn-sm ${started !== null ? "day-btn-danger" : "day-btn-soft"}`}
-          aria-live="polite"
-        >
-          <DayIcon name="timer" className="h-4 w-4" />
-          {started !== null ? `Stop · ${((now - started) / 1000).toFixed(2)} s` : "Time a run"}
-        </button>
+        {started === null ? (
+          <button type="button" onClick={startWatch} className="day-btn day-btn-soft day-btn-sm">
+            <DayIcon name="timer" className="h-4 w-4" />
+            Time a run
+          </button>
+        ) : (
+          <>
+            <button type="button" onClick={() => stopWatch(true)} className="day-btn day-btn-ink day-btn-sm" aria-live="polite">
+              <DayIcon name="check" className="h-4 w-4" />
+              Reached · {((now - started) / 1000).toFixed(2)} s
+            </button>
+            <button type="button" onClick={() => stopWatch(false)} className="day-btn day-btn-danger day-btn-sm">
+              <DayIcon name="close" className="h-4 w-4" />
+              Failed
+            </button>
+          </>
+        )}
       </div>
-
-      {sheet.runs === 0 ? (
-        <div>
-          <label className="day-label" htmlFor={`${remainingName}-field`}>
-            No run reached the centre? Cells short of it at best
-          </label>
-          <input
-            id={`${remainingName}-field`}
-            name={remainingName}
-            value={remaining}
-            onChange={(event) => setRemaining(event.target.value)}
-            inputMode="decimal"
-            placeholder="e.g. 3"
-            className="day-input day-num max-w-[10rem]"
-          />
-        </div>
-      ) : (
-        <input type="hidden" name={remainingName} value="" />
-      )}
 
       <div className={`rounded-2xl bg-day-ink p-4 text-day-on-ink ${compact ? "" : "sm:p-5"}`} aria-live="polite">
         <div className={`grid gap-3 ${compact ? "grid-cols-[auto_minmax(0,1fr)_auto]" : "grid-cols-3"}`}>
           <div>
-            <p className="text-[11px] font-semibold opacity-60">Runs</p>
-            <p className={`day-num day-display mt-1 whitespace-nowrap ${compact ? "text-xl" : "text-2xl"}`}>{sheet.runs}</p>
+            <p className="text-[11px] font-semibold opacity-60">Successful</p>
+            <p className={`day-num day-display mt-1 whitespace-nowrap ${compact ? "text-xl" : "text-2xl"}`}>
+              {sheet.runs}
+              {sheet.failed ? <span className="opacity-60"> / {sheet.runs + sheet.failed}</span> : null}
+            </p>
           </div>
           <div>
             <p className="text-[11px] font-semibold opacity-60">Official time</p>
@@ -164,8 +247,9 @@ export function RunTimes({
           </div>
         </div>
         <p className="day-num mt-3 border-t border-day-on-ink/20 pt-3 text-xs opacity-75">
+          {sheet.runs + sheet.failed ? `${outcomeText(sheet)}. ` : ""}
           {workingOf(sheet)}
-          {total > MATCH_SECONDS ? " · These add up to more than 8 minutes." : ""}
+          {total > MATCH_SECONDS ? " These add up to more than 8 minutes." : ""}
         </p>
       </div>
     </div>

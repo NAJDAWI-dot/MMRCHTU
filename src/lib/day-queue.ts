@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { loadCompetition } from "@/lib/competition";
-import { clockTime, dayKey, runningDayKey } from "@/lib/day-mode";
-import { zonedInstant } from "@/lib/day-slots";
+import { clockTime } from "@/lib/day-mode";
+import { competitionDayKey, qualifyingSlot } from "@/lib/match-results";
 import { buildQueue, estimateCall, placeOf, type QueueEntry, type QueuePlace, type RunQueue } from "@/lib/run-queue";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 
@@ -36,16 +36,18 @@ export const loadQueue = cache(async (now: Date = new Date()): Promise<QueueView
   const queue = buildQueue(entries, config.queueTeamId);
   const slotMinutes = config.runSlotMinutes || 10;
 
-  // Before the first call the drawn slot times are the best guess there is.
-  const day = config.eventDate ? dayKey(config.eventDate) : runningDayKey(now);
-  const start = config.runOrderStart ? zonedInstant(day, config.runOrderStart) : null;
-  const drawnSlot = (order: number | null) => (start && order ? new Date(start.getTime() + (order - 1) * slotMinutes * 60_000) : null);
+  // Before the first call the slot times are the best guess there is.
+  const day = competitionDayKey(config.eventDate, now);
+  const drawnSlot = (id: string) => {
+    const team = state.byId.get(id);
+    return team ? qualifyingSlot(team, config, day) : null;
+  };
 
   const etaOf = (id: string) => {
     const index = queue.upcoming.findIndex((entry) => entry.id === id);
     if (index === -1) return "";
     if (!queue.now) {
-      const slot = drawnSlot(queue.upcoming[index]!.runOrder);
+      const slot = drawnSlot(id);
       return slot ? `about ${clockTime(slot)}` : "";
     }
     return `about ${clockTime(estimateCall(config.queueCalledAt, now, slotMinutes, index))}`;

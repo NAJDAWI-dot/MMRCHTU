@@ -118,6 +118,8 @@ const PATHS = {
     </>
   ),
   expand: <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />,
+  download: <path d="M12 4v11m-5-5 5 5 5-5M5 20h14" />,
+  upload: <path d="M12 20V9m-5 5 5-5 5 5M5 4h14" />,
   lock: (
     <>
       <rect x="4" y="10" width="16" height="11" rx="2" />

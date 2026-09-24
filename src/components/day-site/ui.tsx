@@ -1,10 +1,12 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Crest } from "@/components/day-site/Crest";
+import { RunChips } from "@/components/day-site/RunChips";
 import { DayIcon, type DayIconName } from "@/components/day-site/icons";
 import { phaseInfo, type Journey, type ResolvedMatch } from "@/lib/bracket";
 import type { GuideBlock } from "@/lib/day-guides";
-import { formatCells, formatPoints, formatTime, scoreSheet, workingOf } from "@/lib/score-sheet";
+import { clockTime } from "@/lib/day-mode";
+import { formatCells, formatPoints, outcomeText, scoreSheet, workingOf } from "@/lib/score-sheet";
 
 /** The heading every day page opens with, arriving a line at a time. */
 export function PageHead({
@@ -137,52 +139,41 @@ export function Empty({ icon = "flag", title, children }: { icon?: DayIconName; 
 }
 
 /**
- * A match sheet, shown: every successful run's time, the fastest picked out as
- * the official time, and the sum that makes the score.
+ * A match sheet, shown: every run in order, the successful ones by their time
+ * with the fastest picked out as the official time, the failed ones crossed,
+ * and the sum that makes the score.
  */
 export function SheetView({
   times,
   remaining,
+  log,
   score,
   compact = false,
 }: {
   times: number[];
   remaining: number | null;
+  /** Every run, successful or not, when the sheet has them. */
+  log?: unknown;
   /** A score from before run times were recorded, shown on its own. */
   score?: number | null;
   compact?: boolean;
 }) {
-  const sheet = scoreSheet({ times, remaining });
-  if (!times.length && score !== null && score !== undefined) {
+  const sheet = scoreSheet({ times, remaining, log });
+  if (!sheet.log.length && score !== null && score !== undefined) {
     return <p className="text-sm text-day-muted">Score {formatPoints(score)}.</p>;
   }
-  const fastest = sheet.official;
+  if (!sheet.log.length) return <p className="text-sm text-day-muted">No run reached the centre.</p>;
   return (
     <div className="space-y-3">
-      {times.length ? (
-        <ol className="flex flex-wrap gap-1.5" aria-label="Successful runs">
-          {times.map((time, index) => {
-            const best = time === fastest && times.indexOf(time) === index;
-            return (
-              <li
-                key={index}
-                className={`day-num inline-flex items-baseline gap-1.5 rounded-lg px-2.5 py-1 text-sm ${
-                  best ? "bg-day-gold/15 font-bold text-day-gold ring-1 ring-day-gold/40" : "bg-day-ink/[0.05] text-day-ink"
-                }`}
-              >
-                <span className="text-[10px] font-semibold text-day-faint">R{index + 1}</span>
-                {formatTime(time)}
-                {best ? <span className="sr-only">(official time)</span> : null}
-              </li>
-            );
-          })}
-        </ol>
-      ) : (
-        <p className="text-sm text-day-muted">
-          No run reached the centre{remaining !== null ? `: stopped ${formatCells(remaining)} short` : ""}.
-        </p>
-      )}
-      {!compact && sheet.score !== null ? <p className="day-num text-sm text-day-muted">{workingOf(sheet)}</p> : null}
+      <p className="text-xs font-semibold text-day-muted">{outcomeText(sheet)}</p>
+      <RunChips log={sheet.log} official={sheet.official} />
+      {sheet.score === null ? (
+        sheet.remaining !== null ? (
+          <p className="text-sm text-day-muted">No run reached the centre. The closest stopped {formatCells(sheet.remaining)} short.</p>
+        ) : null
+      ) : !compact ? (
+        <p className="day-num text-sm text-day-muted">{workingOf(sheet)}</p>
+      ) : null}
     </div>
   );
 }
@@ -199,7 +190,7 @@ export function MatchCard({
   arena,
   showSheets = false,
 }: {
-  match: ResolvedMatch;
+  match: ResolvedMatch & { scheduledAt?: Date | null };
   nameOf: (id: string | null) => string | null;
   live?: boolean;
   highlight?: string;
@@ -207,9 +198,10 @@ export function MatchCard({
   showSheets?: boolean;
 }) {
   const sides = [
-    { id: match.teamAId, seed: match.seedA, score: match.scoreA, times: match.timesA, remaining: match.remainingA },
-    { id: match.teamBId, seed: match.seedB, score: match.scoreB, times: match.timesB, remaining: match.remainingB },
+    { id: match.teamAId, seed: match.seedA, score: match.scoreA, times: match.timesA, remaining: match.remainingA, log: match.runLogA },
+    { id: match.teamBId, seed: match.seedB, score: match.scoreB, times: match.timesB, remaining: match.remainingB, log: match.runLogB },
   ];
+  const time = match.scheduledAt && !match.winnerId ? clockTime(match.scheduledAt) : "";
   return (
     <div
       className={`day-card overflow-hidden ${live ? "ring-2 ring-day-live/50" : ""}`}
@@ -219,6 +211,7 @@ export function MatchCard({
         <span className="flex items-center gap-2 text-day-muted">
           {live ? <span className="day-live-dot" aria-hidden="true" /> : null}
           <span className={live ? "text-day-live" : ""}>{live ? "On the maze now" : phaseInfo(match.round).name}</span>
+          {time ? <span className="day-num text-day-faint">· {time}</span> : null}
           {arena ? <span className="text-day-faint">· {arena}</span> : null}
         </span>
         <span className="text-day-faint">
@@ -266,9 +259,9 @@ export function MatchCard({
                   {match.walkover ? "" : formatPoints(side.score)}
                 </span>
               </div>
-              {showSheets && (side.times.length > 0 || side.remaining !== null) ? (
+              {showSheets && (side.times.length > 0 || side.remaining !== null || side.log.length > 0) ? (
                 <div className="mt-3 pl-[47px]">
-                  <SheetView times={side.times} remaining={side.remaining} compact />
+                  <SheetView times={side.times} remaining={side.remaining} log={side.log} compact />
                 </div>
               ) : null}
             </div>

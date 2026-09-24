@@ -45,15 +45,18 @@ export interface Competitor {
   deskNote: string;
   /** Place in the phase 1 running order, once drawn. */
   runOrder: number | null;
+  /** A slot time set by hand or imported ("09:40"), or "" to work it out from the order. */
+  slotTime: string;
   eligible: boolean;
   standing: Standing | undefined;
   journey: Journey;
 }
 
-/** A resolved match plus what only the stored row knows: live or not, and where. */
+/** A resolved match plus what only the stored row knows: live or not, when and where. */
 export interface BracketMatch extends ResolvedMatch {
   status: string;
   arena: string;
+  scheduledAt: Date | null;
   updatedAt: Date | null;
 }
 
@@ -78,7 +81,7 @@ export const loadCompetition = cache(async (): Promise<CompetitionState> => {
       select: { id: true, teamName: true, status: true, memberCount: true, dayStatus: true },
     }),
     prisma.qualifyingRun.findMany({
-      select: { registrationId: true, score: true, runTimes: true, remaining: true, createdAt: true },
+      select: { registrationId: true, score: true, runTimes: true, remaining: true, runLog: true, createdAt: true },
     }),
     prisma.knockoutMatch.findMany({ orderBy: [{ round: "asc" }, { slot: "asc" }] }),
   ]);
@@ -106,6 +109,7 @@ export const loadCompetition = cache(async (): Promise<CompetitionState> => {
       // A decided match is never still live, whatever the row last said.
       status: match.winnerId ? "DONE" : (stored?.status ?? "PENDING"),
       arena: stored?.arena ?? "",
+      scheduledAt: stored?.scheduledAt ?? null,
       updatedAt: stored?.updatedAt ?? null,
     };
   });
@@ -132,6 +136,7 @@ export const loadCompetition = cache(async (): Promise<CompetitionState> => {
         badges: team.dayStatus?.badges ?? false,
         deskNote: team.dayStatus?.deskNote ?? "",
         runOrder: team.dayStatus?.runOrder ?? null,
+        slotTime: team.dayStatus?.slotTime ?? "",
         eligible: !ineligible.has(team.id),
         standing,
         journey: journeyOf(team.id, standing, bracket, drawn),

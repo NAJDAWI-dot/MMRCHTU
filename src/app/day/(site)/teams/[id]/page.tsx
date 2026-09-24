@@ -152,7 +152,10 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
                 <div className="flex flex-wrap items-end justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold text-day-muted">Successful runs</p>
-                    <p className="day-num day-display mt-1 text-5xl text-day-ink">{standing.runs}</p>
+                    <p className="day-num day-display mt-1 text-5xl text-day-ink">
+                      {standing.runs}
+                      {standing.failed ? <span className="text-2xl text-day-faint"> of {standing.runs + standing.failed}</span> : null}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-day-muted">Score</p>
@@ -160,10 +163,11 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
                   </div>
                 </div>
                 <div className="mt-6 border-t border-day-line/[0.07] pt-6">
-                  <SheetView times={standing.times} remaining={standing.remaining} score={standing.best} />
+                  <SheetView times={standing.times} remaining={standing.remaining} log={standing.log} score={standing.best} />
                 </div>
                 <p className="mt-6 text-xs text-day-faint">
-                  Score = successful runs ÷ official time × 1000. The official time, in gold, is the fastest run.
+                  Score = successful runs ÷ official time × 1000. The official time, in gold, is the fastest run. Crossed runs did not reach the centre
+                  and do not count.
                 </p>
               </>
             ) : (

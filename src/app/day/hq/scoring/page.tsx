@@ -4,14 +4,16 @@ import { DayIcon } from "@/components/day-site/icons";
 import { requireSection } from "@/lib/admin-access";
 import { QUALIFIERS, QUALIFYING_STATUS_LABELS } from "@/lib/bracket";
 import { loadCompetition } from "@/lib/competition";
-import { zonedInstant } from "@/lib/day-slots";
-import { clockTime, dayKey, runningDayKey } from "@/lib/day-mode";
+import { clockTime } from "@/lib/day-mode";
+import { competitionDayKey, qualifyingSlot } from "@/lib/match-results";
 import { prisma } from "@/lib/prisma";
+import { scoreSheet } from "@/lib/score-sheet";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import { ArmedForm, DeskForm, DeskHead, Submit } from "../DeskKit";
 import { loadQueue } from "@/lib/day-queue";
 import { callBack, callChosen, callNext, clearRunOrder, drawBracket, drawRunOrder, reopenQualifying, saveScoringSettings, standDown } from "./actions";
 import { QualifyingDesk, type DeskTeam } from "./QualifyingDesk";
+import { TransferPanel } from "./TransferPanel";
 
 export const metadata: Metadata = { title: "Qualifying" };
 
@@ -30,15 +32,17 @@ export default async function QualifyingDeskPage() {
   const locked = state.qualifyingStatus === "LOCKED";
   const sheetOf = new Map(sheets.map((sheet) => [sheet.registrationId, sheet]));
 
-  // Slot times from the running order: the start, plus a slot per place.
-  const day = config.eventDate ? dayKey(config.eventDate) : runningDayKey(new Date());
-  const startAt = config.runOrderStart ? zonedInstant(day, config.runOrderStart) : null;
-  const slotOf = (order: number | null) =>
-    startAt && order ? clockTime(new Date(startAt.getTime() + (order - 1) * config.runSlotMinutes * 60_000)) : "";
+  // Slot times: a team's own, or the start plus a slot per place.
+  const day = competitionDayKey(config.eventDate);
+  const slotOf = (team: { runOrder: number | null; slotTime: string }) => {
+    const at = qualifyingSlot(team, config, day);
+    return at ? clockTime(at) : "";
+  };
 
   const teams: DeskTeam[] = state.competitors.map((team) => {
     const row = sheetOf.get(team.id);
     const standing = team.standing;
+    const sheet = row ? scoreSheet({ times: row.runTimes, remaining: row.remaining, log: row.runLog }) : null;
     return {
       id: team.id,
       name: team.name,
@@ -46,18 +50,20 @@ export default async function QualifyingDeskPage() {
       reason: team.withdrawn ? "withdrawn" : team.inspection === "FAILED" ? "failed inspection" : "",
       checkedIn: team.checkedIn,
       runOrder: team.runOrder,
-      slot: slotOf(team.runOrder),
+      slot: slotOf(team),
       rank: standing?.rank ?? null,
       qualified: !!standing?.qualified,
-      sheet: row
+      sheet: row && sheet
         ? {
-            times: row.runTimes,
-            remaining: row.remaining,
+            log: sheet.log,
+            runs: sheet.runs,
+            failed: sheet.failed,
+            remaining: sheet.remaining,
             score: standing?.best ?? row.score,
             official: standing?.official ?? null,
             note: row.note,
             recordedBy: row.recordedBy,
-            legacy: row.runTimes.length === 0 && row.score !== null,
+            legacy: sheet.log.length === 0 && row.score !== null,
           }
         : null,
     };
@@ -72,7 +78,7 @@ export default async function QualifyingDeskPage() {
       <DeskHead
         icon="timer"
         title="Qualifying"
-        lead={`Phase 1 · ${QUALIFYING_STATUS_LABELS[state.qualifyingStatus]} · ${ran} of ${state.competitors.length} teams have run. Type each successful run's time; the score is (runs ÷ fastest time) × 1000.`}
+        lead={`Phase 1 · ${QUALIFYING_STATUS_LABELS[state.qualifyingStatus]} · ${ran} of ${state.competitors.length} teams have run. Write down every run and whether it reached the centre; the score is (successful runs ÷ fastest time) × 1000.`}
       />
 
       {/* ------------------------------------------------ running order */}
@@ -80,7 +86,7 @@ export default async function QualifyingDeskPage() {
         <div>
           <p className="day-kicker">Running order</p>
           <p className="day-display mt-2 text-2xl text-day-ink">
-            {drawn ? `${drawn} teams drawn, first at ${config.runOrderStart}` : "Not drawn yet"}
+            {drawn ? `${drawn} teams drawn${config.runOrderStart ? `, first at ${config.runOrderStart}` : ""}` : "Not drawn yet"}
           </p>
           <p className="mt-1 text-sm text-day-muted">
             Once check-in closes, draw a random order among the teams that checked in. Each gets a slot on the qualifying list and its team page.
@@ -247,6 +253,8 @@ export default async function QualifyingDeskPage() {
           </ArmedForm>
         )}
       </section>
+
+      <TransferPanel drawn={state.drawn} />
 
       <section className="day-card p-5 sm:p-6">
         <p className="day-kicker">On the standings page</p>

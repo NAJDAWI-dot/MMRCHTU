@@ -1,14 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
+  cleanLog,
   compareResults,
   formatPoints,
   formatTime,
+  outcomeOf,
+  outcomeText,
   parseRemaining,
+  parseRunResult,
   parseRunTime,
   scoreSheet,
   sheetFromFields,
   workingOf,
+  type RunEntry,
 } from "@/lib/score-sheet";
+
+const ok = (time: number): RunEntry => ({ ok: true, time, short: null });
+const fail = (short: number | null, time: number | null = null): RunEntry => ({ ok: false, time, short });
 
 describe("a match sheet", () => {
   it("works the rulebook examples out from the run times", () => {
@@ -26,7 +34,7 @@ describe("a match sheet", () => {
     const none = scoreSheet({ times: [], remaining: 3 });
     expect(none.score).toBeNull();
     expect(none.remaining).toBe(3);
-    expect(workingOf(none)).toBe("No run reached the centre. Stopped 3 cells short.");
+    expect(workingOf(none)).toBe("No run reached the centre. The closest stopped 3 cells short.");
   });
 
   it("drops the distance once a run did reach the centre", () => {
@@ -77,10 +85,24 @@ describe("reading what a judge types", () => {
   });
 
   it("skips blank rows, and refuses the sheet over one bad row or too long a total", () => {
-    const good = sheetFromFields(["30", "", "28.5"], "");
+    const good = sheetFromFields(["30", "", "28.5"]);
     expect(good.ok && good.sheet.times).toEqual([30, 28.5]);
-    expect(sheetFromFields(["30", "oops"], "")).toEqual({ ok: false, problem: "bad-time" });
-    expect(sheetFromFields(["300", "200"], "")).toEqual({ ok: false, problem: "too-long" });
+    expect(sheetFromFields(["30", "oops"])).toEqual({ ok: false, problem: "bad-time" });
+    expect(sheetFromFields(["300", "200"])).toEqual({ ok: false, problem: "too-long" });
+  });
+
+  it("reads every run with its result, keeping a failed row even when it is empty", () => {
+    const read = sheetFromFields(["40", "", "25.5", ""], ["no", "no", "yes", "yes"], ["3", "", "", ""]);
+    expect(read.ok && read.sheet.log).toEqual([fail(3, 40), fail(null), ok(25.5)]);
+    expect(sheetFromFields(["", "30"], ["no", "yes"], ["three", ""])).toEqual({ ok: false, problem: "bad-short" });
+    // A failed run's time counts against the eight minutes too.
+    expect(sheetFromFields(["300", "200"], ["no", "yes"], ["2", ""])).toEqual({ ok: false, problem: "too-long" });
+  });
+
+  it("reads a result the way people write one", () => {
+    for (const yes of ["yes", "Success", "✓", "1", "TRUE"]) expect(parseRunResult(yes)).toBe(true);
+    for (const no of ["no", "Fail", "failed", "✗", "0", "DNF"]) expect(parseRunResult(no)).toBe(false);
+    expect(parseRunResult("maybe")).toBeNull();
   });
 
   it("writes a time back the way a stopwatch would", () => {
@@ -88,5 +110,60 @@ describe("reading what a judge types", () => {
     expect(formatTime(25.412)).toBe("25.412 s");
     expect(formatTime(65.3)).toBe("1:05.3");
     expect(formatTime(null)).toBe("–");
+  });
+});
+
+describe("successful and failed runs", () => {
+  it("scores a team with only successful runs on all of them", () => {
+    const sheet = scoreSheet({ times: [], remaining: null, log: [ok(41.2), ok(25), ok(26.1), ok(25.4)] });
+    expect(outcomeOf(sheet)).toBe("all-successful");
+    expect(outcomeText(sheet)).toBe("All 4 runs successful");
+    expect(formatPoints(sheet.score)).toBe("160.0");
+    expect(workingOf(sheet)).toBe("4 runs ÷ 25.0 s × 1000 = 160.0");
+  });
+
+  it("scores a team with some of each on its successful runs alone", () => {
+    const sheet = scoreSheet({ times: [], remaining: null, log: [fail(4, 60), ok(30), fail(1), ok(25)] });
+    expect(outcomeOf(sheet)).toBe("mixed");
+    expect(outcomeText(sheet)).toBe("2 of 4 runs successful");
+    expect(sheet.runs).toBe(2);
+    expect(sheet.failed).toBe(2);
+    expect(sheet.official).toBe(25);
+    expect(formatPoints(sheet.score)).toBe("80.0");
+    // A team that reached the centre is never ranked by distance.
+    expect(sheet.remaining).toBeNull();
+    expect(workingOf(sheet)).toBe("2 successful runs ÷ 25.0 s × 1000 = 80.0. The 2 failed runs do not count.");
+  });
+
+  it("gives a team with no successful run no score, ranked by its closest run", () => {
+    const sheet = scoreSheet({ times: [], remaining: null, log: [fail(5), fail(2.5, 90), fail(null)] });
+    expect(outcomeOf(sheet)).toBe("none-successful");
+    expect(outcomeText(sheet)).toBe("None of 3 runs successful");
+    expect(sheet.score).toBeNull();
+    expect(sheet.remaining).toBe(2.5);
+    expect(workingOf(sheet)).toBe("No run reached the centre in 3 runs. The closest stopped 2.5 cells short.");
+  });
+
+  it("ranks the three kinds the rulebook's way", () => {
+    const all = scoreSheet({ times: [], remaining: null, log: [ok(25), ok(26)] });
+    const mixed = scoreSheet({ times: [], remaining: null, log: [ok(25), fail(2), fail(1)] });
+    const close = scoreSheet({ times: [], remaining: null, log: [fail(1)] });
+    const far = scoreSheet({ times: [], remaining: null, log: [fail(6), fail(4)] });
+    const ranked = [far, mixed, close, all].sort(compareResults);
+    expect(ranked).toEqual([all, mixed, close, far]);
+  });
+
+  it("reads a sheet from before failed runs were kept the same as it always did", () => {
+    const old = scoreSheet({ times: [30, 25], remaining: null, log: [] });
+    expect(old.log).toEqual([ok(30), ok(25)]);
+    expect(old.failed).toBe(0);
+    const stopped = scoreSheet({ times: [], remaining: 3, log: [] });
+    expect(stopped.log).toEqual([fail(3)]);
+    expect(stopped.remaining).toBe(3);
+  });
+
+  it("cleans a stored log, dropping anything that is not a run", () => {
+    expect(cleanLog([ok(25), { ok: true, time: null }, { ok: false, short: "x" }, "junk", null, { ok: "yes", time: 4 }])).toEqual([ok(25), fail(null)]);
+    expect(cleanLog("not a list")).toEqual([]);
   });
 });

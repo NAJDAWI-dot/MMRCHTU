@@ -301,3 +301,76 @@ export function memberRow(
     member.ieeeMembershipId,
   ];
 }
+
+/**
+ * Reads a CSV file back: what an admin saved from Excel, Google Sheets or
+ * Numbers, or one of this site's own exports.
+ *
+ * Quoted fields, doubled quotes and line breaks inside quotes all read as
+ * RFC 4180 says. The separator is taken from the header line, since Excel in
+ * much of the world saves with semicolons, and a tab-separated paste works the
+ * same way. The apostrophe sanitiseCell puts in front of a formula-looking
+ * value comes off again, so an export read back is what went out. Blank lines
+ * are dropped.
+ */
+export function parseCsv(text: string): string[][] {
+  const source = text.startsWith(BOM) ? text.slice(1) : text;
+  const delimiter = detectDelimiter(source);
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let quoted = false;
+  const endField = () => {
+    row.push(field.length > 1 && field[0] === "'" && FORMULA_TRIGGERS.includes(field[1]!) ? field.slice(1) : field);
+    field = "";
+  };
+  const endRow = () => {
+    endField();
+    if (row.some((cell) => cell.trim() !== "")) rows.push(row);
+    row = [];
+  };
+  for (let i = 0; i < source.length; i++) {
+    const char = source[i]!;
+    if (quoted) {
+      if (char === '"') {
+        if (source[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          quoted = false;
+        }
+      } else {
+        field += char;
+      }
+    } else if (char === '"' && field === "") {
+      quoted = true;
+    } else if (char === delimiter) {
+      endField();
+    } else if (char === "\n" || char === "\r") {
+      if (char === "\r" && source[i + 1] === "\n") i++;
+      endRow();
+    } else {
+      field += char;
+    }
+  }
+  if (field !== "" || row.length) endRow();
+  return rows;
+}
+
+/** Whichever of comma, semicolon and tab the first line uses most, outside quotes. */
+function detectDelimiter(text: string): string {
+  const counts = new Map<string, number>([
+    [",", 0],
+    [";", 0],
+    ["\t", 0],
+  ]);
+  let quoted = false;
+  for (const char of text) {
+    if (char === '"') quoted = !quoted;
+    else if (!quoted && (char === "\n" || char === "\r")) break;
+    else if (!quoted && counts.has(char)) counts.set(char, counts.get(char)! + 1);
+  }
+  let best = ",";
+  for (const [char, count] of counts) if (count > counts.get(best)!) best = char;
+  return best;
+}

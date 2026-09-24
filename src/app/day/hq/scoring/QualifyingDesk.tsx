@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { Crest } from "@/components/day-site/Crest";
 import { DayIcon } from "@/components/day-site/icons";
-import { formatCells, formatPoints, formatTime } from "@/lib/score-sheet";
+import { RunChips } from "@/components/day-site/RunChips";
+import { formatCells, formatPoints, formatTime, outcomeText, type RunEntry } from "@/lib/score-sheet";
 import { DeskForm, Submit } from "../DeskKit";
 import { deleteSheet, saveSheet } from "./actions";
 import { MatchClock, RunTimes } from "./RunTimes";
@@ -20,7 +21,10 @@ export interface DeskTeam {
   rank: number | null;
   qualified: boolean;
   sheet: {
-    times: number[];
+    /** Every run, successful or not, in order. */
+    log: RunEntry[];
+    runs: number;
+    failed: number;
     remaining: number | null;
     score: number | null;
     official: number | null;
@@ -32,8 +36,8 @@ export interface DeskTeam {
 }
 
 /**
- * The qualifying desk: pick a team, type the time of each run that reached
- * the centre, save. The score, the official time and the working appear as
+ * The qualifying desk: pick a team, write down each run (its time if it
+ * reached the centre, how far short it stopped if not), save. The score, the official time and the working appear as
  * the times go in, and the table beside it re-ranks the moment it is saved.
  */
 export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: boolean }) {
@@ -105,10 +109,10 @@ export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: b
                 </div>
                 <RunTimes
                   name="time"
-                  remainingName="remaining"
-                  initialTimes={team.sheet?.times ?? []}
-                  initialRemaining={team.sheet?.remaining ?? null}
-                  label="Successful runs, in the order they were run"
+                  resultName="result"
+                  shortName="short"
+                  initialLog={team.sheet?.log ?? []}
+                  label="Every run, in the order it was run"
                 />
                 <div>
                   <label className="day-label" htmlFor="sheet-note">
@@ -155,10 +159,10 @@ export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: b
                       : item.sheet
                         ? item.sheet.legacy
                           ? "Score only"
-                          : item.sheet.times.length
-                            ? `${item.sheet.times.length} run${item.sheet.times.length === 1 ? "" : "s"} · official ${formatTime(item.sheet.official)}`
-                            : item.sheet.remaining !== null
-                              ? `No run reached the centre · ${formatCells(item.sheet.remaining)} short`
+                          : item.sheet.runs
+                            ? `${outcomeText(item.sheet)} · official ${formatTime(item.sheet.official)}`
+                            : item.sheet.failed
+                              ? `${outcomeText(item.sheet)}${item.sheet.remaining !== null ? ` · closest ${formatCells(item.sheet.remaining)} short` : ""}`
                               : "No run reached the centre"
                         : item.slot
                           ? `Runs at ${item.slot}`
@@ -171,17 +175,10 @@ export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: b
                 {item.rank ? <span className="day-num rounded-full bg-day-ink/[0.06] px-2 py-0.5 text-xs font-bold text-day-muted">#{item.rank}</span> : null}
                 <span className="day-num day-display w-16 text-right text-2xl text-day-ink">{item.sheet ? formatPoints(item.sheet.score) : ""}</span>
               </div>
-              {item.sheet && item.sheet.times.length ? (
-                <ol className="mt-3 flex flex-wrap gap-1.5 pl-12">
-                  {item.sheet.times.map((time, index) => (
-                    <li
-                      key={index}
-                      className={`day-num rounded-md px-2 py-0.5 text-xs ${time === item.sheet!.official ? "bg-day-gold/15 font-bold text-day-gold" : "bg-day-ink/[0.05] text-day-ink"}`}
-                    >
-                      {formatTime(time)}
-                    </li>
-                  ))}
-                </ol>
+              {item.sheet && item.sheet.log.length ? (
+                <div className="mt-3 pl-12">
+                  <RunChips log={item.sheet.log} official={item.sheet.official} small />
+                </div>
               ) : null}
               {!locked && item.eligible ? (
                 <div className="mt-3 flex gap-2 pl-12">
