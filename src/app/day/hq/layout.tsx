@@ -5,6 +5,7 @@ import { ThemeSwitch, Wordmark } from "@/components/day-site/DayNav";
 import { requireAdmin } from "@/lib/auth";
 import { ROLE_LABELS, parseRoles } from "@/lib/roles";
 import { DeskTabs } from "./DeskTabs";
+import { openDaySite } from "@/lib/day-links";
 
 export const metadata: Metadata = { title: { default: "Day HQ", template: "%s | Day HQ" }, robots: { index: false } };
 
@@ -26,10 +27,10 @@ export default async function DayHqLayout({ children }: { children: React.ReactN
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
           <Wordmark href="/day/hq" label="Day HQ" />
           <div className="flex items-center gap-2">
-            <Link href="/day" className="day-btn day-btn-soft day-btn-sm hidden sm:inline-flex">
+            <a href={openDaySite("/day")} className="day-btn day-btn-soft day-btn-sm hidden sm:inline-flex">
               <DayIcon name="live" className="h-4 w-4" />
               Day site
-            </Link>
+            </a>
             <Link href="/admin?classic=1" className="day-btn day-btn-soft day-btn-sm hidden md:inline-flex">
               <DayIcon name="gear" className="h-4 w-4" />
               Classic admin
@@ -55,9 +56,9 @@ export default async function DayHqLayout({ children }: { children: React.ReactN
           {roles.length ? ` · ${roles.map((role) => ROLE_LABELS[role]).join(", ")}` : " · no role yet"}
         </span>
         <span className="flex gap-4">
-          <Link href="/day" className="hover:text-day-ink sm:hidden">
+          <a href={openDaySite("/day")} className="hover:text-day-ink sm:hidden">
             Day site
-          </Link>
+          </a>
           <Link href="/admin?classic=1" className="hover:text-day-ink">
             Classic admin
           </Link>

@@ -9,6 +9,7 @@ import { canOpen } from "@/lib/roles";
 import { DeskForm, DeskHead, Submit } from "../DeskKit";
 import { startDayAlbum, takeDownPhoto } from "./actions";
 import { DayPhotoUploader } from "./DayPhotoUploader";
+import { openDaySite } from "@/lib/day-links";
 
 export const metadata: Metadata = { title: "Photos" };
 
@@ -31,10 +32,10 @@ export default async function PhotosDeskPage() {
       >
         {album ? (
           <div className="flex flex-wrap gap-2">
-            <Link href="/day/photos" className="day-btn day-btn-soft day-btn-sm">
+            <a href={openDaySite("/day/photos")} className="day-btn day-btn-soft day-btn-sm">
               <DayIcon name="live" className="h-4 w-4" />
               Photos page
-            </Link>
+            </a>
             {canOpen(rolesOf(admin), "/admin/gallery") ? (
               <Link href={`/admin/gallery/${album.id}`} className="day-btn day-btn-soft day-btn-sm">
                 <DayIcon name="gear" className="h-4 w-4" />
