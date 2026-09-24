@@ -512,16 +512,22 @@ model TeamDayStatus {
 
   // Place in the phase 1 running order, 1-based, once it has been drawn.
   runOrder Int?
+  // The team's qualifying slot as a clock time ("09:40"), when it was set by
+  // hand or imported rather than worked out from the order. Empty: the start
+  // plus a slot length per place.
+  slotTime String @default("")
 
   updatedAt DateTime @updatedAt
 }
 
-// A team's phase 1 match sheet: the time of every run that reached the
-// centre. The score is worked out from them by the rulebook formula,
-// (successful runs / fastest time) * 1000, and kept here so nothing has to
-// recompute it to sort. A mouse that never reached the centre has no score and
-// is ranked by `remaining`, how many cells short of the centre it stopped.
-// Rows from before run times were recorded have a score and no times.
+// A team's phase 1 match sheet: every run, in the order it was run, marked
+// successful or not (`runLog`). The score is worked out from the successful
+// ones by the rulebook formula, (successful runs / fastest time) * 1000, and
+// kept here with their times (`runTimes`) so nothing has to recompute it to
+// sort. A mouse that never reached the centre has no score and is ranked by
+// `remaining`, the fewest cells short of the centre any of its runs stopped.
+// Rows from before run times were recorded have a score and no times; rows
+// from before the log have times and an empty log.
 model QualifyingRun {
   id             String       @id @default(cuid())
   registrationId String
@@ -529,6 +535,8 @@ model QualifyingRun {
   score          Float?
   runTimes       Float[]      @default([])
   remaining      Float?
+  // [{ ok, time, short }] per run, see RunEntry in src/lib/score-sheet.ts.
+  runLog         Json         @default("[]")
   note           String       @default("")
   recordedBy     String       @default("")
   createdAt      DateTime     @default(now())
@@ -561,6 +569,9 @@ model KnockoutMatch {
   timesB     Float[] @default([])
   remainingA Float?
   remainingB Float?
+  // Every run of each side, successful or not, as on the qualifying sheet.
+  runLogA    Json    @default("[]")
+  runLogB    Json    @default("[]")
 
   // PENDING | LIVE | DONE
   status      String    @default("PENDING")

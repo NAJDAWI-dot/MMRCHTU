@@ -4,11 +4,20 @@ import { useState } from "react";
 import { useFormState } from "react-dom";
 import { Crest } from "@/components/day-site/Crest";
 import { DayIcon } from "@/components/day-site/icons";
-import { formatPoints, formatTime, scoreSheet } from "@/lib/score-sheet";
+import { formatCells, formatPoints, formatTime, outcomeText, type RunEntry } from "@/lib/score-sheet";
 import { Notice, Submit } from "../../DeskKit";
 import { EMPTY_DESK_STATE } from "../../state";
 import { saveMatch } from "../actions";
 import { RunTimes } from "../RunTimes";
+
+/** One side's sheet, worked out on the server. */
+export interface SideSheet {
+  log: RunEntry[];
+  runs: number;
+  failed: number;
+  official: number | null;
+  remaining: number | null;
+}
 
 export interface MatchRow {
   id: string;
@@ -22,32 +31,34 @@ export interface MatchRow {
   seedB: number | null;
   scoreA: number | null;
   scoreB: number | null;
-  timesA: number[];
-  timesB: number[];
-  remainingA: number | null;
-  remainingB: number | null;
+  sheetA: SideSheet;
+  sheetB: SideSheet;
   winnerId: string | null;
   status: string;
   arena: string;
+  /** "14:20", when the match has a start time. */
+  time: string;
   walkover: boolean;
   void: boolean;
   tied: boolean;
 }
 
-function Side({ name, id, seed, score, times, remaining, winner }: { name: string; id: string | null; seed: number | null; score: number | null; times: number[]; remaining: number | null; winner: boolean }) {
-  const official = scoreSheet({ times, remaining }).official;
+function Side({ name, id, seed, score, sheet, winner }: { name: string; id: string | null; seed: number | null; score: number | null; sheet: SideSheet; winner: boolean }) {
   return (
     <div className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${winner ? "bg-day-good/10" : ""}`}>
       <span className="day-num w-6 shrink-0 text-right text-xs text-day-faint">{seed ?? ""}</span>
       {id ? <Crest name={name} size={22} /> : <span className="h-[30px] w-[30px] shrink-0 rounded-[28%] border border-dashed border-day-line/20" />}
       <span className="min-w-0 flex-1">
         <span className={`block truncate font-semibold ${id ? "text-day-ink" : "italic text-day-faint"}`}>{name}</span>
-        {times.length ? (
+        {sheet.runs ? (
           <span className="day-num block text-[11px] text-day-muted">
-            {times.length} run{times.length === 1 ? "" : "s"} · best {formatTime(official)}
+            {outcomeText(sheet)} · best {formatTime(sheet.official)}
           </span>
-        ) : remaining !== null ? (
-          <span className="block text-[11px] text-day-muted">{remaining} cells short</span>
+        ) : sheet.failed ? (
+          <span className="day-num block text-[11px] text-day-muted">
+            {outcomeText(sheet)}
+            {sheet.remaining !== null ? ` · closest ${formatCells(sheet.remaining)} short` : ""}
+          </span>
         ) : null}
       </span>
       {winner ? <DayIcon name="check" className="h-4 w-4 text-day-good" /> : null}
@@ -74,6 +85,7 @@ export function MatchForm({ match }: { match: MatchRow }) {
         <span className="flex items-center gap-2 text-day-muted">
           {live ? <span className="day-live-dot" aria-hidden="true" /> : null}
           {match.label}
+          {match.time ? <span className="day-num text-day-faint">· {match.time}</span> : null}
           {match.arena ? <span className="text-day-faint">· {match.arena}</span> : null}
         </span>
         <span className={done ? "text-day-good" : live ? "text-day-live" : "text-day-faint"}>
@@ -81,8 +93,8 @@ export function MatchForm({ match }: { match: MatchRow }) {
         </span>
       </div>
       <div className="p-2">
-        <Side name={match.teamA} id={match.teamAId} seed={match.seedA} score={match.scoreA} times={match.timesA} remaining={match.remainingA} winner={done && match.winnerId === match.teamAId} />
-        <Side name={match.teamB} id={match.teamBId} seed={match.seedB} score={match.scoreB} times={match.timesB} remaining={match.remainingB} winner={done && match.winnerId === match.teamBId} />
+        <Side name={match.teamA} id={match.teamAId} seed={match.seedA} score={match.scoreA} sheet={match.sheetA} winner={done && match.winnerId === match.teamAId} />
+        <Side name={match.teamB} id={match.teamBId} seed={match.seedB} score={match.scoreB} sheet={match.sheetB} winner={done && match.winnerId === match.teamBId} />
       </div>
 
       {ready ? (
@@ -90,10 +102,10 @@ export function MatchForm({ match }: { match: MatchRow }) {
           <form action={action} className="day-dialog space-y-5 border-t border-day-line/[0.07] bg-day-sunk/40 p-4 sm:p-5">
             <input type="hidden" name="id" value={match.id} />
             <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-2">
-              <RunTimes name="timesA" remainingName="remainingA" initialTimes={match.timesA} initialRemaining={match.remainingA} label={match.teamA} compact />
-              <RunTimes name="timesB" remainingName="remainingB" initialTimes={match.timesB} initialRemaining={match.remainingB} label={match.teamB} compact />
+              <RunTimes name="timesA" resultName="resultA" shortName="shortA" initialLog={match.sheetA.log} label={match.teamA} compact />
+              <RunTimes name="timesB" resultName="resultB" shortName="shortB" initialLog={match.sheetB.log} label={match.teamB} compact />
             </div>
-            <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
               <div>
                 <label className="day-label" htmlFor={`w-${match.id}`}>
                   Winner
@@ -118,6 +130,12 @@ export function MatchForm({ match }: { match: MatchRow }) {
                   Maze
                 </label>
                 <input id={`a-${match.id}`} name="arena" defaultValue={match.arena} placeholder="Maze A" className="day-input" />
+              </div>
+              <div>
+                <label className="day-label" htmlFor={`t-${match.id}`}>
+                  Starts at
+                </label>
+                <input id={`t-${match.id}`} name="time" defaultValue={match.time} placeholder="14:20" inputMode="numeric" className="day-input day-num" />
               </div>
             </div>
             <p className="text-xs text-day-muted">

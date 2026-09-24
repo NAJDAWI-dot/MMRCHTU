@@ -3,9 +3,12 @@ import Link from "next/link";
 import { requireSection } from "@/lib/admin-access";
 import { phaseInfo } from "@/lib/bracket";
 import { loadCompetition } from "@/lib/competition";
+import { clockTime } from "@/lib/day-mode";
+import { scoreSheet } from "@/lib/score-sheet";
 import { DeskHead } from "../../DeskKit";
+import { TransferPanel } from "../TransferPanel";
 import { BracketRounds } from "./BracketRounds";
-import type { MatchRow } from "./MatchForm";
+import type { MatchRow, SideSheet } from "./MatchForm";
 
 export const metadata: Metadata = { title: "Bracket" };
 
@@ -14,6 +17,10 @@ export default async function BracketDeskPage() {
   await requireSection("/day/hq/scoring");
   const state = await loadCompetition();
 
+  const sideSheet = (times: number[], remaining: number | null, log: unknown): SideSheet => {
+    const sheet = scoreSheet({ times, remaining, log });
+    return { log: sheet.log, runs: sheet.runs, failed: sheet.failed, official: sheet.official, remaining: sheet.remaining };
+  };
   const nameOf = (id: string | null, fallback: string) => (id ? (state.byId.get(id)?.name ?? "Unknown team") : fallback);
   const rows: MatchRow[] = state.bracket.map((match) => ({
     id: match.id,
@@ -27,13 +34,12 @@ export default async function BracketDeskPage() {
     seedB: match.seedB,
     scoreA: match.scoreA,
     scoreB: match.scoreB,
-    timesA: match.timesA,
-    timesB: match.timesB,
-    remainingA: match.remainingA,
-    remainingB: match.remainingB,
+    sheetA: sideSheet(match.timesA, match.remainingA, match.runLogA),
+    sheetB: sideSheet(match.timesB, match.remainingB, match.runLogB),
     winnerId: match.winnerId,
     status: match.status,
     arena: match.arena,
+    time: match.scheduledAt ? clockTime(match.scheduledAt) : "",
     walkover: match.walkover,
     void: match.void,
     tied: match.tied,
@@ -50,7 +56,7 @@ export default async function BracketDeskPage() {
           state.drawn
             ? champion
               ? `Finished. ${champion.name} are the champions.`
-              : "Open a match, type each team's successful run times, save. Winners move on by themselves."
+              : "Open a match, write down each team's runs and whether they reached the centre, save. Winners move on by themselves."
             : "Not drawn yet."
         }
       />
@@ -65,6 +71,7 @@ export default async function BracketDeskPage() {
       ) : (
         <BracketRounds rows={rows} />
       )}
+      {state.drawn ? <TransferPanel drawn /> : null}
     </div>
   );
 }

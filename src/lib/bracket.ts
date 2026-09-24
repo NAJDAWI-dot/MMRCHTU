@@ -1,4 +1,4 @@
-import { compareResults, scoreSheet } from "@/lib/score-sheet";
+import { cleanLog, compareResults, scoreSheet, type RunEntry } from "@/lib/score-sheet";
 
 /**
  * The competition's scoring: qualifying standings and the knockout bracket.
@@ -102,6 +102,8 @@ export interface RunLike {
   score: number | null;
   runTimes?: number[];
   remaining?: number | null;
+  /** Every run, successful or not (JSON as stored). */
+  runLog?: unknown;
   createdAt: Date;
 }
 
@@ -121,10 +123,14 @@ export interface Standing {
   times: number[];
   /** Cells short of the centre, for a team that never reached it. */
   remaining: number | null;
+  /** Every run, successful or not, in order. */
+  log: RunEntry[];
   /** When the sheet was written: the last tie-break, first to set it wins. */
   bestAt: Date | null;
   /** Successful runs. */
   runs: number;
+  /** Runs that did not reach the centre. */
+  failed: number;
   /** Whether the team has run at all, successful or not. */
   recorded: boolean;
   /** 1-based, or null for a team with no sheet or not eligible. */
@@ -133,16 +139,25 @@ export interface Standing {
   eligible: boolean;
 }
 
-type Sheet = { score: number | null; official: number | null; remaining: number | null; times: number[]; at: Date };
+type Sheet = { score: number | null; official: number | null; remaining: number | null; times: number[]; log: RunEntry[]; failed: number; at: Date };
 
 function sheetOf(run: RunLike): Sheet {
   const times = run.runTimes ?? [];
-  if (times.length === 0 && run.score !== null) {
+  const log = cleanLog(run.runLog);
+  if (times.length === 0 && log.length === 0 && run.score !== null) {
     // Written before times were: the score is all there is.
-    return { score: run.score, official: null, remaining: null, times: [], at: run.createdAt };
+    return { score: run.score, official: null, remaining: null, times: [], log: [], failed: 0, at: run.createdAt };
   }
-  const result = scoreSheet({ times, remaining: run.remaining ?? null });
-  return { score: result.score, official: result.official, remaining: result.remaining, times: result.times, at: run.createdAt };
+  const result = scoreSheet({ times, remaining: run.remaining ?? null, log });
+  return {
+    score: result.score,
+    official: result.official,
+    remaining: result.remaining,
+    times: result.times,
+    log: result.log,
+    failed: result.failed,
+    at: run.createdAt,
+  };
 }
 
 /**
@@ -182,8 +197,10 @@ export function standings(
       official: entry?.official ?? null,
       times: entry?.times ?? [],
       remaining: entry?.remaining ?? null,
+      log: entry?.log ?? [],
       bestAt: entry?.at ?? null,
-      runs: entry ? entry.times.length || (entry.score !== null ? 1 : 0) : 0,
+      runs: entry ? entry.times.length || (entry.score !== null && !entry.log.length ? 1 : 0) : 0,
+      failed: entry?.failed ?? 0,
       recorded: !!entry,
       eligible: !ineligible.has(team.id),
     };
@@ -286,6 +303,9 @@ export interface MatchInput {
   timesB?: number[];
   remainingA?: number | null;
   remainingB?: number | null;
+  /** Each side's every run, successful or not (JSON as stored). */
+  runLogA?: unknown;
+  runLogB?: unknown;
 }
 
 export interface ResolvedMatch extends MatchInput {
@@ -293,6 +313,8 @@ export interface ResolvedMatch extends MatchInput {
   timesB: number[];
   remainingA: number | null;
   remainingB: number | null;
+  runLogA: RunEntry[];
+  runLogB: RunEntry[];
   /** Neither side can ever have a team: two byes met. Nobody plays it. */
   void: boolean;
   /** Decided without being played, because one side is a bye. */
@@ -360,6 +382,8 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
           (stored.timesB?.length ?? 0) > 0 ||
           (stored.remainingA ?? null) !== null ||
           (stored.remainingB ?? null) !== null ||
+          cleanLog(stored.runLogA).length > 0 ||
+          cleanLog(stored.runLogB).length > 0 ||
           (stored.winnerId !== null && stored.teamAId !== null && stored.teamBId !== null));
 
       let scoreA = teamsChanged ? null : (stored?.scoreA ?? null);
@@ -368,6 +392,8 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
       let timesB = teamsChanged ? [] : (stored?.timesB ?? []);
       let remainingA = teamsChanged ? null : (stored?.remainingA ?? null);
       let remainingB = teamsChanged ? null : (stored?.remainingB ?? null);
+      let runLogA = teamsChanged ? [] : cleanLog(stored?.runLogA);
+      let runLogB = teamsChanged ? [] : cleanLog(stored?.runLogB);
       const storedWinner = teamsChanged ? null : (stored?.winnerId ?? null);
 
       let winnerId: string | null = null;
@@ -391,6 +417,8 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
         timesB = [];
         remainingA = null;
         remainingB = null;
+        runLogA = [];
+        runLogB = [];
       } else if (sideB.team && sideA.bye) {
         winnerId = sideB.team;
         walkover = true;
@@ -400,6 +428,8 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
         timesB = [];
         remainingA = null;
         remainingB = null;
+        runLogA = [];
+        runLogB = [];
       }
 
       const match: ResolvedMatch = {
@@ -417,6 +447,8 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
         timesB,
         remainingA,
         remainingB,
+        runLogA,
+        runLogB,
         void: isVoid,
         walkover,
         tied,
@@ -454,7 +486,9 @@ export function changedMatches(input: MatchInput[], resolved: ResolvedMatch[]): 
       (stored.timesA ?? []).join() !== match.timesA.join() ||
       (stored.timesB ?? []).join() !== match.timesB.join() ||
       (stored.remainingA ?? null) !== match.remainingA ||
-      (stored.remainingB ?? null) !== match.remainingB
+      (stored.remainingB ?? null) !== match.remainingB ||
+      JSON.stringify(cleanLog(stored.runLogA)) !== JSON.stringify(match.runLogA) ||
+      JSON.stringify(cleanLog(stored.runLogB)) !== JSON.stringify(match.runLogB)
     );
   });
 }

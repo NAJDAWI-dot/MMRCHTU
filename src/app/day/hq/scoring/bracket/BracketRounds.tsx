@@ -43,7 +43,7 @@ export function BracketRounds({ rows }: { rows: MatchRow[] }) {
           // redraws with fresh values whenever an earlier result changes who
           // is in it; the green "done" state is the confirmation then.
           <MatchForm
-            key={`${row.id}:${row.teamAId}:${row.teamBId}:${row.timesA.join()}:${row.timesB.join()}:${row.remainingA}:${row.remainingB}:${row.winnerId}:${row.status}`}
+            key={`${row.id}:${row.teamAId}:${row.teamBId}:${JSON.stringify(row.sheetA.log)}:${JSON.stringify(row.sheetB.log)}:${row.winnerId}:${row.status}:${row.time}:${row.arena}`}
             match={row}
           />
         ))}

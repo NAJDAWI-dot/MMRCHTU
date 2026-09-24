@@ -13,7 +13,7 @@ import { loadDaySite } from "@/lib/day-site";
 import { prisma } from "@/lib/prisma";
 import { finalPlacings, roundLeaderboard, type RoundResult } from "@/lib/screen-boards";
 import { groupByTier } from "@/lib/sponsors";
-import { formatPoints, formatTime } from "@/lib/score-sheet";
+import { formatCells, formatPoints, formatTime } from "@/lib/score-sheet";
 import { HallScreen, type ScreenPanel } from "./HallScreen";
 
 export const revalidate = 30;
@@ -262,7 +262,11 @@ export default async function HallScreenPage() {
         key: row.teamId,
         rank: String(row.rank),
         name: row.name,
-        detail: row.runs ? `${row.runs} ${row.runs === 1 ? "run" : "runs"} · best ${formatTime(row.official)}` : "No run reached the centre",
+        detail: row.runs
+          ? `${row.failed ? `${row.runs} of ${row.runs + row.failed} runs` : `${row.runs} ${row.runs === 1 ? "run" : "runs"}`} · best ${formatTime(row.official)}`
+          : row.remaining !== null
+            ? `No run reached the centre · closest ${formatCells(row.remaining)} short`
+            : "No run reached the centre",
         score: formatPoints(row.best),
         tone: row.rank === 1 ? "text-day-gold" : "text-day-faint",
         bar: leader && row.best ? Math.max(4, Math.round((row.best / leader) * 100)) : undefined,
