@@ -26,7 +26,7 @@ export function QueueCards({ now, onDeck, inHole, calledAt, onDeckEta, inHoleEta
           {now ? "On the maze" : "First up"}
         </p>
         {now || onDeck ? (
-          <Link href={`/day/teams/${(now ?? onDeck)!.id}`} className="group mt-5 flex items-center gap-4">
+          <Link href={`/day/teams/${(now ?? onDeck)!.id}`} data-team={(now ?? onDeck)!.id} className="group mt-5 flex items-center gap-4">
             <Crest name={(now ?? onDeck)!.name} size={64} />
             <span className="min-w-0">
               <span className="day-display line-clamp-2 block break-words text-3xl leading-tight text-day-ink group-hover:underline sm:text-5xl">
@@ -51,7 +51,7 @@ export function QueueCards({ now, onDeck, inHole, calledAt, onDeckEta, inHoleEta
           <li key={slot.label} className="day-card p-5 sm:p-6" data-reveal style={{ ["--i" as string]: index + 1 }}>
             <p className={`text-sm font-semibold ${slot.tone}`}>{slot.label}</p>
             {slot.entry ? (
-              <Link href={`/day/teams/${slot.entry.id}`} className="group mt-3 flex items-center gap-3">
+              <Link href={`/day/teams/${slot.entry.id}`} data-team={slot.entry.id} className="group mt-3 flex items-center gap-3">
                 <Crest name={slot.entry.name} size={32} />
                 <span className="min-w-0">
                   <span className="day-display line-clamp-2 block break-words text-2xl leading-tight text-day-ink group-hover:underline">

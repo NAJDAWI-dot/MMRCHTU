@@ -67,6 +67,15 @@ describe("who opens what", () => {
     expect(canOpen(["SCORING"], "/day/hq/sponsors")).toBe(false);
   });
 
+  it("gives the judge tablet and the Reveal desk to scoring only", () => {
+    expect(canOpen(["SCORING"], "/day/judge")).toBe(true);
+    expect(canOpen(["SCORING"], "/day/hq/scoring/reveal")).toBe(true);
+    for (const role of ["REGISTRATION", "MEDIA", "OPERATIONS"] as const) {
+      expect(canOpen([role], "/day/judge")).toBe(false);
+      expect(canOpen([role], "/day/hq/scoring/reveal")).toBe(false);
+    }
+  });
+
   it("opens nothing but the dashboard and hub for an account with no role", () => {
     const open = ADMIN_LINKS.filter((link) => canOpen([], link.href)).map((link) => link.href);
     expect(open.sort()).toEqual(["/admin", "/day/hq"]);

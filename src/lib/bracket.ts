@@ -136,6 +136,8 @@ export interface Standing {
   /** 1-based, or null for a team with no sheet or not eligible. */
   rank: number | null;
   qualified: boolean;
+  /** The judges put the team through, or kept it out, whatever its place. */
+  override: QualifyOverride;
   eligible: boolean;
 }
 
@@ -175,10 +177,11 @@ function sheetOf(run: RunLike): Sheet {
 export function standings(
   teams: TeamLike[],
   runs: RunLike[],
-  options: { cutoff?: number; ineligible?: ReadonlySet<string> } = {},
+  options: { cutoff?: number; ineligible?: ReadonlySet<string>; overrides?: ReadonlyMap<string, QualifyOverride> } = {},
 ): Standing[] {
   const cutoff = options.cutoff ?? QUALIFIERS;
   const ineligible = options.ineligible ?? new Set<string>();
+  const overrides = options.overrides ?? new Map<string, QualifyOverride>();
 
   const best = new Map<string, Sheet>();
   for (const run of runs) {
@@ -222,10 +225,34 @@ export function standings(
     );
   const unranked = rows.filter((row) => !row.recorded || !row.eligible).sort(byName);
 
+  // The judges' picks go through first and take places from the cut; the table
+  // fills what is left, passing over anyone the judges kept out.
+  const overrideOf = (id: string): QualifyOverride => overrides.get(id) ?? "";
+  const forcedIn = [...ranked, ...unranked].filter((row) => row.eligible && overrideOf(row.teamId) === "IN").length;
+  let open = Math.max(0, cutoff - forcedIn);
+  const through = new Set<string>();
+  for (const row of ranked) {
+    const override = overrideOf(row.teamId);
+    if (override === "IN") through.add(row.teamId);
+    else if (override === "" && open > 0) {
+      through.add(row.teamId);
+      open--;
+    }
+  }
+  for (const row of unranked) if (row.eligible && overrideOf(row.teamId) === "IN") through.add(row.teamId);
+
   return [
-    ...ranked.map((row, index) => ({ ...row, rank: index + 1, qualified: index < cutoff })),
-    ...unranked.map((row) => ({ ...row, rank: null, qualified: false })),
+    ...ranked.map((row, index) => ({ ...row, rank: index + 1, qualified: through.has(row.teamId), override: overrideOf(row.teamId) })),
+    ...unranked.map((row) => ({ ...row, rank: null, qualified: through.has(row.teamId), override: overrideOf(row.teamId) })),
   ];
+}
+
+/** The judges' say on one team's qualifying: through, out, or "" for the table's say. */
+export type QualifyOverride = "" | "IN" | "OUT";
+
+export function parseQualifyOverride(value: unknown): QualifyOverride {
+  const raw = String(value ?? "").toUpperCase();
+  return raw === "IN" || raw === "OUT" ? raw : "";
 }
 
 // ------------------------------------------------------------------ seeding
@@ -306,6 +333,8 @@ export interface MatchInput {
   /** Each side's every run, successful or not (JSON as stored). */
   runLogA?: unknown;
   runLogB?: unknown;
+  /** The stored winner was the judges' decision and beats the sheets. */
+  winnerOverride?: boolean;
 }
 
 export interface ResolvedMatch extends MatchInput {
@@ -315,6 +344,7 @@ export interface ResolvedMatch extends MatchInput {
   remainingB: number | null;
   runLogA: RunEntry[];
   runLogB: RunEntry[];
+  winnerOverride: boolean;
   /** Neither side can ever have a team: two byes met. Nobody plays it. */
   void: boolean;
   /** Decided without being played, because one side is a bye. */
@@ -395,6 +425,7 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
       let runLogA = teamsChanged ? [] : cleanLog(stored?.runLogA);
       let runLogB = teamsChanged ? [] : cleanLog(stored?.runLogB);
       const storedWinner = teamsChanged ? null : (stored?.winnerId ?? null);
+      let winnerOverride = !teamsChanged && !!stored?.winnerOverride;
 
       let winnerId: string | null = null;
       let walkover = false;
@@ -402,7 +433,10 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
       const isVoid = sideA.bye && sideB.bye;
 
       if (sideA.team && sideB.team) {
-        if (scoreA !== null && scoreB !== null && compareScores(scoreA, scoreB, direction) !== 0) {
+        if (winnerOverride && (storedWinner === sideA.team || storedWinner === sideB.team)) {
+          // The judges' decision stands, whatever the sheets say.
+          winnerId = storedWinner;
+        } else if (scoreA !== null && scoreB !== null && compareScores(scoreA, scoreB, direction) !== 0) {
           winnerId = compareScores(scoreA, scoreB, direction) < 0 ? sideA.team : sideB.team;
         } else {
           tied = scoreA !== null && scoreB !== null;
@@ -419,6 +453,7 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
         remainingB = null;
         runLogA = [];
         runLogB = [];
+        winnerOverride = false;
       } else if (sideB.team && sideA.bye) {
         winnerId = sideB.team;
         walkover = true;
@@ -430,6 +465,7 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
         remainingB = null;
         runLogA = [];
         runLogB = [];
+        winnerOverride = false;
       }
 
       const match: ResolvedMatch = {
@@ -449,6 +485,7 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
         remainingB,
         runLogA,
         runLogB,
+        winnerOverride: winnerOverride && winnerId !== null,
         void: isVoid,
         walkover,
         tied,
@@ -483,6 +520,7 @@ export function changedMatches(input: MatchInput[], resolved: ResolvedMatch[]): 
       stored.scoreA !== match.scoreA ||
       stored.scoreB !== match.scoreB ||
       stored.winnerId !== match.winnerId ||
+      !!stored.winnerOverride !== match.winnerOverride ||
       (stored.timesA ?? []).join() !== match.timesA.join() ||
       (stored.timesB ?? []).join() !== match.timesB.join() ||
       (stored.remainingA ?? null) !== match.remainingA ||

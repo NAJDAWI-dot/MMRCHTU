@@ -6,6 +6,7 @@ import { DayIcon, type DayIconName } from "@/components/day-site/icons";
 import { phaseInfo, type Journey, type ResolvedMatch } from "@/lib/bracket";
 import type { GuideBlock } from "@/lib/day-guides";
 import { clockTime } from "@/lib/day-mode";
+import { heldBackLines, type Reveal } from "@/lib/reveal";
 import { MAZE_CELLS, formatPoints, formatReached, outcomeText, scoreSheet, workingOf } from "@/lib/score-sheet";
 
 /** The heading every day page opens with, arriving a line at a time. */
@@ -138,6 +139,27 @@ export function Empty({ icon = "flag", title, children }: { icon?: DayIconName; 
   );
 }
 
+/** A quiet note that some results on the page are still to be announced. */
+export function HeldBack({ reveal, phases }: { reveal?: Reveal; phases: readonly number[] }) {
+  const lines = heldBackLines(reveal, phases);
+  if (!lines.length) return null;
+  return (
+    <div className="day-card flex items-start gap-4 p-4 ring-1 ring-day-gold/30 sm:p-5" role="note" data-reveal>
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-day-gold/15 text-day-gold">
+        <DayIcon name="lock" className="h-5 w-5" />
+      </span>
+      <div className="space-y-0.5 pt-0.5">
+        {lines.map((line) => (
+          <p key={line} className="text-sm font-semibold text-day-ink">
+            {line}
+          </p>
+        ))}
+        <p className="text-xs text-day-muted">Keep this page open: it updates the moment they are revealed.</p>
+      </div>
+    </div>
+  );
+}
+
 /**
  * A match sheet, shown: every run in order, the successful ones by their time
  * with the fastest picked out as the official time, the failed ones crossed,
@@ -217,7 +239,7 @@ export function MatchCard({
           {arena ? <span className="text-day-faint">· {arena}</span> : null}
         </span>
         <span className="text-day-faint">
-          {match.walkover ? "Bye" : match.winnerId ? "Final" : `Match ${match.slot + 1}`}
+          {match.walkover ? "Bye" : match.winnerOverride ? "Judges' decision" : match.winnerId ? "Final" : `Match ${match.slot + 1}`}
         </span>
       </div>
       <div className="divide-y divide-day-line/[0.06]">
@@ -226,7 +248,7 @@ export function MatchCard({
           const won = !!match.winnerId && match.winnerId === side.id;
           const lost = !!match.winnerId && !!side.id && match.winnerId !== side.id;
           return (
-            <div key={index} className={`px-5 py-3.5 ${highlight && side.id === highlight ? "bg-day-crimson/[0.05]" : ""}`}>
+            <div key={index} data-team={side.id ?? undefined} className={`px-5 py-3.5 ${highlight && side.id === highlight ? "bg-day-crimson/[0.05]" : ""}`}>
               <div className="flex items-center gap-3">
                 {name ? (
                   <Crest name={name} size={26} ring={won && match.round === 6} />

@@ -6,6 +6,7 @@ import { loadCompetition } from "@/lib/competition";
 import { clockTime } from "@/lib/day-mode";
 import { scoreSheet } from "@/lib/score-sheet";
 import { DeskHead } from "../../DeskKit";
+import { RevealBanner } from "../RevealBanner";
 import { TransferPanel } from "../TransferPanel";
 import { BracketRounds } from "./BracketRounds";
 import type { MatchRow, SideSheet } from "./MatchForm";
@@ -37,6 +38,7 @@ export default async function BracketDeskPage() {
     sheetA: sideSheet(match.timesA, match.remainingA, match.runLogA),
     sheetB: sideSheet(match.timesB, match.remainingB, match.runLogB),
     winnerId: match.winnerId,
+    winnerOverride: match.winnerOverride,
     status: match.status,
     arena: match.arena,
     time: match.scheduledAt ? clockTime(match.scheduledAt) : "",
@@ -60,6 +62,7 @@ export default async function BracketDeskPage() {
             : "Not drawn yet."
         }
       />
+      <RevealBanner phases={[1, 2, 3, 4, 5, 6]} />
       {!state.drawn ? (
         <p className="day-card p-6 text-day-muted">
           The bracket is drawn from the qualifying table.{" "}

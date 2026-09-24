@@ -52,6 +52,9 @@ const COMPETITION_DAY_FALLBACK: CompetitionDayConfig = {
   queueCalledAt: null,
   queueHistory: "",
   dayAlbumId: "",
+  hiddenResults: "",
+  hiddenAdvance: "",
+  lastReveal: "",
   updatedAt: NEVER_SAVED,
 };
 

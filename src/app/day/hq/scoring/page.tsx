@@ -13,6 +13,7 @@ import { ArmedForm, DeskForm, DeskHead, Submit } from "../DeskKit";
 import { loadQueue } from "@/lib/day-queue";
 import { callBack, callChosen, callNext, clearRunOrder, drawBracket, drawRunOrder, reopenQualifying, saveScoringSettings, standDown } from "./actions";
 import { QualifyingDesk, type DeskTeam } from "./QualifyingDesk";
+import { RevealBanner } from "./RevealBanner";
 import { TransferPanel } from "./TransferPanel";
 import { openDaySite } from "@/lib/day-links";
 
@@ -54,6 +55,7 @@ export default async function QualifyingDeskPage() {
       slot: slotOf(team),
       rank: standing?.rank ?? null,
       qualified: !!standing?.qualified,
+      override: standing?.override ?? "",
       sheet: row && sheet
         ? {
             log: sheet.log,
@@ -81,6 +83,8 @@ export default async function QualifyingDeskPage() {
         title="Qualifying"
         lead={`Phase 1 · ${QUALIFYING_STATUS_LABELS[state.qualifyingStatus]} · ${ran} of ${state.competitors.length} teams have run. Write down every run and whether it reached the centre; the score is (successful runs ÷ fastest time) × 1000.`}
       />
+
+      <RevealBanner phases={[1]} />
 
       {/* ------------------------------------------------ running order */}
       <section className="day-card grid grid-cols-[minmax(0,1fr)] gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">

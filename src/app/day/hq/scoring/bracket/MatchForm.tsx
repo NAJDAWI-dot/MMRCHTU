@@ -34,6 +34,8 @@ export interface MatchRow {
   sheetA: SideSheet;
   sheetB: SideSheet;
   winnerId: string | null;
+  /** The winner is the judges' decision, not the sheets'. */
+  winnerOverride: boolean;
   status: string;
   arena: string;
   /** "14:20", when the match has a start time. */
@@ -89,7 +91,7 @@ export function MatchForm({ match }: { match: MatchRow }) {
           {match.arena ? <span className="text-day-faint">· {match.arena}</span> : null}
         </span>
         <span className={done ? "text-day-good" : live ? "text-day-live" : "text-day-faint"}>
-          {match.void ? "No match" : match.walkover ? "Bye" : done ? "Done" : live ? "On the maze" : ready ? "Ready" : "Waiting for teams"}
+          {match.void ? "No match" : match.walkover ? "Bye" : done ? (match.winnerOverride ? "Judges' decision" : "Done") : live ? "On the maze" : ready ? "Ready" : "Waiting for teams"}
         </span>
       </div>
       <div className="p-2">
@@ -108,12 +110,12 @@ export function MatchForm({ match }: { match: MatchRow }) {
             <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
               <div>
                 <label className="day-label" htmlFor={`w-${match.id}`}>
-                  Winner
+                  Who goes through
                 </label>
-                <select id={`w-${match.id}`} name="winnerId" defaultValue={match.winnerId ?? ""} className="day-input">
-                  <option value="">From the sheets</option>
-                  <option value={match.teamAId!}>{match.teamA}</option>
-                  <option value={match.teamBId!}>{match.teamB}</option>
+                <select id={`w-${match.id}`} name="winnerId" defaultValue={match.winnerOverride ? (match.winnerId ?? "") : ""} className="day-input">
+                  <option value="">Decided by the sheets</option>
+                  <option value={match.teamAId!}>{match.teamA}: judges&rsquo; decision</option>
+                  <option value={match.teamBId!}>{match.teamB}: judges&rsquo; decision</option>
                 </select>
               </div>
               <div>
@@ -139,7 +141,7 @@ export function MatchForm({ match }: { match: MatchRow }) {
               </div>
             </div>
             <p className="text-xs text-day-muted">
-              The winner is worked out from the sheets. Pick one only for a dead heat, or a match one team did not turn up for.
+              The winner is worked out from the sheets. Pick a team only for a dead heat, a no-show or a ruling: the judges&rsquo; pick goes through whatever the sheets say.
             </p>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <label className="flex items-center gap-2 text-xs text-day-muted">

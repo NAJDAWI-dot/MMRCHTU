@@ -58,6 +58,9 @@ export type MatchPlan =
  * official time on an exact tie, then whoever got closer to the centre when
  * neither side reached it. A tie that survives all of that, or a match decided
  * without being run (a no-show), takes the scorer's pick.
+ *
+ * With `override`, the pick is the judges' decision and stands whatever the
+ * sheets say (a disqualification, a ruling on a protest).
  */
 export function planMatchResult(
   rows: StoredMatch[],
@@ -65,11 +68,13 @@ export function planMatchResult(
   a: SheetResult,
   b: SheetResult,
   picked: string | null,
+  override = false,
 ): MatchPlan {
   const played = a.log.length > 0 || b.log.length > 0;
+  const winnerOverride = override && !!picked;
 
   let winnerId: string | null = picked;
-  if (played && target.teamAId && target.teamBId) {
+  if (played && target.teamAId && target.teamBId && !winnerOverride) {
     const cmp = compareResults(a, b);
     if (cmp !== 0) winnerId = cmp < 0 ? target.teamAId : target.teamBId;
     else if (!picked) return { ok: false, message: "The two sheets are level on everything the rulebook compares. Pick the winner." };
@@ -88,6 +93,7 @@ export function planMatchResult(
           runLogA: a.log,
           runLogB: b.log,
           winnerId,
+          winnerOverride,
         }
       : row,
   );

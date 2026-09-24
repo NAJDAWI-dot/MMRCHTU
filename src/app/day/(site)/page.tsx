@@ -5,9 +5,10 @@ import { Crest } from "@/components/day-site/Crest";
 import { ChapterLogo } from "@/components/day-site/DayNav";
 import { HeroMaze } from "@/components/day-site/HeroMaze";
 import { DayIcon, type DayIconName } from "@/components/day-site/icons";
-import { Empty, MatchCard, MoreLink, SectionTitle } from "@/components/day-site/ui";
+import { FollowPicker } from "@/components/day-site/Follow";
+import { Empty, HeldBack, MatchCard, MoreLink, SectionTitle } from "@/components/day-site/ui";
 import { KNOCKOUT_ROUNDS, QUALIFIERS, matchesInRound, phaseInfo } from "@/lib/bracket";
-import { loadCompetition } from "@/lib/competition";
+import { loadPublicCompetition } from "@/lib/public-competition";
 import { shouldShowCountdown } from "@/lib/countdown";
 import { clockTime, postedAgo } from "@/lib/day-mode";
 import { loadDaySite } from "@/lib/day-site";
@@ -37,7 +38,7 @@ function progressThrough(start: Date, end: Date | null | undefined, now: Date): 
 /** The live hub: the fanciest page on the site, and the one open all day. */
 export default async function DayLivePage() {
   await requireDayViewer();
-  const [state, site, queue, gallery] = await Promise.all([loadCompetition(), loadDaySite(), loadQueue(), loadDayPhotos(6)]);
+  const [state, site, queue, gallery] = await Promise.all([loadPublicCompetition(), loadDaySite(), loadQueue(), loadDayPhotos(6)]);
   const nameOf = (id: string | null) => (id ? (state.byId.get(id)?.name ?? null) : null);
 
   const champion = state.competitors.find((team) => team.journey.state === "CHAMPION");
@@ -175,7 +176,7 @@ export default async function DayLivePage() {
         {[
           { label: "Teams competing", value: state.competitors.length, icon: "teams" as const, tone: "text-day-ink" },
           { label: "Checked in", value: checkedIn, icon: "check" as const, tone: "text-day-good" },
-          { label: state.drawn ? "In the bracket" : "Have run", value: state.drawn ? Math.min(ranked.length, QUALIFIERS) : ran, icon: "timer" as const, tone: "text-day-crimson" },
+          { label: state.drawn ? "In the bracket" : "Have run", value: state.drawn ? state.table.filter((row) => row.qualified).length : ran, icon: "timer" as const, tone: "text-day-crimson" },
           { label: "Matches decided", value: decided, icon: "flag" as const, tone: "text-day-gold" },
         ].map((stat, index) => (
           <div key={stat.label} className="day-card p-5 sm:p-6" data-reveal style={{ ["--i" as string]: index }}>
@@ -189,6 +190,10 @@ export default async function DayLivePage() {
           </div>
         ))}
       </section>
+
+      {state.competitors.length ? <FollowPicker teams={state.competitors.map((team) => ({ id: team.id, name: team.name }))} /> : null}
+
+      <HeldBack reveal={state.reveal} phases={Array.from({ length: phase }, (_, index) => index + 1)} />
 
       {/* ------------------------------------------------- now on the maze */}
       <section className="space-y-6">
@@ -301,7 +306,7 @@ export default async function DayLivePage() {
           {ranked.length ? (
             <ol className="day-card divide-y divide-day-line/[0.06] overflow-hidden" data-reveal>
               {ranked.slice(0, 8).map((row) => (
-                <li key={row.teamId}>
+                <li key={row.teamId} data-team={row.teamId}>
                   <Link href={`/day/teams/${row.teamId}`} className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-day-ink/[0.03]">
                     <span
                       className={`day-num day-display w-8 text-center text-2xl ${row.rank === 1 ? "text-day-gold" : "text-day-faint"}`}

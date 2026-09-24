@@ -5,6 +5,8 @@ import { DayAutoRefresh } from "@/components/day/DayAutoRefresh";
 import { DayIcon } from "@/components/day-site/icons";
 import { MMRC_PLATE } from "@/lib/brand";
 import { DAY_TIME_ZONE } from "@/lib/day-mode";
+import type { RevealShow } from "@/lib/reveal-show";
+import { RevealTakeover, playedBefore } from "./RevealTakeover";
 
 export interface ScreenPanel {
   key: string;
@@ -57,22 +59,33 @@ export function HallScreen({
   phaseLine,
   alert,
   followUrl,
+  reveal = null,
 }: {
   panels: ScreenPanel[];
   phaseLine: string;
   alert: ScreenAlert | null;
   followUrl: string;
+  /** Results just revealed from HQ: played full screen, once per screen. */
+  reveal?: RevealShow | null;
 }) {
   // Read here rather than on the server: once the day site is public the page
   // is served from the cache, which never sees the query string.
   // ?panel=standings holds one panel; ?theme=light suits a screen in a bright room.
+  // ?reveal=again replays the latest reveal, to rehearse it.
   const [pinned, setPinned] = useState<string | null>(null);
   const [light, setLight] = useState(false);
+  const [replay, setReplay] = useState(false);
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
     setPinned(query.get("panel"));
     setLight(query.get("theme") === "light");
+    setReplay(query.get("reveal") === "again");
   }, []);
+
+  const [playing, setPlaying] = useState<RevealShow | null>(null);
+  useEffect(() => {
+    if (reveal && (replay || !playedBefore(reveal.id))) setPlaying(reveal);
+  }, [reveal, replay]);
 
   // now, a, now, b, now, c: "now" between each of the others.
   const sequence = useMemo(() => {
@@ -235,6 +248,16 @@ export function HallScreen({
             </div>
           </footer>
         </div>
+        {playing ? (
+          <RevealTakeover
+            key={playing.id}
+            show={playing}
+            onDone={() => {
+              setPlaying(null);
+              setReplay(false);
+            }}
+          />
+        ) : null}
       </div>
     </div>
   );

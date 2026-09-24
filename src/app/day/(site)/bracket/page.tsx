@@ -3,9 +3,11 @@ import Link from "next/link";
 import { CenteredScroll } from "@/components/day-site/CenteredScroll";
 import { Crest } from "@/components/day-site/Crest";
 import { DayIcon } from "@/components/day-site/icons";
-import { Empty, MatchCard, MoreLink, PageHead } from "@/components/day-site/ui";
+import { Empty, HeldBack, MatchCard, MoreLink, PageHead } from "@/components/day-site/ui";
+import { advanceShown } from "@/lib/reveal";
 import { KNOCKOUT_ROUNDS, phaseInfo } from "@/lib/bracket";
-import { loadCompetition, type BracketMatch } from "@/lib/competition";
+import { type BracketMatch } from "@/lib/competition";
+import { loadPublicCompetition } from "@/lib/public-competition";
 import { formatPoints } from "@/lib/score-sheet";
 import { requireDayViewer } from "@/lib/day-access";
 
@@ -36,6 +38,7 @@ function Cell({ match, nameOf }: { match: BracketMatch | undefined; nameOf: Name
         return (
           <div
             key={index}
+            data-team={side.id ?? undefined}
             className={`flex h-9 items-center gap-1.5 px-2.5 ${index === 0 ? "border-b border-day-line/[0.07]" : ""} ${won ? "bg-day-gold/10" : ""}`}
           >
             <span className="day-num w-4 shrink-0 text-right text-[10px] text-day-faint">{side.seed ?? ""}</span>
@@ -94,7 +97,7 @@ function Column({ matches, side, nameOf }: { matches: (BracketMatch | undefined)
 /** Phases 2 to 6: two halves of the draw, meeting at the final. */
 export default async function DayBracketPage() {
   await requireDayViewer();
-  const state = await loadCompetition();
+  const state = await loadPublicCompetition();
   const nameOf: NameOf = (id) => (id ? (state.byId.get(id)?.name ?? null) : null);
   const at = (round: number, slot: number) => state.bracket.find((m) => m.round === round && m.slot === slot);
   const half = (round: number, side: "left" | "right") => {
@@ -115,7 +118,13 @@ export default async function DayBracketPage() {
         lead="The top 32 from qualifying, seeded 1 against 32, 2 against 31 and so on. Two mice run side by side on identical mazes, and the higher score goes through."
       />
 
-      {!state.drawn ? (
+      <HeldBack reveal={state.reveal} phases={[2, 3, 4, 5, 6]} />
+
+      {!state.drawn && state.reveal && !advanceShown(state.reveal, 1) && state.qualifyingStatus === "LOCKED" ? (
+        <Empty icon="lock" title="The draw is announced soon">
+          Qualifying is over and the judges have the bracket. It appears here the moment it is revealed.
+        </Empty>
+      ) : !state.drawn ? (
         <Empty icon="bracket" title="The draw has not happened yet">
           The bracket is drawn from the qualifying table once qualifying closes.
           <span className="mt-4 block">

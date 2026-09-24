@@ -668,6 +668,160 @@ html.lenis body {
   }
 }
 
+/* ------------------------------------------------------- the reveal */
+
+/* The hall screen's takeover when results are revealed: a dark stage with a
+   crimson and gold glow, a countdown, the title, then the rows one by one. */
+.reveal-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 55% at 50% 38%, rgb(var(--day-gold) / 0.22), transparent 70%),
+    radial-gradient(90% 80% at 50% 110%, rgb(var(--day-crimson) / 0.35), transparent 70%),
+    rgb(14 8 20);
+  color: rgb(255 248 240);
+  animation: reveal-stage-in 600ms ease-out both;
+}
+
+.reveal-stage.is-leaving {
+  animation: reveal-stage-out 900ms ease-in both;
+}
+
+@keyframes reveal-stage-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes reveal-stage-out {
+  to {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+}
+
+.reveal-count {
+  animation: reveal-count 1000ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes reveal-count {
+  0% {
+    opacity: 0;
+    transform: scale(2.4);
+    filter: blur(12px);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+
+.reveal-title {
+  animation: reveal-title 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes reveal-title {
+  from {
+    opacity: 0;
+    letter-spacing: 0.4em;
+    filter: blur(14px);
+  }
+  to {
+    opacity: 1;
+    letter-spacing: -0.01em;
+    filter: blur(0);
+  }
+}
+
+.reveal-row {
+  animation: reveal-row 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes reveal-row {
+  from {
+    opacity: 0;
+    transform: translateY(5vh) scale(0.94);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+/* The gold that runs across first place and the champions' name. */
+.reveal-shine {
+  background: linear-gradient(100deg, rgb(var(--day-gold)) 20%, rgb(255 236 170) 45%, rgb(var(--day-gold)) 70%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: reveal-shine 2600ms linear infinite;
+}
+
+@keyframes reveal-shine {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+/* Light behind the champions, turning slowly. */
+.reveal-rays {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: 180vmax;
+  height: 180vmax;
+  translate: -50% -50%;
+  background: repeating-conic-gradient(from 0deg, rgb(var(--day-gold) / 0.16) 0deg 6deg, transparent 6deg 18deg);
+  mask-image: radial-gradient(circle, black 0%, transparent 55%);
+  animation: day-spin 60s linear infinite;
+}
+
+.reveal-burst {
+  animation: reveal-burst 1400ms ease-out both;
+}
+
+@keyframes reveal-burst {
+  from {
+    opacity: 0.9;
+    transform: scale(0.2);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+.reveal-confetti {
+  position: absolute;
+  top: -4vh;
+  width: 1.1vh;
+  height: 2.2vh;
+  border-radius: 0.2vh;
+  animation: reveal-confetti linear both;
+}
+
+@keyframes reveal-confetti {
+  to {
+    transform: translate3d(var(--drift, 0), 115vh, 0) rotate(var(--spin, 720deg));
+  }
+}
+
 /* -------------------------------------------------------- reduced motion */
 
 @media (prefers-reduced-motion: reduce) {
@@ -683,8 +837,19 @@ html.lenis body {
   .day-dialog,
   .day-banner-in,
   .screen-panel,
-  .screen-progress {
+  .screen-progress,
+  .reveal-stage,
+  .reveal-count,
+  .reveal-title,
+  .reveal-row,
+  .reveal-shine,
+  .reveal-rays,
+  .reveal-burst {
     animation: none;
+  }
+
+  .reveal-confetti {
+    display: none;
   }
 
   .day-run-path {
