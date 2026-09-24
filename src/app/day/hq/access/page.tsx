@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { requireSection } from "@/lib/admin-access";
 import { DAY_AUDIENCE_LABELS, parseAudience, parseViewerIds } from "@/lib/day-audience";
 import { DAY_MODE_HIDDEN_PAGES } from "@/lib/day-mode";
@@ -7,6 +6,7 @@ import { getCompetitionDayConfig } from "@/lib/site-config";
 import { prisma } from "@/lib/prisma";
 import { DeskHead } from "../DeskKit";
 import { AudienceForm } from "./DayModeForms";
+import { openDaySite } from "@/lib/day-links";
 
 export const metadata: Metadata = { title: "Access" };
 
@@ -47,9 +47,9 @@ export default async function DaySiteAccessPage() {
                 : "Nobody has been named yet, so only Master admins can open it."}
         </p>
         <p className="mt-4">
-          <Link href="/day" className="day-btn day-btn-soft day-btn-sm">
+          <a href={openDaySite("/day")} className="day-btn day-btn-soft day-btn-sm">
             Open the day site
-          </Link>
+          </a>
         </p>
         <p className="mt-3 text-xs text-day-faint">
           Signed in before this was set up and seeing “not found”? Sign out and back in once.

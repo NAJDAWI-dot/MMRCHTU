@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { ROLE_LABELS, canOpen } from "@/lib/roles";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import { DESKS } from "./desks";
+import { openDaySite } from "@/lib/day-links";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -79,14 +80,14 @@ export default async function DayHqPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/day" className="day-btn day-btn-ink">
+            <a href={openDaySite("/day")} className="day-btn day-btn-ink">
               <DayIcon name="live" className="h-4 w-4" />
               Open the day site
-            </Link>
-            <Link href="/day/screen" target="_blank" className="day-btn day-btn-soft" title="For the projector: open it on the laptop driving it and press F">
+            </a>
+            <a href={openDaySite("/day/screen")} target="_blank" className="day-btn day-btn-soft" title="For the projector: open it on the laptop driving it and press F">
               <DayIcon name="expand" className="h-4 w-4" />
               Hall screen
-            </Link>
+            </a>
           </div>
         </div>
 

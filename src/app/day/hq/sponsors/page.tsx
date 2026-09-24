@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { DayIcon } from "@/components/day-site/icons";
 import { SponsorLogo } from "@/components/day-site/SponsorLogo";
 import { requireSection } from "@/lib/admin-access";
@@ -9,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { SPONSOR_NAME_MAX, SPONSOR_TIER_MAX } from "@/lib/sponsors";
 import { ArmedForm, DeskForm, DeskHead, Submit, Toggle } from "../DeskKit";
 import { addSponsor, deleteSponsor, moveSponsor, saveSponsor } from "./actions";
+import { openDaySite } from "@/lib/day-links";
 
 export const metadata: Metadata = { title: "Sponsors" };
 
@@ -30,10 +30,10 @@ export default async function SponsorsDeskPage() {
         title="Sponsors"
         lead="The sponsors slide on the hall screen. Sponsors with the same tier are shown together, in the order of this list."
       >
-        <Link href="/day/screen?panel=sponsors" target="_blank" className="day-btn day-btn-soft day-btn-sm">
+        <a href={openDaySite("/day/screen?panel=sponsors")} target="_blank" className="day-btn day-btn-soft day-btn-sm">
           <DayIcon name="expand" className="h-4 w-4" />
           See the slide
-        </Link>
+        </a>
       </DeskHead>
 
       {isStorageConfigured() ? null : (

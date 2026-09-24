@@ -14,6 +14,7 @@ import { loadQueue } from "@/lib/day-queue";
 import { callBack, callChosen, callNext, clearRunOrder, drawBracket, drawRunOrder, reopenQualifying, saveScoringSettings, standDown } from "./actions";
 import { QualifyingDesk, type DeskTeam } from "./QualifyingDesk";
 import { TransferPanel } from "./TransferPanel";
+import { openDaySite } from "@/lib/day-links";
 
 export const metadata: Metadata = { title: "Qualifying" };
 
@@ -136,10 +137,10 @@ export default async function QualifyingDeskPage() {
                 team&rsquo;s page follow this.
               </p>
             </div>
-            <Link href="/day/screen" target="_blank" className="day-btn day-btn-soft day-btn-sm">
+            <a href={openDaySite("/day/screen")} target="_blank" className="day-btn day-btn-soft day-btn-sm">
               <DayIcon name="live" className="h-4 w-4" />
               Hall screen
-            </Link>
+            </a>
           </div>
 
           <ol className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-3">
