@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DayIcon } from "@/components/day-site/icons";
-import { requireSection } from "@/lib/admin-access";
+import { requireSection, rolesOf } from "@/lib/admin-access";
+import { TEST_DATA_BY } from "@/lib/test-data";
 import { QUALIFIERS, QUALIFYING_STATUS_LABELS } from "@/lib/bracket";
 import { loadCompetition } from "@/lib/competition";
 import { clockTime } from "@/lib/day-mode";
@@ -11,7 +12,19 @@ import { scoreSheet } from "@/lib/score-sheet";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import { ArmedForm, DeskForm, DeskHead, Submit } from "../DeskKit";
 import { loadQueue } from "@/lib/day-queue";
-import { callBack, callChosen, callNext, clearRunOrder, drawBracket, drawRunOrder, reopenQualifying, saveScoringSettings, standDown } from "./actions";
+import {
+  callBack,
+  callChosen,
+  callNext,
+  clearRunOrder,
+  drawBracket,
+  drawRunOrder,
+  generateTestSheets,
+  removeTestSheets,
+  reopenQualifying,
+  saveScoringSettings,
+  standDown,
+} from "./actions";
 import { QualifyingDesk, type DeskTeam } from "./QualifyingDesk";
 import { RevealBanner } from "./RevealBanner";
 import { TransferPanel } from "./TransferPanel";
@@ -24,7 +37,8 @@ export const metadata: Metadata = { title: "Qualifying" };
  * into the bracket.
  */
 export default async function QualifyingDeskPage() {
-  await requireSection("/day/hq/scoring");
+  const admin = await requireSection("/day/hq/scoring");
+  const isMaster = rolesOf(admin).includes("MASTER");
   const [state, config, sheets, queue] = await Promise.all([
     loadCompetition(),
     getCompetitionDayConfig(),
@@ -73,6 +87,7 @@ export default async function QualifyingDeskPage() {
   });
 
   const ran = state.table.filter((row) => row.recorded).length;
+  const testSheets = sheets.filter((sheet) => sheet.recordedBy === TEST_DATA_BY).length;
   const qualifiedCount = state.table.filter((row) => row.qualified).length;
   const drawn = teams.filter((team) => team.runOrder !== null).length;
 
@@ -260,6 +275,52 @@ export default async function QualifyingDeskPage() {
       </section>
 
       <TransferPanel drawn={state.drawn} />
+
+      {isMaster ? (
+        <section className="day-card space-y-5 border border-dashed border-day-plum/30 p-5 sm:p-6" aria-labelledby="test-data-title">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-2xl">
+              <p className="day-kicker">Master only</p>
+              <h2 id="test-data-title" className="day-display mt-2 text-2xl text-day-ink">
+                Test data
+              </h2>
+              <p className="mt-1 text-sm text-day-muted">
+                Fill every team without a sheet with a random one, to try the desks, the standings, the hall screen and the draw before the day. Test
+                sheets are marked, and removing them removes only them: a real sheet is never touched.
+              </p>
+            </div>
+            <span className={`rounded-full px-3 py-1 text-xs font-bold ${testSheets ? "bg-day-plum/15 text-day-plum" : "bg-day-ink/[0.06] text-day-muted"}`}>
+              {testSheets ? `${testSheets} test sheet${testSheets === 1 ? "" : "s"} in` : "No test data"}
+            </span>
+          </div>
+          {locked ? (
+            <p className="text-sm text-day-muted">The bracket is drawn. Reopen qualifying to add or remove test data.</p>
+          ) : (
+            <div className="flex flex-wrap items-start gap-3">
+              <ArmedForm
+                action={generateTestSheets}
+                label="Fill with random test sheets"
+                warning={
+                  <>
+                    Every eligible team without a sheet gets a random one, on the live site.
+                    {config.dayAudience === "PUBLIC" ? <strong> The day site is public, so visitors will see them.</strong> : " Only people who can open the day site will see them."}
+                  </>
+                }
+                confirm="Add test data"
+              />
+              {testSheets ? (
+                <ArmedForm
+                  action={removeTestSheets}
+                  label="Remove the test data"
+                  destructive
+                  warning={`The ${testSheets} test sheet${testSheets === 1 ? "" : "s"} go. Real sheets stay exactly as they are.`}
+                  confirm="Remove test data"
+                />
+              ) : null}
+            </div>
+          )}
+        </section>
+      ) : null}
 
       <section className="day-card p-5 sm:p-6">
         <p className="day-kicker">On the standings page</p>
