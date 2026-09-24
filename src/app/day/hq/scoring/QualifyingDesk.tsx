@@ -104,7 +104,11 @@ export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: b
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-bold text-day-ink">{team.name}</p>
                     <p className="text-xs text-day-muted">
-                      {team.sheet ? `Has a sheet, saved by ${team.sheet.recordedBy || "the desk"}. Saving replaces it.` : "No sheet yet."}
+                      {team.sheet
+                        ? team.sheet.recordedBy === "test-data"
+                          ? "Has a random test sheet. Saving replaces it with a real one."
+                          : `Has a sheet, saved by ${team.sheet.recordedBy || "the desk"}. Saving replaces it.`
+                        : "No sheet yet."}
                       {team.checkedIn ? "" : " Not checked in."}
                     </p>
                   </div>
@@ -154,7 +158,12 @@ export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: b
               <div className="flex items-center gap-3">
                 <span className="day-num w-9 shrink-0 text-center text-xs font-bold text-day-faint">{item.runOrder ? `#${item.runOrder}` : "–"}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-day-ink">{item.name}</p>
+                  <p className="flex min-w-0 items-center gap-2 font-semibold text-day-ink">
+                    <span className="truncate">{item.name}</span>
+                    {item.sheet?.recordedBy === "test-data" ? (
+                      <span className="shrink-0 rounded-full bg-day-plum/15 px-2 py-0.5 text-[10px] font-bold text-day-plum">Test data</span>
+                    ) : null}
+                  </p>
                   <p className="text-xs text-day-muted">
                     {!item.eligible
                       ? item.reason

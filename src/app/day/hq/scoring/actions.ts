@@ -1,7 +1,7 @@
 "use server";
 
 import { randomInt } from "node:crypto";
-import { requireSection } from "@/lib/admin-access";
+import { requireSection, rolesOf } from "@/lib/admin-access";
 import { prisma } from "@/lib/prisma";
 import { refreshDaySite } from "@/lib/day-refresh";
 import { loadCompetition } from "@/lib/competition";
@@ -25,6 +25,7 @@ import {
 import { clockTime } from "@/lib/day-mode";
 import { cleanLog, formatPoints, scoreSheet, sheetFromFields, workingOf } from "@/lib/score-sheet";
 import { SHEET_PROBLEMS as PROBLEMS, readScoreFile, readTimingFile } from "@/lib/score-transfer";
+import { TEST_DATA_BY, TEST_DATA_NOTE, randomSheet } from "@/lib/test-data";
 import type { DeskState } from "../state";
 
 const SECTION = "/day/hq/scoring";
@@ -630,4 +631,63 @@ export async function importTimings(_previous: DeskState, formData: FormData): P
     parsed.knockout.length ? `${parsed.knockout.length} knockout match time${parsed.knockout.length === 1 ? "" : "s"}` : "",
   ].filter(Boolean);
   return { ok: true, message: `Imported ${parts.join(" and ")}.` };
+}
+
+// ------------------------------------------------------------ test data
+
+/** Master only: test data lands on the live site. */
+async function requireMaster() {
+  const admin = await requireSection(SECTION);
+  return rolesOf(admin).includes("MASTER") ? admin : null;
+}
+
+/**
+ * Fills every eligible team that has no sheet yet with a random one, signed
+ * as test data. A team with a real sheet is left alone, always.
+ */
+export async function generateTestSheets(_previous: DeskState, _formData: FormData): Promise<DeskState> {
+  if (!(await requireMaster())) return { ok: false, message: "Only a Master admin can add test data." };
+  const state = await loadCompetition();
+  if (state.qualifyingStatus === "LOCKED") return { ok: false, message: "The bracket is drawn. Reopen qualifying before adding test data." };
+
+  const sheets = await prisma.qualifyingRun.findMany({ select: { registrationId: true } });
+  const hasSheet = new Set(sheets.map((row) => row.registrationId));
+  const teams = state.competitors.filter((team) => team.eligible && !hasSheet.has(team.id));
+  if (!teams.length) return { ok: false, message: "Every eligible team already has a sheet, so there is nobody to fill in." };
+
+  await prisma.$transaction([
+    ...teams.map((team) => {
+      const sheet = scoreSheet({ times: [], remaining: null, log: randomSheet() });
+      return prisma.qualifyingRun.create({
+        data: {
+          registrationId: team.id,
+          score: sheet.score,
+          runTimes: sheet.times,
+          remaining: sheet.remaining,
+          runLog: logJson(sheet.log),
+          note: TEST_DATA_NOTE,
+          recordedBy: TEST_DATA_BY,
+        },
+      });
+    }),
+    ...(state.qualifyingStatus === "NOT_SET" ? [upsertConfig({ qualifyingStatus: "OPEN" })] : []),
+  ]);
+  refreshDaySite();
+  const kept = hasSheet.size ? ` ${hasSheet.size} real sheet${hasSheet.size === 1 ? " was" : "s were"} left as they are.` : "";
+  return { ok: true, message: `Added random sheets for ${teams.length} team${teams.length === 1 ? "" : "s"}.${kept}` };
+}
+
+/** Takes every test sheet away again, and nothing else. */
+export async function removeTestSheets(_previous: DeskState, _formData: FormData): Promise<DeskState> {
+  if (!(await requireMaster())) return { ok: false, message: "Only a Master admin can remove test data." };
+  const state = await loadCompetition();
+  if (state.qualifyingStatus === "LOCKED") return { ok: false, message: "The bracket is drawn. Reopen qualifying before removing test data." };
+
+  const { count } = await prisma.qualifyingRun.deleteMany({ where: { recordedBy: TEST_DATA_BY } });
+  if (!count) return { ok: false, message: "There is no test data to remove." };
+  // Qualifying goes back to not started if the test data was all there was.
+  const left = await prisma.qualifyingRun.count();
+  if (!left && state.qualifyingStatus === "OPEN") await upsertConfig({ qualifyingStatus: "NOT_SET" });
+  refreshDaySite();
+  return { ok: true, message: `Removed ${count} test sheet${count === 1 ? "" : "s"}. Real sheets are untouched.` };
 }
