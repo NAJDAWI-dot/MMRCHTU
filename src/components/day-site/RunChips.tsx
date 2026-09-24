@@ -1,10 +1,10 @@
 import { DayIcon } from "@/components/day-site/icons";
-import { formatCells, formatTime, type RunEntry } from "@/lib/score-sheet";
+import { formatTime, type RunEntry } from "@/lib/score-sheet";
 
 /**
  * Every run of a sheet in the order it was run: a successful one by its time,
  * the official (fastest) one picked out in gold, and a failed one crossed, with
- * how far short of the centre it stopped when that was written down.
+ * the cell it reached when that was written down.
  */
 export function RunChips({ log, official, small = false }: { log: RunEntry[]; official: number | null; small?: boolean }) {
   const officialIndex = official === null ? -1 : log.findIndex((run) => run.ok && run.time === official);
@@ -27,7 +27,7 @@ export function RunChips({ log, official, small = false }: { log: RunEntry[]; of
             </li>
           );
         }
-        const detail = [run.short !== null ? `${formatCells(run.short)} short` : "", run.time !== null ? formatTime(run.time) : ""].filter(Boolean).join(" · ");
+        const detail = run.cell !== null ? `Cell ${run.cell}` : "";
         return (
           <li key={index} className={`day-num inline-flex items-center gap-1.5 ${chip} bg-day-live/10 text-day-live`}>
             {small ? null : <span className="text-[10px] font-semibold opacity-70">R{index + 1}</span>}

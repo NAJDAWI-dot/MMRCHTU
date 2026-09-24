@@ -6,7 +6,7 @@ import { DayIcon, type DayIconName } from "@/components/day-site/icons";
 import { phaseInfo, type Journey, type ResolvedMatch } from "@/lib/bracket";
 import type { GuideBlock } from "@/lib/day-guides";
 import { clockTime } from "@/lib/day-mode";
-import { formatCells, formatPoints, outcomeText, scoreSheet, workingOf } from "@/lib/score-sheet";
+import { MAZE_CELLS, formatPoints, formatReached, outcomeText, scoreSheet, workingOf } from "@/lib/score-sheet";
 
 /** The heading every day page opens with, arriving a line at a time. */
 export function PageHead({
@@ -169,7 +169,9 @@ export function SheetView({
       <RunChips log={sheet.log} official={sheet.official} />
       {sheet.score === null ? (
         sheet.remaining !== null ? (
-          <p className="text-sm text-day-muted">No run reached the centre. The closest stopped {formatCells(sheet.remaining)} short.</p>
+          <p className="text-sm text-day-muted">
+            No run reached the centre. The furthest reached {formatReached(sheet.remaining)} of {MAZE_CELLS}.
+          </p>
         ) : null
       ) : !compact ? (
         <p className="day-num text-sm text-day-muted">{workingOf(sheet)}</p>

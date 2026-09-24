@@ -3,8 +3,8 @@ import { FINAL_ROUND, changedMatches, matchesInRound, resolveBracket, seedFirstR
 import { planMatchResult, qualifyingSlot, type StoredMatch } from "@/lib/match-results";
 import { scoreSheet, type RunEntry } from "@/lib/score-sheet";
 
-const ok = (time: number): RunEntry => ({ ok: true, time, short: null });
-const fail = (short: number | null, time: number | null = null): RunEntry => ({ ok: false, time, short });
+const ok = (time: number): RunEntry => ({ ok: true, time, cell: null });
+const fail = (cell: number | null): RunEntry => ({ ok: false, time: null, cell });
 const sheet = (...log: RunEntry[]) => scoreSheet({ times: [], remaining: null, log });
 
 /** The round of 32 drawn from 32 teams, t1 to t32 by seed, nothing played. */
@@ -35,12 +35,12 @@ describe("a knockout result from two sheets", () => {
   it("puts a team with some failed runs through over one that never reached the centre", () => {
     const rows = drawn();
     const target = rows.find((m) => m.round === 2 && m.slot === 0)!;
-    const plan = planMatchResult(rows, target, sheet(fail(2, 50), ok(30)), sheet(fail(1), fail(3)), null);
+    const plan = planMatchResult(rows, target, sheet(fail(50), ok(30)), sheet(fail(99), fail(97)), null);
     expect(plan.ok).toBe(true);
     if (!plan.ok) return;
     expect(plan.target.winnerId).toBe(target.teamAId);
-    expect(plan.target.runLogA).toEqual([fail(2, 50), ok(30)]);
-    expect(plan.target.runLogB).toEqual([fail(1), fail(3)]);
+    expect(plan.target.runLogA).toEqual([fail(50), ok(30)]);
+    expect(plan.target.runLogB).toEqual([fail(99), fail(97)]);
     expect(plan.target.remainingB).toBe(1);
     // The winner is waiting in the round of 16.
     expect(plan.matches.find((m) => m.round === 3 && m.slot === 0)!.teamAId).toBe(target.teamAId);
@@ -49,7 +49,7 @@ describe("a knockout result from two sheets", () => {
   it("puts the closer of two mice that never reached the centre through", () => {
     const rows = drawn();
     const target = rows.find((m) => m.round === 2 && m.slot === 1)!;
-    const plan = planMatchResult(rows, target, sheet(fail(4)), sheet(fail(6), fail(2.5)), null);
+    const plan = planMatchResult(rows, target, sheet(fail(60)), sheet(fail(40), fail(75)), null);
     expect(plan.ok && plan.target.winnerId).toBe(target.teamBId);
   });
 
@@ -68,7 +68,7 @@ describe("a knockout result from two sheets", () => {
     const first = planMatchResult(rows, target, sheet(ok(30)), sheet(ok(40)), null);
     if (!first.ok) throw new Error(first.message);
     rows = apply(rows, first);
-    const again = planMatchResult(rows, rows[0]!, sheet(ok(30), fail(2)), sheet(ok(40)), null);
+    const again = planMatchResult(rows, rows[0]!, sheet(ok(30), fail(98)), sheet(ok(40)), null);
     expect(again.ok && again.changed.map((m) => `${m.round}:${m.slot}`)).toEqual(["2:0"]);
   });
 
@@ -80,7 +80,7 @@ describe("a knockout result from two sheets", () => {
       rows = apply(rows, plan);
     }
     const r16 = rows.find((m) => m.round === 3 && m.slot === 0)!;
-    const played = planMatchResult(rows, r16, sheet(ok(25), fail(1)), sheet(fail(3)), null);
+    const played = planMatchResult(rows, r16, sheet(ok(25), fail(99)), sheet(fail(97)), null);
     if (!played.ok) throw new Error(played.message);
     rows = apply(rows, played);
 
@@ -108,12 +108,12 @@ describe("the qualifying table with failed runs", () => {
   const teams = [1, 2, 3, 4].map((n) => ({ id: `t${n}`, name: `Team ${n}` }));
   const run = (id: string, log: RunEntry[], minute: number) => ({ registrationId: id, score: null, runTimes: [], runLog: log, createdAt: new Date(Date.UTC(2026, 2, 14, 8, minute)) });
 
-  it("ranks all-successful and mixed sheets by score, then the no-success ones by distance", () => {
+  it("ranks all-successful and mixed sheets by score, then the no-success ones by the furthest cell", () => {
     const table = standings(teams, [
-      run("t1", [fail(1), fail(4)], 1),
-      run("t2", [ok(25), fail(2), ok(26)], 2),
+      run("t1", [fail(99), fail(96)], 1),
+      run("t2", [ok(25), fail(98), ok(26)], 2),
       run("t3", [ok(30)], 3),
-      run("t4", [fail(3)], 4),
+      run("t4", [fail(97)], 4),
     ]);
     expect(table.map((row) => [row.teamId, row.runs, row.failed, row.remaining])).toEqual([
       ["t2", 2, 1, null],
@@ -121,7 +121,7 @@ describe("the qualifying table with failed runs", () => {
       ["t1", 0, 2, 1],
       ["t4", 0, 1, 3],
     ]);
-    expect(table[0]!.log).toEqual([ok(25), fail(2), ok(26)]);
+    expect(table[0]!.log).toEqual([ok(25), fail(98), ok(26)]);
   });
 });
 

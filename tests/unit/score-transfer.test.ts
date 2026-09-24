@@ -16,8 +16,8 @@ const TEAMS = [
   { id: "t2", name: "Byte Mice" },
   { id: "t3", name: "=Sneaky" },
 ];
-const ok = (time: number): RunEntry => ({ ok: true, time, short: null });
-const fail = (short: number | null, time: number | null = null): RunEntry => ({ ok: false, time, short });
+const ok = (time: number): RunEntry => ({ ok: true, time, cell: null });
+const fail = (cell: number | null): RunEntry => ({ ok: false, time: null, cell });
 
 describe("reading a CSV", () => {
   it("reads quotes, doubled quotes and line breaks inside quotes", () => {
@@ -72,16 +72,16 @@ describe("phases", () => {
 
 describe("the scores file", () => {
   it("writes one row per run, successful or not", () => {
-    const sheet = scoreSheet({ times: [], remaining: null, log: [fail(3, 40), ok(25.5)] });
+    const sheet = scoreSheet({ times: [], remaining: null, log: [fail(72), ok(25.5)] });
     expect(scoreRows(1, null, TEAMS[0]!, sheet, sheet.score, "touched on run 1")).toEqual([
-      ["Qualifying", "", "t1", "Maze Runners", 1, "Fail", 40, 3, "39.2", "touched on run 1"],
+      ["Qualifying", "", "t1", "Maze Runners", 1, "Fail", "", 72, "39.2", "touched on run 1"],
       ["Qualifying", "", "t1", "Maze Runners", 2, "Success", 25.5, "", "39.2", ""],
     ]);
   });
 
   it("reads back exactly what it wrote", () => {
-    const a = scoreSheet({ times: [], remaining: null, log: [fail(3, 40), ok(25.5), ok(30)] });
-    const b = scoreSheet({ times: [], remaining: null, log: [fail(2), fail(1.5)] });
+    const a = scoreSheet({ times: [], remaining: null, log: [fail(72), ok(25.5), ok(30)] });
+    const b = scoreSheet({ times: [], remaining: null, log: [fail(40), fail(null)] });
     const knockout = scoreSheet({ times: [], remaining: null, log: [ok(22)] });
     const csv = toCsv(SCORE_HEADERS, [
       ...scoreRows(1, null, TEAMS[0]!, a, a.score, "note"),
@@ -100,11 +100,11 @@ describe("the scores file", () => {
   });
 
   it("takes a hand-made sheet: names instead of IDs, any order, a result left out", () => {
-    const csv = ["Team,Run,Result,Time,Cells short", "byte mice,2,,31.5,", "Byte Mice,1,fail,,4", "Maze Runners,1,✗,,2"].join("\n");
+    const csv = ["Team,Run,Result,Time,Cell", "byte mice,2,,31.5,", "Byte Mice,1,fail,,64", "Maze Runners,1,,,88"].join("\n");
     const read = readScoreFile(csv, TEAMS);
     expect(read.ok && read.qualifying.map((item) => [item.team.id, item.log])).toEqual([
-      ["t2", [fail(4), ok(31.5)]],
-      ["t1", [fail(2)]],
+      ["t2", [fail(64), ok(31.5)]],
+      ["t1", [fail(88)]],
     ]);
     // No Note column: the notes the sheets have are kept.
     expect(read.ok && read.qualifying.every((item) => item.note === null)).toBe(true);
@@ -112,13 +112,13 @@ describe("the scores file", () => {
 
   it("refuses the whole file with the lines to fix", () => {
     const csv = [
-      "Phase,Match,Team,Result,Time (s),Cells short",
+      "Phase,Match,Team,Result,Time (s),Cell reached",
       "Qualifying,,Nobody,Success,25,",
       "Qualifying,,Maze Runners,Success,,",
       "Qualifying,,Maze Runners,Maybe,20,",
       "Round of 32,17,Byte Mice,Success,20,",
       "Semis,,Byte Mice,Success,20,",
-      "Qualifying,,Byte Mice,Fail,,lots",
+      "Qualifying,,Byte Mice,Fail,,100",
       "Qualifying,,Byte Mice,Success,9:99,",
     ].join("\n");
     const read = readScoreFile(csv, TEAMS);
@@ -130,13 +130,13 @@ describe("the scores file", () => {
       'Line 4: "Maybe" is not a result. Use Success or Fail.',
       "Line 5: Round of 32 needs a match number from 1 to 16.",
       'Line 6: "Semis" is not a phase. Use Qualifying, Round of 32, Round of 16, Quarter-finals, Semi-finals or Final.',
-      'Line 7: "lots" is not a number of cells.',
+      'Line 7: "100" is not a cell. A failed run reached a cell from 1 to 99.',
       'Line 8: "9:99" is not a run time. Use seconds, like 25.41, inside the 8 minutes.',
     ]);
   });
 
   it("refuses a team's runs that add up to more than the match", () => {
-    const csv = ["Team,Result,Time", "Maze Runners,Success,300", "Maze Runners,Fail,200"].join("\n");
+    const csv = ["Team,Result,Time", "Maze Runners,Success,300", "Maze Runners,Success,200"].join("\n");
     const read = readScoreFile(csv, TEAMS);
     expect(!read.ok && read.errors[0]).toMatch(/^Line 2: Maze Runners\. Those runs add up to more than the eight minute match/);
   });
@@ -162,6 +162,14 @@ describe("the standings file", () => {
     expect(
       standingsRow({ rank: 3, teamId: "t1", name: "Maze Runners", best: 80, runs: 2, failed: 1, official: 25, remaining: null, qualified: true }),
     ).toEqual([3, "t1", "Maze Runners", "80.0", 2, 1, 25, "", "2 of 3 runs successful", "yes"]);
+    expect(
+      standingsRow({ rank: 9, teamId: "t2", name: "Byte Mice", best: null, runs: 0, failed: 2, official: null, remaining: 19, qualified: false }),
+    ).toEqual([9, "t2", "Byte Mice", "", 0, 2, "", 81, "None of 2 runs successful", "no"]);
+  });
+
+  it("still reads a file written with cells short of the centre", () => {
+    const read = readScoreFile("Team,Result,Cells short\nMaze Runners,Fail,3", TEAMS);
+    expect(read.ok && read.qualifying[0]!.log).toEqual([fail(97)]);
   });
 });
 

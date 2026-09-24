@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useFormState } from "react-dom";
 import { Crest } from "@/components/day-site/Crest";
 import { DayIcon } from "@/components/day-site/icons";
-import { formatCells, formatPoints, formatTime, outcomeText, type RunEntry } from "@/lib/score-sheet";
+import { formatPoints, formatReached, formatTime, outcomeText, type RunEntry } from "@/lib/score-sheet";
 import { Notice, Submit } from "../../DeskKit";
 import { EMPTY_DESK_STATE } from "../../state";
 import { saveMatch } from "../actions";
@@ -57,7 +57,7 @@ function Side({ name, id, seed, score, sheet, winner }: { name: string; id: stri
         ) : sheet.failed ? (
           <span className="day-num block text-[11px] text-day-muted">
             {outcomeText(sheet)}
-            {sheet.remaining !== null ? ` · closest ${formatCells(sheet.remaining)} short` : ""}
+            {sheet.remaining !== null ? ` · furthest ${formatReached(sheet.remaining)}` : ""}
           </span>
         ) : null}
       </span>
@@ -102,8 +102,8 @@ export function MatchForm({ match }: { match: MatchRow }) {
           <form action={action} className="day-dialog space-y-5 border-t border-day-line/[0.07] bg-day-sunk/40 p-4 sm:p-5">
             <input type="hidden" name="id" value={match.id} />
             <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-2">
-              <RunTimes name="timesA" resultName="resultA" shortName="shortA" initialLog={match.sheetA.log} label={match.teamA} compact />
-              <RunTimes name="timesB" resultName="resultB" shortName="shortB" initialLog={match.sheetB.log} label={match.teamB} compact />
+              <RunTimes name="timesA" resultName="resultA" cellName="cellA" initialLog={match.sheetA.log} label={match.teamA} compact />
+              <RunTimes name="timesB" resultName="resultB" cellName="cellB" initialLog={match.sheetB.log} label={match.teamB} compact />
             </div>
             <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
               <div>

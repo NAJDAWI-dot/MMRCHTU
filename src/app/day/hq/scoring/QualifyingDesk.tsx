@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Crest } from "@/components/day-site/Crest";
 import { DayIcon } from "@/components/day-site/icons";
 import { RunChips } from "@/components/day-site/RunChips";
-import { formatCells, formatPoints, formatTime, outcomeText, type RunEntry } from "@/lib/score-sheet";
+import { formatPoints, formatReached, formatTime, outcomeText, type RunEntry } from "@/lib/score-sheet";
 import { DeskForm, Submit } from "../DeskKit";
 import { deleteSheet, saveSheet } from "./actions";
 import { MatchClock, RunTimes } from "./RunTimes";
@@ -37,7 +37,7 @@ export interface DeskTeam {
 
 /**
  * The qualifying desk: pick a team, write down each run (its time if it
- * reached the centre, how far short it stopped if not), save. The score, the official time and the working appear as
+ * reached the centre, the cell it got to if not), save. The score, the official time and the working appear as
  * the times go in, and the table beside it re-ranks the moment it is saved.
  */
 export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: boolean }) {
@@ -110,7 +110,7 @@ export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: b
                 <RunTimes
                   name="time"
                   resultName="result"
-                  shortName="short"
+                  cellName="cell"
                   initialLog={team.sheet?.log ?? []}
                   label="Every run, in the order it was run"
                 />
@@ -162,7 +162,7 @@ export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: b
                           : item.sheet.runs
                             ? `${outcomeText(item.sheet)} · official ${formatTime(item.sheet.official)}`
                             : item.sheet.failed
-                              ? `${outcomeText(item.sheet)}${item.sheet.remaining !== null ? ` · closest ${formatCells(item.sheet.remaining)} short` : ""}`
+                              ? `${outcomeText(item.sheet)}${item.sheet.remaining !== null ? ` · furthest ${formatReached(item.sheet.remaining)}` : ""}`
                               : "No run reached the centre"
                         : item.slot
                           ? `Runs at ${item.slot}`

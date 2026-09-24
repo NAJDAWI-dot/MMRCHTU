@@ -5,7 +5,9 @@ import {
   checkLog,
   formatPoints,
   outcomeText,
-  parseRemaining,
+  MAZE_CELLS,
+  cellFromShort,
+  parseCell,
   parseRunResult,
   parseRunTime,
   type RunEntry,
@@ -30,11 +32,11 @@ import {
 
 export const SHEET_PROBLEMS: Record<SheetProblem, string> = {
   "bad-time": "One of the run times is not a time. Use seconds (25.41) or minutes and seconds (1:05.3).",
-  "bad-short": "One of the failed runs has a distance short that is not a number of cells, like 3 or 2.5.",
+  "bad-cell": "One of the failed runs has a cell that is not a whole number from 1 to 99.",
   "too-long": "Those runs add up to more than the eight minute match. Check the times.",
 };
 
-export const SCORE_HEADERS = ["Phase", "Match", "Team ID", "Team", "Run", "Result", "Time (s)", "Cells short", "Score", "Note"] as const;
+export const SCORE_HEADERS = ["Phase", "Match", "Team ID", "Team", "Run", "Result", "Time (s)", "Cell reached", "Score", "Note"] as const;
 export const STANDINGS_HEADERS = [
   "Rank",
   "Team ID",
@@ -43,7 +45,7 @@ export const STANDINGS_HEADERS = [
   "Successful runs",
   "Failed runs",
   "Official time (s)",
-  "Closest (cells short)",
+  "Furthest cell (no successful run)",
   "Runs",
   "Top 32",
 ] as const;
@@ -69,7 +71,7 @@ export function scoreRows(phase: number, match: number | null, team: TeamRef, sh
     index + 1,
     run.ok ? "Success" : "Fail",
     run.time ?? "",
-    run.short ?? "",
+    run.cell ?? "",
     points,
     index === 0 ? note : "",
   ]);
@@ -86,7 +88,7 @@ export function standingsRow(
     row.runs,
     row.failed,
     row.official ?? "",
-    row.remaining ?? "",
+    row.remaining === null ? "" : cellFromShort(row.remaining),
     outcomeText(row),
     row.qualified ? "yes" : "no",
   ];
@@ -94,7 +96,7 @@ export function standingsRow(
 
 // ------------------------------------------------------------------ reading
 
-type Column = "phase" | "match" | "order" | "teamId" | "team" | "run" | "result" | "time" | "short" | "note" | "maze";
+type Column = "phase" | "match" | "order" | "teamId" | "team" | "run" | "result" | "time" | "cell" | "short" | "note" | "maze";
 
 const HEADER_NAMES: Record<string, Column> = {
   phase: "phase",
@@ -122,16 +124,20 @@ const HEADER_NAMES: Record<string, Column> = {
   slot: "time",
   "start time": "time",
   starts: "time",
+  "cell reached": "cell",
+  cell: "cell",
+  "cell number": "cell",
+  "cell no": "cell",
+  "reached cell": "cell",
+  // Files from before cells were written down as a number.
   "cells short": "short",
-  short: "short",
-  remaining: "short",
   "distance short": "short",
   note: "note",
   maze: "maze",
   arena: "maze",
 };
 
-/** "Time (s)" and "Cells short:" both read as their plain names. */
+/** "Time (s)" and "Cell reached:" both read as their plain names. */
 function columnOf(header: string): Column | null {
   const key = header
     .toLowerCase()
@@ -251,9 +257,11 @@ export function readScoreFile(text: string, teams: TeamRef[]): ScoreImport {
     const fail = (why: string) => errors.push(`Line ${row.line}: ${why}.`);
     const resultText = row.get("result");
     const timeText = row.get("time");
-    const shortText = row.get("short");
+    // The cell reached, or on an older file the cells short of the centre.
+    const cellText = row.get("cell");
+    const shortText = cellText ? "" : row.get("short");
     const noteText = row.get("note");
-    if (!resultText && !timeText && !shortText && !noteText) continue;
+    if (!resultText && !timeText && !cellText && !shortText && !noteText) continue;
 
     const phaseText = row.get("phase");
     const round = phaseText ? parsePhase(phaseText) : 1;
@@ -280,33 +288,37 @@ export function readScoreFile(text: string, teams: TeamRef[]): ScoreImport {
     const group = groups.get(key) ?? { round, slot, team, runs: [], note: "", line: row.line };
     groups.set(key, group);
     if (noteText && !group.note) group.note = noteText.slice(0, 200);
-    if (!resultText && !timeText && !shortText) continue;
+    if (!resultText && !timeText && !cellText && !shortText) continue;
 
-    const result = resultText ? parseRunResult(resultText) : timeText ? true : false;
+    // No result written: a time means it reached the centre, a cell means it did not.
+    const result = resultText ? parseRunResult(resultText) : !!timeText && !cellText && !shortText;
     if (result === null) {
       fail(`"${resultText}" is not a result. Use Success or Fail`);
       continue;
     }
-    const time = timeText ? parseRunTime(timeText) : null;
-    if (timeText && time === null) {
-      fail(`"${timeText}" is not a run time. Use seconds, like 25.41, inside the 8 minutes`);
-      continue;
-    }
-    if (result && time === null) {
-      fail("a successful run needs its time");
-      continue;
-    }
-    const short = !result && shortText ? parseRemaining(shortText) : null;
-    if (!result && shortText && short === null) {
-      fail(`"${shortText}" is not a number of cells`);
-      continue;
+    let run: RunEntry;
+    if (result) {
+      const time = timeText ? parseRunTime(timeText) : null;
+      if (timeText && time === null) {
+        fail(`"${timeText}" is not a run time. Use seconds, like 25.41, inside the 8 minutes`);
+        continue;
+      }
+      if (time === null) {
+        fail("a successful run needs its time");
+        continue;
+      }
+      run = { ok: true, time, cell: null };
+    } else {
+      const short = shortText ? parseCell(shortText) : null;
+      const cell = cellText ? parseCell(cellText) : short !== null ? cellFromShort(short) : null;
+      if ((cellText || shortText) && cell === null) {
+        fail(`"${cellText || shortText}" is not a cell. A failed run reached a cell from 1 to ${MAZE_CELLS - 1}`);
+        continue;
+      }
+      run = { ok: false, time: null, cell };
     }
     const order = Number(row.get("run"));
-    group.runs.push({
-      order: Number.isFinite(order) && row.get("run") ? order : Number.MAX_SAFE_INTEGER,
-      line: row.line,
-      run: { ok: result, time, short: result ? null : short },
-    });
+    group.runs.push({ order: Number.isFinite(order) && row.get("run") ? order : Number.MAX_SAFE_INTEGER, line: row.line, run });
   }
 
   const qualifying: QualifyingSheetImport[] = [];

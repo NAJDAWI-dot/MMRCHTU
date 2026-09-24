@@ -42,7 +42,7 @@ export function TransferPanel({ drawn }: { drawn: boolean }) {
         <DeskForm action={importScores} className="day-sunk space-y-3 p-4" resetOnSuccess>
           <p className="font-semibold text-day-ink">Import scores</p>
           <p className="text-xs text-day-muted">
-            One row per run: Phase, Match (knockout only), Team, Run, Result (Success or Fail), Time (s), Cells short. Each team or match side in the file
+            One row per run: Phase, Match (knockout only), Team, Run, Result (Success or Fail), Time (s) for a successful run, Cell reached (1 to 99) for a failed one. Each team or match side in the file
             gets exactly those runs; everyone else is left alone. The Score column is worked out again, not read.
           </p>
           <label className="day-label" htmlFor="import-scores">

@@ -14,7 +14,7 @@ export type StoredMatch = MatchInput & { id: string; status: string };
 
 /** A run log as Prisma writes JSON. */
 export function logJson(log: RunEntry[]): Prisma.InputJsonValue {
-  return log.map((run) => ({ ok: run.ok, time: run.time, short: run.short }));
+  return log.map((run) => ({ ok: run.ok, time: run.time, cell: run.cell }));
 }
 
 /** The competition day as a "2026-03-14" key: the set date, or today's. */
