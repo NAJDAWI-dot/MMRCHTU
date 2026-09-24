@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { MAX_IMAGE_EDGE, fitWithin, formatBytes, isAllowedImageType } from "@/lib/gallery";
+import { MAX_IMAGE_EDGE, formatBytes, isAllowedImageType } from "@/lib/gallery";
+import { shrinkPhoto, type PreparedPhoto } from "@/lib/photo-shrink";
 import { uploadPhotos } from "./actions";
 
 /**
@@ -16,53 +17,6 @@ import { uploadPhotos } from "./actions";
  * Dimensions are measured before upload and sent alongside each file so the
  * gallery can reserve the right space and not jump around as images load.
  */
-
-/** Re-encode quality. High enough to look clean, low enough to matter. */
-const JPEG_QUALITY = 0.85;
-
-interface Prepared {
-  file: File;
-  width: number;
-  height: number;
-  originalSize: number;
-}
-
-/** Draws the image at its capped size and re-encodes it. */
-async function shrink(file: File): Promise<Prepared> {
-  const bitmap = await createImageBitmap(file);
-  const { width, height } = fitWithin(bitmap.width, bitmap.height, MAX_IMAGE_EDGE);
-
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    bitmap.close();
-    // No canvas means no resize; send the original rather than nothing.
-    return { file, width: bitmap.width, height: bitmap.height, originalSize: file.size };
-  }
-  ctx.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
-
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY),
-  );
-  if (!blob) return { file, width, height, originalSize: file.size };
-
-  // Keep the original if re-encoding somehow made it bigger — true for small
-  // PNG screenshots and already-optimised images.
-  if (blob.size >= file.size) {
-    return { file, width, height, originalSize: file.size };
-  }
-
-  const renamed = file.name.replace(/\.[^.]+$/, "") + ".jpg";
-  return {
-    file: new File([blob], renamed, { type: "image/jpeg" }),
-    width,
-    height,
-    originalSize: file.size,
-  };
-}
 
 export function PhotoUploader({ albumId, disabled }: { albumId: string; disabled?: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -85,10 +39,10 @@ export function PhotoUploader({ albumId, disabled }: { albumId: string; disabled
     setStatus(`Preparing ${usable.length} photo${usable.length === 1 ? "" : "s"}…`);
 
     try {
-      const prepared: Prepared[] = [];
+      const prepared: PreparedPhoto[] = [];
       for (const [i, file] of usable.entries()) {
         setStatus(`Preparing ${i + 1} of ${usable.length}…`);
-        prepared.push(await shrink(file));
+        prepared.push(await shrinkPhoto(file));
       }
 
       const before = prepared.reduce((sum, p) => sum + p.originalSize, 0);

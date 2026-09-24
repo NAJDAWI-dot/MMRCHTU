@@ -19,13 +19,14 @@ export const metadata: Metadata = { title: "Overview" };
 export default async function DayHqPage() {
   const admin = await requireSection("/day/hq");
   const roles = rolesOf(admin);
-  const [state, config, alerts, announcements, volunteers, slots] = await Promise.all([
+  const [state, config, alerts, announcements, volunteers, slots, sponsors] = await Promise.all([
     loadCompetition(),
     getCompetitionDayConfig(),
     prisma.dayAnnouncement.count({ where: { isPublished: true, isAlert: true } }),
     prisma.dayAnnouncement.count({ where: { isPublished: true } }),
     prisma.volunteer.count(),
     prisma.daySlot.count(),
+    prisma.sponsor.count({ where: { isPublished: true } }),
   ]);
 
   const total = state.competitors.length;
@@ -48,6 +49,7 @@ export default async function DayHqPage() {
   const counts: Record<string, string> = {
     "/day/hq/announcements": `${announcements} live · ${alerts} alert${alerts === 1 ? "" : "s"}`,
     "/day/hq/volunteers": `${volunteers} people`,
+    "/day/hq/sponsors": `${sponsors} on the slide`,
     "/day/hq/access": DAY_AUDIENCE_LABELS[audience],
     "/day/hq/check-in": `${arrived} of ${total} here`,
     "/day/hq/scoring": `${ran} of ${total} have run`,
@@ -76,10 +78,16 @@ export default async function DayHqPage() {
               {slots ? null : " No running order has been written on the Competition Day screen yet."}
             </p>
           </div>
-          <Link href="/day" className="day-btn day-btn-ink">
-            <DayIcon name="live" className="h-4 w-4" />
-            Open the day site
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/day" className="day-btn day-btn-ink">
+              <DayIcon name="live" className="h-4 w-4" />
+              Open the day site
+            </Link>
+            <Link href="/day/screen" target="_blank" className="day-btn day-btn-soft" title="For the projector: open it on the laptop driving it and press F">
+              <DayIcon name="expand" className="h-4 w-4" />
+              Hall screen
+            </Link>
+          </div>
         </div>
 
         {stats.length ? (

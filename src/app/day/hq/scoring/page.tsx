@@ -9,7 +9,8 @@ import { clockTime, dayKey, runningDayKey } from "@/lib/day-mode";
 import { prisma } from "@/lib/prisma";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import { ArmedForm, DeskForm, DeskHead, Submit } from "../DeskKit";
-import { clearRunOrder, drawBracket, drawRunOrder, reopenQualifying, saveScoringSettings } from "./actions";
+import { loadQueue } from "@/lib/day-queue";
+import { callBack, callChosen, callNext, clearRunOrder, drawBracket, drawRunOrder, reopenQualifying, saveScoringSettings, standDown } from "./actions";
 import { QualifyingDesk, type DeskTeam } from "./QualifyingDesk";
 
 export const metadata: Metadata = { title: "Qualifying" };
@@ -20,10 +21,11 @@ export const metadata: Metadata = { title: "Qualifying" };
  */
 export default async function QualifyingDeskPage() {
   await requireSection("/day/hq/scoring");
-  const [state, config, sheets] = await Promise.all([
+  const [state, config, sheets, queue] = await Promise.all([
     loadCompetition(),
     getCompetitionDayConfig(),
     prisma.qualifyingRun.findMany({ orderBy: { createdAt: "asc" } }),
+    loadQueue(),
   ]);
   const locked = state.qualifyingStatus === "LOCKED";
   const sheetOf = new Map(sheets.map((sheet) => [sheet.registrationId, sheet]));
@@ -113,6 +115,93 @@ export default async function QualifyingDeskPage() {
           </div>
         )}
       </section>
+
+      {/* --------------------------------------------------- call queue */}
+      {queue.active ? (
+        <section className="day-card space-y-6 p-5 sm:p-6" aria-labelledby="queue-title">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="day-kicker">Call queue</p>
+              <h2 id="queue-title" className="day-display mt-2 text-2xl text-day-ink">
+                {queue.queue.now ? `${queue.queue.now.name} on the maze` : "Nobody called yet"}
+              </h2>
+              <p className="mt-1 text-sm text-day-muted">
+                {queue.queue.ran} of {queue.queue.total} have run · {queue.queue.upcoming.length} still to call. The hall screen, the live page and each
+                team&rsquo;s page follow this.
+              </p>
+            </div>
+            <Link href="/day/screen" target="_blank" className="day-btn day-btn-soft day-btn-sm">
+              <DayIcon name="live" className="h-4 w-4" />
+              Hall screen
+            </Link>
+          </div>
+
+          <ol className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-3">
+            {[
+              { label: "On the maze", entry: queue.queue.now, note: queue.calledAt && queue.queue.now ? `Called at ${clockTime(queue.calledAt)}` : "" },
+              { label: "On deck", entry: queue.queue.onDeck, note: queue.queue.onDeck ? queue.etaOf(queue.queue.onDeck.id) : "" },
+              { label: "In the hole", entry: queue.queue.inHole, note: queue.queue.inHole ? queue.etaOf(queue.queue.inHole.id) : "" },
+            ].map((tile, index) => (
+              <li key={tile.label} className={`day-sunk p-4 ${index === 0 && tile.entry ? "ring-2 ring-day-live/50" : ""}`}>
+                <p className={`flex items-center gap-2 text-xs font-semibold ${index === 0 ? "text-day-live" : "text-day-muted"}`}>
+                  {index === 0 && tile.entry ? <span className="day-live-dot" aria-hidden="true" /> : null}
+                  {tile.label}
+                </p>
+                <p className="day-display mt-2 truncate text-xl text-day-ink">{tile.entry?.name ?? "–"}</p>
+                <p className="day-num mt-1 text-xs text-day-faint">
+                  {tile.entry?.runOrder ? `#${tile.entry.runOrder}` : ""}
+                  {tile.note ? ` · ${tile.note}` : ""}
+                </p>
+              </li>
+            ))}
+          </ol>
+
+          <div className="flex flex-wrap items-start gap-3">
+            <DeskForm action={callNext} className="space-y-3">
+              <Submit pending="Calling…">{queue.queue.onDeck ? `Call ${queue.queue.onDeck.name}` : "Call next"}</Submit>
+            </DeskForm>
+            {queue.queue.now || config.queueHistory ? (
+              <DeskForm action={callBack} className="space-y-3">
+                <Submit pending="…" variant="secondary">
+                  Back one
+                </Submit>
+              </DeskForm>
+            ) : null}
+            {queue.queue.now ? (
+              <DeskForm action={standDown} className="space-y-3">
+                <Submit pending="…" variant="ghost">
+                  Stand down
+                </Submit>
+              </DeskForm>
+            ) : null}
+          </div>
+
+          <DeskForm action={callChosen} className="flex flex-wrap items-end gap-3">
+            <div className="min-w-0 flex-1 sm:max-w-sm">
+              <label className="day-label" htmlFor="queue-team">
+                Call a team out of turn
+              </label>
+              <select id="queue-team" name="teamId" className="day-input" defaultValue="">
+                <option value="" disabled>
+                  Pick a team
+                </option>
+                {queue.entries
+                  .filter((entry) => entry.runOrder !== null && entry.eligible)
+                  .sort((a, b) => a.runOrder! - b.runOrder!)
+                  .map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      #{entry.runOrder} {entry.name}
+                      {entry.ran ? " (has run)" : ""}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <Submit pending="Calling…" variant="secondary">
+              Call
+            </Submit>
+          </DeskForm>
+        </section>
+      ) : null}
 
       <QualifyingDesk teams={teams} locked={locked} />
 

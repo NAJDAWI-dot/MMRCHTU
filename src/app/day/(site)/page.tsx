@@ -11,6 +11,9 @@ import { loadCompetition } from "@/lib/competition";
 import { shouldShowCountdown } from "@/lib/countdown";
 import { clockTime, postedAgo } from "@/lib/day-mode";
 import { loadDaySite } from "@/lib/day-site";
+import { loadQueue } from "@/lib/day-queue";
+import { loadDayPhotos } from "@/lib/day-photos";
+import { QueueCards } from "@/components/day-site/QueueCards";
 import { formatPoints, formatTime } from "@/lib/score-sheet";
 import { requireDayViewer } from "@/lib/day-access";
 
@@ -34,7 +37,7 @@ function progressThrough(start: Date, end: Date | null | undefined, now: Date): 
 /** The live hub: the fanciest page on the site, and the one open all day. */
 export default async function DayLivePage() {
   await requireDayViewer();
-  const [state, site] = await Promise.all([loadCompetition(), loadDaySite()]);
+  const [state, site, queue, gallery] = await Promise.all([loadCompetition(), loadDaySite(), loadQueue(), loadDayPhotos(6)]);
   const nameOf = (id: string | null) => (id ? (state.byId.get(id)?.name ?? null) : null);
 
   const champion = state.competitors.find((team) => team.journey.state === "CHAMPION");
@@ -62,6 +65,9 @@ export default async function DayLivePage() {
       : state.qualifyingStatus === "OPEN"
         ? `Phase 1 · Qualifying · ${ran} of ${state.competitors.length} teams have run`
         : "Phase 1 · Qualifying opens soon";
+
+  // The call queue takes the "now" slot through qualifying, once there is someone to call.
+  const showQueue = !live.length && !upNext.length && queue.active && !!(queue.queue.now || queue.queue.onDeck);
 
   const countdown = shouldShowCountdown(site.eventDate) && site.eventDate;
   const focusProgress = site.focus?.state === "now" ? progressThrough(site.focus.startsAt, site.focus.endsAt, site.now) : null;
@@ -187,10 +193,14 @@ export default async function DayLivePage() {
       {/* ------------------------------------------------- now on the maze */}
       <section className="space-y-6">
         <SectionTitle
-          kicker={live.length ? "Happening now" : "Now and next"}
-          action={<MoreLink href={live.length || upNext.length ? "/day/bracket" : "/day/schedule"}>{live.length || upNext.length ? "Full bracket" : "Running order"}</MoreLink>}
+          kicker={live.length ? "Happening now" : showQueue ? `Qualifying · ${queue.queue.ran} of ${queue.queue.total} have run` : "Now and next"}
+          action={
+            <MoreLink href={live.length || upNext.length ? "/day/bracket" : showQueue ? "/day/standings" : "/day/schedule"}>
+              {live.length || upNext.length ? "Full bracket" : showQueue ? "Standings" : "Running order"}
+            </MoreLink>
+          }
         >
-          {live.length ? "On the maze" : upNext.length ? `Next in the ${phaseInfo(upNext[0]!.round).name}` : "Where the day is"}
+          {live.length ? "On the maze" : upNext.length ? `Next in the ${phaseInfo(upNext[0]!.round).name}` : showQueue ? "The call queue" : "Where the day is"}
         </SectionTitle>
 
         {live.length || upNext.length ? (
@@ -199,6 +209,15 @@ export default async function DayLivePage() {
               <MatchCard key={match.id} match={match} nameOf={nameOf} live={match.status === "LIVE"} arena={match.arena} />
             ))}
           </div>
+        ) : showQueue ? (
+          <QueueCards
+            now={queue.queue.now}
+            onDeck={queue.queue.onDeck}
+            inHole={queue.queue.inHole}
+            calledAt={queue.calledAt ? clockTime(queue.calledAt) : ""}
+            onDeckEta={queue.queue.onDeck ? queue.etaOf(queue.queue.onDeck.id) : ""}
+            inHoleEta={queue.queue.inHole ? queue.etaOf(queue.queue.inHole.id) : ""}
+          />
         ) : site.focus ? (
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
             <div className="day-card relative overflow-hidden p-6 sm:p-8" data-reveal>
@@ -385,6 +404,32 @@ export default async function DayLivePage() {
           )}
         </div>
       </section>
+
+      {/* ------------------------------------------------ from the hall */}
+      {gallery.photos.length ? (
+        <section className="space-y-6">
+          <SectionTitle kicker="From the hall" action={<MoreLink href="/day/photos">All {gallery.count} photos</MoreLink>}>
+            Photos
+          </SectionTitle>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6" data-reveal>
+            {gallery.photos.map((photo) => (
+              <li key={photo.id}>
+                <Link href="/day/photos" className="day-card day-lift block overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photo.url}
+                    alt={photo.caption || "A photo from the hall"}
+                    width={photo.width ?? undefined}
+                    height={photo.height ?? undefined}
+                    loading="lazy"
+                    className="aspect-square w-full bg-day-ink/[0.06] object-cover"
+                  />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {/* ------------------------------------------------ find your way */}
       <section className="space-y-6">

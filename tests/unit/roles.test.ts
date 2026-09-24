@@ -54,6 +54,19 @@ describe("who opens what", () => {
     expect(canOpen(["MEDIA", "OPERATIONS"], "/day/hq/scoring")).toBe(false);
   });
 
+  it("opens the Photos desk to whoever is shooting, not to scoring", () => {
+    expect(canOpen(["MEDIA"], "/day/hq/photos")).toBe(true);
+    expect(canOpen(["OPERATIONS"], "/day/hq/photos")).toBe(true);
+    expect(canOpen(["SCORING"], "/day/hq/photos")).toBe(false);
+    expect(canOpen(["REGISTRATION"], "/day/hq/photos")).toBe(false);
+  });
+
+  it("opens the Sponsors desk to media and operations", () => {
+    expect(canOpen(["MEDIA"], "/day/hq/sponsors")).toBe(true);
+    expect(canOpen(["OPERATIONS"], "/day/hq/sponsors")).toBe(true);
+    expect(canOpen(["SCORING"], "/day/hq/sponsors")).toBe(false);
+  });
+
   it("opens nothing but the dashboard and hub for an account with no role", () => {
     const open = ADMIN_LINKS.filter((link) => canOpen([], link.href)).map((link) => link.href);
     expect(open.sort()).toEqual(["/admin", "/day/hq"]);

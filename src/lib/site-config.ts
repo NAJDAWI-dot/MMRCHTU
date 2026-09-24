@@ -48,6 +48,10 @@ const COMPETITION_DAY_FALLBACK: CompetitionDayConfig = {
   runOrderStart: "",
   runSlotMinutes: 10,
   runOrderDrawnAt: null,
+  queueTeamId: "",
+  queueCalledAt: null,
+  queueHistory: "",
+  dayAlbumId: "",
   updatedAt: NEVER_SAVED,
 };
 

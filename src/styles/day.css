@@ -634,6 +634,40 @@ html.lenis body {
   display: none;
 }
 
+/* ----------------------------------------------------------- hall screen */
+
+/* Each panel arrives with a short rise; the bar under the footer fills for
+   as long as the panel stays. */
+.screen-panel {
+  animation: screen-panel-in 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes screen-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.5vh);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.screen-progress {
+  width: 100%;
+  transform-origin: left;
+  animation: screen-progress linear both;
+}
+
+@keyframes screen-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 /* -------------------------------------------------------- reduced motion */
 
 @media (prefers-reduced-motion: reduce) {
@@ -647,7 +681,9 @@ html.lenis body {
   .day-run-path,
   .day-run-mouse,
   .day-dialog,
-  .day-banner-in {
+  .day-banner-in,
+  .screen-panel,
+  .screen-progress {
     animation: none;
   }
 

@@ -26,6 +26,7 @@ export const DAY_PRIMARY: readonly NavItem[] = [
 
 /** Everything else, behind "More". */
 export const DAY_MORE: readonly NavItem[] = [
+  { href: "/day/photos", label: "Photos", icon: "camera", hint: "Pictures from the hall as they are taken" },
   { href: "/day/competitors", label: "Competitors", icon: "flag", hint: "Check-in, the match, the rules on the day" },
   { href: "/day/volunteers", label: "Volunteers", icon: "hand", hint: "Stations, shifts and who is where" },
   { href: "/day/organizers", label: "Organizers", icon: "badge", hint: "The committee running the day" },
