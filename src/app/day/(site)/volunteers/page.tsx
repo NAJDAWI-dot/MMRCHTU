@@ -38,22 +38,20 @@ export default async function DayVolunteersPage() {
           <SectionTitle kicker="Who is where">Stations</SectionTitle>
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[...stations.entries()].map(([station, people], index) => (
-              <div key={station} className="day-card overflow-hidden" data-reveal style={{ ["--i" as string]: index % 6 }}>
-                <div className="flex items-center gap-3 border-b border-day-line/[0.07] px-5 py-4">
-                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-day-crimson/10 text-day-crimson">
-                    <DayIcon name="pin" className="h-[18px] w-[18px]" />
-                  </span>
+              <div key={station} className="day-card day-posts" data-reveal style={{ ["--i" as string]: index % 6 }}>
+                <div className="flex items-center gap-3 border-b-2 border-day-line/85 px-5 py-4">
+                  <DayIcon name="pin" className="h-5 w-5 shrink-0 text-day-crimson" />
                   <p className="day-display text-xl text-day-ink">{station}</p>
                   <span className="day-num ml-auto text-sm text-day-faint">{people.length}</span>
                 </div>
-                <ul className="divide-y divide-day-line/[0.06]">
+                <ul className="divide-y divide-day-line/[0.08]">
                   {people.map((person) => (
                     <li key={person.id} className="flex items-center justify-between gap-3 px-5 py-3">
                       <span className="min-w-0">
                         <span className="block truncate font-semibold text-day-ink">{person.name}</span>
                         {person.role ? <span className="block truncate text-sm text-day-muted">{person.role}</span> : null}
                       </span>
-                      {person.shift ? <span className="day-num shrink-0 rounded-full bg-day-gold/10 px-2.5 py-1 text-xs font-semibold text-day-gold">{person.shift}</span> : null}
+                      {person.shift ? <span className="day-chip day-num shrink-0 bg-day-gold/15 text-day-gold">{person.shift}</span> : null}
                     </li>
                   ))}
                 </ul>
@@ -62,9 +60,7 @@ export default async function DayVolunteersPage() {
           </div>
         </section>
       ) : null}
-      <div className="day-card p-6 sm:p-10">
-        <GuideView blocks={guide.blocks} />
-      </div>
+      <GuideView blocks={guide.blocks} />
     </div>
   );
 }

@@ -101,7 +101,7 @@ function Clock({ clock }: { clock: ReturnType<typeof useMatchClock> }) {
   const low = clock.left < 60000;
   const done = clock.left === 0;
   return (
-    <div className={`flex items-center gap-4 rounded-3xl px-5 py-3 ring-1 ${done ? "bg-day-live/15 ring-day-live/40" : "bg-day-sunk ring-day-line/[0.08]"}`}>
+    <div className={`flex items-center gap-4 rounded-[4px] px-5 py-3 ring-1 ${done ? "bg-day-live/15 ring-day-live/40" : "bg-day-sunk ring-day-line/[0.08]"}`}>
       <span
         className={`day-num day-display text-5xl tabular-nums sm:text-6xl ${low ? "text-day-live" : "text-day-ink"}`}
         aria-label={`Match time left: ${minutes} minutes ${seconds} seconds`}
@@ -161,16 +161,16 @@ function Pad({
   });
   const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", kind === "time" ? "." : "", "0", "back"];
   return (
-    <div className="fixed inset-0 z-[80] grid place-items-center bg-day-ink/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="fixed inset-0 z-[80] grid place-items-center bg-[rgb(20_8_26/0.55)] p-4" role="dialog" aria-modal="true" aria-label={title}>
       <div className="day-card w-full max-w-sm space-y-4 p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <p className="day-display text-2xl text-day-ink">{title}</p>
-          <button type="button" onClick={onCancel} aria-label="Cancel" className="grid h-10 w-10 place-items-center rounded-xl text-day-faint hover:bg-day-ink/[0.06]">
+          <button type="button" onClick={onCancel} aria-label="Cancel" className="grid h-10 w-10 place-items-center rounded-[4px] text-day-faint hover:bg-day-ink/[0.06]">
             <DayIcon name="close" className="h-5 w-5" />
           </button>
         </div>
         <p
-          className={`day-num day-display rounded-2xl px-4 py-3 text-right text-5xl ring-1 ${
+          className={`day-num day-display rounded-[4px] px-4 py-3 text-right text-5xl ring-1 ${
             text && value === null ? "bg-day-live/10 text-day-live ring-day-live/40" : "bg-day-sunk text-day-ink ring-day-line/[0.08]"
           }`}
           aria-live="polite"
@@ -189,7 +189,7 @@ function Pad({
                 type="button"
                 onClick={() => press(key)}
                 aria-label={key === "back" ? "Delete" : key}
-                className="day-num grid h-16 place-items-center rounded-2xl bg-day-ink/[0.05] text-2xl font-semibold text-day-ink transition-colors active:bg-day-ink/15"
+                className="day-num grid h-16 place-items-center rounded-[4px] bg-day-ink/[0.05] text-2xl font-semibold text-day-ink transition-colors active:bg-day-ink/15"
               >
                 {key === "back" ? <DayIcon name="back" className="h-6 w-6" /> : key}
               </button>
@@ -320,7 +320,7 @@ function SideRecorder({
                     } else setArmed(index);
                   }}
                   onBlur={() => setArmed((current) => (current === index ? null : current))}
-                  className={`day-num inline-flex h-11 items-center gap-2 rounded-xl px-3 text-base font-semibold ring-1 transition-colors ${
+                  className={`day-num inline-flex h-11 items-center gap-2 rounded-[4px] px-3 text-base font-semibold ring-1 transition-colors ${
                     armed === index
                       ? "bg-day-live text-day-on-ink ring-day-live"
                       : run.ok
@@ -340,7 +340,7 @@ function SideRecorder({
         </ol>
       </div>
 
-      <div className="mt-auto grid grid-cols-3 gap-3 rounded-2xl bg-day-ink p-4 text-day-on-ink" aria-live="polite">
+      <div className="mt-auto grid grid-cols-3 gap-3 rounded-[4px] bg-day-ink p-4 text-day-on-ink" aria-live="polite">
         <div>
           <p className="text-[11px] font-semibold opacity-60">Successful</p>
           <p className="day-num day-display mt-1 text-2xl">
@@ -553,12 +553,10 @@ export function JudgeTablet({ data }: { data: JudgeData }) {
 
   return (
     <div className="min-h-screen pb-10">
-      <header className="sticky top-0 z-40 border-b border-day-line/[0.08] bg-day-bg/85 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-day-line/[0.12] bg-day-bg">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-day-crimson/10 text-day-crimson">
-              <DayIcon name="flag" className="h-5 w-5" />
-            </span>
+            <DayIcon name="flag" className="h-6 w-6 shrink-0 text-day-crimson" />
             <div>
               <p className="day-display text-xl leading-none text-day-ink">Judge</p>
               <p className="text-xs font-semibold text-day-muted">{knockout ? "Knockout" : "Phase 1 · Qualifying"}</p>
@@ -566,10 +564,10 @@ export function JudgeTablet({ data }: { data: JudgeData }) {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ${online ? "bg-day-good/10 text-day-good" : "bg-day-live/10 text-day-live"}`}
+              className={`inline-flex items-center gap-2 rounded-[2px] px-3 py-1.5 text-xs font-semibold ${online ? "bg-day-good/10 text-day-good" : "bg-day-live/10 text-day-live"}`}
               role="status"
             >
-              <span className={`h-2 w-2 rounded-full ${online ? "bg-day-good" : "bg-day-live"}`} aria-hidden="true" />
+              <span className={`h-2 w-2 ${online ? "bg-day-good" : "bg-day-live"}`} aria-hidden="true" />
               {online ? "Online" : "Offline"}
               {outbox.length ? ` · ${outbox.length} waiting to send` : ""}
             </span>
@@ -621,7 +619,7 @@ export function JudgeTablet({ data }: { data: JudgeData }) {
         </div>
 
         {restored ? (
-          <p className="rounded-2xl bg-day-gold/10 px-4 py-3 text-sm font-semibold text-day-ink ring-1 ring-day-gold/30" role="status">
+          <p className="rounded-[4px] bg-day-gold/10 px-4 py-3 text-sm font-semibold text-day-ink ring-1 ring-day-gold/30" role="status">
             Unsaved runs from this tablet are back on the sheet. Save them, or remove them.
           </p>
         ) : null}

@@ -11,7 +11,7 @@ function Notice({ state }: { state: ActionState }) {
   return (
     <p
       role="status"
-      className={`rounded-xl px-3.5 py-2.5 text-sm font-medium ${state.ok ? "bg-day-good/10 text-day-good" : "bg-day-live/10 text-day-live"}`}
+      className={`rounded-[4px] px-3.5 py-2.5 text-sm font-medium ${state.ok ? "bg-day-good/10 text-day-good" : "bg-day-live/10 text-day-live"}`}
     >
       {state.message}
     </p>
@@ -58,7 +58,7 @@ export function AudienceForm({
       <form action={action}>
         <input type="hidden" name="onlyMe" value="yes" />
         <input type="hidden" name="audience" value="PRIVATE" />
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-day-gold/10 p-4 ring-1 ring-day-gold/40">
+        <div className="flex flex-wrap items-center gap-3 rounded-[4px] bg-day-gold/10 p-4 ring-1 ring-day-gold/40">
           <p className="min-w-0 flex-1 text-sm text-day-ink">
             <strong>Only me.</strong> Lock the day site to your account alone while you build it.
           </p>
@@ -73,7 +73,7 @@ export function AudienceForm({
             {DAY_AUDIENCES.map((value) => (
               <label
                 key={value}
-                className={`cursor-pointer rounded-2xl border p-4 text-sm transition-colors ${
+                className={`cursor-pointer rounded-[4px] border p-4 text-sm transition-colors ${
                   choice === value ? "border-day-ink bg-day-ink text-day-on-ink" : "border-day-line/15 bg-day-surface text-day-ink hover:border-day-line/30"
                 }`}
               >
@@ -102,7 +102,7 @@ export function AudienceForm({
               {admins.map((admin) => (
                 <label
                   key={admin.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-full border border-day-line/15 bg-day-surface px-3.5 py-2 text-sm text-day-ink"
+                  className="flex cursor-pointer items-center gap-2 rounded-[4px] border border-day-line/15 bg-day-surface px-3.5 py-2 text-sm text-day-ink"
                 >
                   <input
                     type="checkbox"
@@ -120,7 +120,7 @@ export function AudienceForm({
         ) : null}
 
         {goingPublic ? (
-          <label className="flex items-start gap-2 rounded-2xl bg-day-live/[0.06] p-4 text-sm text-day-ink ring-1 ring-day-live/30">
+          <label className="flex items-start gap-2 rounded-[4px] bg-day-live/[0.06] p-4 text-sm text-day-ink ring-1 ring-day-live/30">
             <input
               type="checkbox"
               checked={confirmPublic}

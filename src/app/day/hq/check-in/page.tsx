@@ -91,8 +91,8 @@ export default async function CheckInPage() {
               {tile.value}
               <span className="ml-1 text-base font-semibold text-day-faint">/ {tile.of}</span>
             </dd>
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-day-ink/10" aria-hidden="true">
-              <div className={`h-full rounded-full ${tile.tone}`} style={{ width: `${tile.of ? Math.round((tile.value / tile.of) * 100) : 0}%` }} />
+            <div className="mt-3 h-1.5 overflow-hidden bg-day-ink/10" aria-hidden="true">
+              <div className={`h-full ${tile.tone}`} style={{ width: `${tile.of ? Math.round((tile.value / tile.of) * 100) : 0}%` }} />
             </div>
           </div>
         ))}

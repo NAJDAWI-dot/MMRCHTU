@@ -15,17 +15,15 @@ export default async function DayVenuePage() {
     <div className="space-y-12">
       <PageHead kicker={guide.kicker} title={guide.title} />
       {site.venue || site.dateText ? (
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
+        <div className="day-card day-posts grid grid-cols-[minmax(0,1fr)] gap-px overflow-hidden bg-day-line/[0.12] sm:grid-cols-2">
           {[
             site.venue ? { label: "Where", value: site.venue, icon: "pin" as const } : null,
             site.dateText ? { label: "When", value: site.dateText, icon: "schedule" as const } : null,
           ]
             .filter((item): item is { label: string; value: string; icon: "pin" | "schedule" } => item !== null)
             .map((item, index) => (
-              <div key={item.label} className="day-card flex items-center gap-5 p-6" data-reveal style={{ ["--i" as string]: index }}>
-                <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-day-crimson/10 text-day-crimson">
-                  <DayIcon name={item.icon} className="h-7 w-7" />
-                </span>
+              <div key={item.label} className="flex items-start gap-4 bg-day-surface p-6" data-reveal style={{ ["--i" as string]: index }}>
+                <DayIcon name={item.icon} className="mt-0.5 h-6 w-6 shrink-0 text-day-crimson" />
                 <span>
                   <span className="block text-sm font-semibold text-day-muted">{item.label}</span>
                   <span className="day-display mt-1 block text-2xl text-day-ink sm:text-3xl">{item.value}</span>
@@ -34,9 +32,7 @@ export default async function DayVenuePage() {
             ))}
         </div>
       ) : null}
-      <div className="day-card p-6 sm:p-10">
-        <GuideView blocks={guide.blocks} />
-      </div>
+      <GuideView blocks={guide.blocks} />
     </div>
   );
 }

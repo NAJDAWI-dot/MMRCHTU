@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { Countdown } from "@/components/brand/Countdown";
-import { CountUp } from "@/components/day-site/CountUp";
 import { Crest } from "@/components/day-site/Crest";
-import { ChapterLogo } from "@/components/day-site/DayNav";
+import { DayCountdown } from "@/components/day-site/DayCountdown";
+import { CellKey, DayCells, type DayCell } from "@/components/day-site/DayCells";
 import { HeroMaze } from "@/components/day-site/HeroMaze";
-import { DayIcon, type DayIconName } from "@/components/day-site/icons";
+import { DayIcon } from "@/components/day-site/icons";
 import { FollowPicker } from "@/components/day-site/Follow";
-import { Empty, HeldBack, MatchCard, MoreLink, SectionTitle } from "@/components/day-site/ui";
+import { Road } from "@/components/day-site/Road";
+import { PlaceBlock, RunTicks, gapToLeader } from "@/components/day-site/Tower";
+import { Empty, HeldBack, MatchCard, MoreLink, Post, SectionTitle } from "@/components/day-site/ui";
 import { KNOCKOUT_ROUNDS, QUALIFIERS, matchesInRound, phaseInfo } from "@/lib/bracket";
 import { loadPublicCompetition } from "@/lib/public-competition";
 import { shouldShowCountdown } from "@/lib/countdown";
@@ -20,11 +21,11 @@ import { requireDayViewer } from "@/lib/day-access";
 
 export const revalidate = 30;
 
-const EXPLORE: { href: string; title: string; blurb: string; icon: DayIconName }[] = [
-  { href: "/day/competitors", title: "Competitors", blurb: "Check-in, inspection, your eight minutes and what to bring.", icon: "flag" },
-  { href: "/day/volunteers", title: "Volunteers", blurb: "Stations, shifts and who is where.", icon: "hand" },
-  { href: "/day/organizers", title: "Organizers", blurb: "The committee, the desks and who to ask.", icon: "badge" },
-  { href: "/day/venue", title: "Venue", blurb: "Where it is and how to find your way inside.", icon: "pin" },
+const EXPLORE: { href: string; title: string; blurb: string }[] = [
+  { href: "/day/competitors", title: "Competitors", blurb: "Check-in, inspection, your eight minutes and what to bring." },
+  { href: "/day/volunteers", title: "Volunteers", blurb: "Stations, shifts and who is where." },
+  { href: "/day/organizers", title: "Organizers", blurb: "The committee, the desks and who to ask." },
+  { href: "/day/venue", title: "Venue", blurb: "Where it is and how to find your way inside." },
 ];
 
 /** How far through a slot of the running order we are, 0 to 1. */
@@ -35,7 +36,13 @@ function progressThrough(start: Date, end: Date | null | undefined, now: Date): 
   return Math.min(1, Math.max(0, (now.getTime() - start.getTime()) / span));
 }
 
-/** The live hub: the fanciest page on the site, and the one open all day. */
+/**
+ * The live page: where the day is, at a glance, and the way into everything.
+ *
+ * It opens on the state of play (the phase, and one cell for every team or
+ * match in it) beside the maze itself, then what is on the maze now, the
+ * road to the final, the qualifying tower, the latest results and news.
+ */
 export default async function DayLivePage() {
   await requireDayViewer();
   const [state, site, queue, gallery] = await Promise.all([loadPublicCompetition(), loadDaySite(), loadQueue(), loadDayPhotos(6)]);
@@ -56,16 +63,39 @@ export default async function DayLivePage() {
   const ran = state.table.filter((row) => row.recorded).length;
   const leader = ranked[0]?.best ?? null;
   const checkedIn = state.competitors.filter((team) => team.checkedIn).length;
-  const decided = playable.filter((m) => m.winnerId).length;
   const phase = champion ? 6 : state.drawn ? (currentRound ?? 2) : 1;
 
-  const phaseLine = champion
-    ? "The final is decided"
-    : state.drawn && currentRound
-      ? `Phase ${currentRound} · ${phaseInfo(currentRound).name}`
-      : state.qualifyingStatus === "OPEN"
-        ? `Phase 1 · Qualifying · ${ran} of ${state.competitors.length} teams have run`
-        : "Phase 1 · Qualifying opens soon";
+  // The state of play, in words and in cells.
+  const onMaze = queue.active ? queue.queue.now?.id : undefined;
+  let title: string;
+  let detail: string;
+  let cells: DayCell[] = [];
+  if (champion) {
+    title = "The final is decided";
+    detail = `${champion.name} are the champions of MMRC 26.`;
+  } else if (state.drawn && currentRound) {
+    const round = state.bracket.filter((m) => m.round === currentRound && !m.void);
+    const decided = round.filter((m) => m.winnerId).length;
+    title = phaseInfo(currentRound).name;
+    detail = `Phase ${currentRound} · ${decided} of ${matchesInRound(currentRound)} matches decided${live.length ? ` · ${live.length} on the maze now` : ""}`;
+    cells = round.map((m) => ({
+      id: m.id,
+      name: `${nameOf(m.teamAId) ?? "To be decided"} v ${nameOf(m.teamBId) ?? "To be decided"}`,
+      state: m.winnerId ? "won" : m.status === "LIVE" ? "live" : "waiting",
+    }));
+  } else {
+    title = state.qualifyingStatus === "OPEN" ? "Qualifying" : "Qualifying opens soon";
+    detail =
+      state.qualifyingStatus === "OPEN"
+        ? `Phase 1 · ${ran} of ${state.competitors.length} teams have run · ${checkedIn} checked in`
+        : `Phase 1 · ${state.competitors.length} teams · ${checkedIn} checked in`;
+    const byOrder = [...state.competitors].sort((a, b) => (a.runOrder ?? 999) - (b.runOrder ?? 999) || a.name.localeCompare(b.name));
+    cells = byOrder.map((team) => ({
+      id: team.id,
+      name: team.name,
+      state: !team.eligible ? "out" : team.id === onMaze ? "live" : team.standing?.recorded ? "ran" : team.checkedIn ? "here" : "waiting",
+    }));
+  }
 
   // The call queue takes the "now" slot through qualifying, once there is someone to call.
   const showQueue = !live.length && !upNext.length && queue.active && !!(queue.queue.now || queue.queue.onDeck);
@@ -75,57 +105,77 @@ export default async function DayLivePage() {
 
   // Teams still in it at the start of each phase, for the road to the final.
   const road = [
-    { phase: 1, label: "Qualifying", teams: state.competitors.length },
-    ...KNOCKOUT_ROUNDS.map((round) => ({ phase: round, label: phaseInfo(round).name, teams: matchesInRound(round) * 2 })),
+    { phase: 1, label: "Qualifying", teams: state.competitors.length, blurb: phaseInfo(1).blurb },
+    ...KNOCKOUT_ROUNDS.map((round) => ({ phase: round, label: phaseInfo(round).name, teams: matchesInRound(round) * 2, blurb: phaseInfo(round).blurb })),
   ];
 
+  const [bigPhoto, ...smallPhotos] = gallery.photos.slice(0, 5);
+
   return (
-    <div className="space-y-24 sm:space-y-32">
+    <div className="space-y-20 sm:space-y-28">
       {/* ----------------------------------------------------------- hero */}
-      <section className="relative grid min-h-[calc(100svh-9rem)] grid-cols-[minmax(0,1fr)] items-center gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-        <div>
-          <p className="day-line-in flex flex-wrap items-center gap-2 text-sm font-semibold">
-            <span className="inline-flex items-center gap-2 rounded-full bg-day-live/10 px-3 py-1.5 text-day-live">
+      <section className="grid grid-cols-[minmax(0,1fr)] items-center gap-12 lg:min-h-[calc(100svh-10rem)] lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-16">
+        <div className="min-w-0">
+          <p className="day-line-in flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold text-day-muted" style={{ ["--i" as string]: 0 }}>
+            <span className="inline-flex items-center gap-2 text-day-live">
               <span className="day-live-dot" aria-hidden="true" />
               Live
             </span>
             {site.dateText ? (
-              <span className="rounded-full border border-day-line/10 bg-day-surface/70 px-3 py-1.5 text-day-muted">{site.dateText}</span>
+              <>
+                <span className="h-1 w-1 bg-day-line/40" aria-hidden="true" />
+                <span>{site.dateText}</span>
+              </>
             ) : null}
             {site.venue ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-day-line/10 bg-day-surface/70 px-3 py-1.5 text-day-muted">
-                <DayIcon name="pin" className="h-3.5 w-3.5" />
-                {site.venue}
-              </span>
+              <>
+                <span className="h-1 w-1 bg-day-line/40" aria-hidden="true" />
+                <span>{site.venue}</span>
+              </>
             ) : null}
           </p>
 
-          <h1 className="mt-8">
-            <span className="day-line-in block font-brand text-[clamp(4.2rem,14vw,10.5rem)] leading-[0.86] text-day-ink" style={{ ["--i" as string]: 1 }}>
-              MMRC 26
+          <h1 className="mt-6">
+            <span className="day-rise">
+              <span className="whitespace-nowrap font-brand text-[clamp(3.4rem,13vw,6.4rem)] leading-[0.9] text-day-ink lg:text-[clamp(4rem,6.2vw,6.4rem)]">MMRC 26</span>
             </span>
-            <span
-              className="day-line-in day-display mt-4 block text-[clamp(1.6rem,4.2vw,3.4rem)] uppercase text-day-crimson"
-              style={{ ["--i" as string]: 2, letterSpacing: "0.02em" }}
-            >
-              {site.headline && site.headline !== "Competition Day" ? site.headline : "Competition day"}
+            <span className="day-rise mt-3" style={{ ["--i" as string]: 1 }}>
+              <span className="day-display text-[clamp(1.55rem,4vw,2.75rem)] text-day-crimson">
+                {site.headline && site.headline !== "Competition Day" ? site.headline : "Competition day"}
+              </span>
             </span>
           </h1>
 
-          <div className="day-line-in mt-8 max-w-xl" style={{ ["--i" as string]: 3 }}>
-            <p className="flex items-center gap-3 text-base font-semibold text-day-ink sm:text-lg">
-              <span className="day-stripe h-6 w-1.5 rounded-full" aria-hidden="true" />
-              {phaseLine}
-            </p>
-            {state.qualifyingStatus === "OPEN" && !state.drawn && state.competitors.length ? (
-              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-day-ink/10" aria-hidden="true">
-                <div className="day-stripe-x h-full rounded-full" style={{ width: `${Math.round((ran / state.competitors.length) * 100)}%` }} />
+          {/* The state of play. */}
+          <div className="day-line-in mt-10 max-w-xl" style={{ ["--i" as string]: 2 }}>
+            <div className="day-wall day-wall-quiet mb-6" aria-hidden="true" />
+            <p className="day-display text-[1.65rem] text-day-ink sm:text-[2rem]">{title}</p>
+            <p className="mt-1.5 font-medium text-day-muted">{detail}</p>
+            {cells.length ? (
+              <div className="mt-5 space-y-3">
+                <DayCells cells={cells} size={cells.length > 24 ? 17 : 26} />
+                <CellKey
+                  items={
+                    state.drawn
+                      ? [
+                          { state: "won", label: "Decided" },
+                          { state: "live", label: "On the maze" },
+                          { state: "waiting", label: "To come" },
+                        ]
+                      : [
+                          { state: "ran", label: "Has run" },
+                          { state: "live", label: "On the maze" },
+                          { state: "here", label: "Checked in" },
+                          { state: "waiting", label: "Not here yet" },
+                        ]
+                  }
+                />
               </div>
             ) : null}
-            {site.intro ? <p className="mt-5 leading-relaxed text-day-muted">{site.intro}</p> : null}
+            {site.intro ? <p className="mt-6 leading-relaxed text-day-muted">{site.intro}</p> : null}
           </div>
 
-          <div className="day-line-in mt-9 flex flex-wrap gap-3" style={{ ["--i" as string]: 4 }}>
+          <div className="day-line-in mt-9 flex flex-wrap gap-3" style={{ ["--i" as string]: 3 }}>
             <Link href={state.drawn ? "/day/bracket" : "/day/standings"} className="day-btn day-btn-ink h-12 px-6 text-base">
               {state.drawn ? "Follow the bracket" : "Follow the standings"}
               <DayIcon name="arrow" className="h-4 w-4" />
@@ -136,59 +186,39 @@ export default async function DayLivePage() {
           </div>
 
           {countdown ? (
-            <div className="day-line-in mt-10" style={{ ["--i" as string]: 5 }}>
-              <p className="day-kicker mb-3">Starts in</p>
-              <Countdown target={countdown} />
+            <div className="day-line-in mt-10" style={{ ["--i" as string]: 4 }}>
+              <p className="mb-3 text-sm font-semibold text-day-muted">Starts in</p>
+              <DayCountdown target={countdown} />
             </div>
           ) : null}
         </div>
 
-        <div className="relative" data-reveal="scale">
+        {/* The maze on its floor, or the champions once there are some. */}
+        <div className="relative" data-reveal>
           {champion ? (
-            <Link href={`/day/teams/${champion.id}`} className="day-card day-lift block overflow-hidden p-8 text-center sm:p-10">
-              <div className="day-stripe-x absolute inset-x-0 top-0 h-2" aria-hidden="true" />
-              <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-day-gold/15 text-day-gold">
-                <DayIcon name="trophy" className="h-8 w-8" />
-              </span>
-              <p className="day-kicker mt-6">Champions of MMRC 26</p>
-              <div className="mt-5 flex justify-center">
-                <Crest name={champion.name} size={96} ring />
+            <Link href={`/day/teams/${champion.id}`} className="day-floor day-posts group block overflow-hidden text-center">
+              <div className="day-checker h-3 opacity-80" style={{ ["--size" as string]: "6px" }} aria-hidden="true" />
+              <div className="px-8 py-12 sm:px-10 sm:py-16">
+                <DayIcon name="trophy" className="mx-auto h-10 w-10 text-day-gold" />
+                <p className="mt-5 text-sm font-semibold text-day-gold">Champions of MMRC 26</p>
+                <div className="mt-6 flex justify-center">
+                  <Crest name={champion.name} size={104} ring />
+                </div>
+                <p className="day-display mt-7 text-4xl text-day-ink group-hover:underline sm:text-5xl">{champion.name}</p>
               </div>
-              <p className="day-display mt-6 text-4xl text-day-ink sm:text-5xl">{champion.name}</p>
             </Link>
           ) : (
-            <div className="day-card relative overflow-hidden p-6 sm:p-8">
-              <div className="flex items-center justify-between text-xs font-semibold text-day-muted">
-                <span className="day-kicker">The maze</span>
-                <span className="day-num">10 × 10 · to the centre</span>
+            <figure>
+              <div className="day-floor day-posts p-5 sm:p-7">
+                <HeroMaze className="aspect-square w-full" />
               </div>
-              <HeroMaze className="mt-5 aspect-square w-full" />
-              <p className="mt-5 text-sm leading-relaxed text-day-muted">
-                Eight minutes each. Every run that reaches the centre counts, and the fastest sets the official time.
-              </p>
-            </div>
+              <figcaption className="mt-3 flex items-center justify-between gap-4 text-[0.8125rem] font-semibold text-day-muted">
+                <span>The maze: 10 × 10 cells, the centre in gold</span>
+                <span className="day-num shrink-0">8:00 a team</span>
+              </figcaption>
+            </figure>
           )}
         </div>
-      </section>
-
-      {/* ------------------------------------------------------- numbers */}
-      <section aria-label="The day in numbers" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {[
-          { label: "Teams competing", value: state.competitors.length, icon: "teams" as const, tone: "text-day-ink" },
-          { label: "Checked in", value: checkedIn, icon: "check" as const, tone: "text-day-good" },
-          { label: state.drawn ? "In the bracket" : "Have run", value: state.drawn ? state.table.filter((row) => row.qualified).length : ran, icon: "timer" as const, tone: "text-day-crimson" },
-          { label: "Matches decided", value: decided, icon: "flag" as const, tone: "text-day-gold" },
-        ].map((stat, index) => (
-          <div key={stat.label} className="day-card p-5 sm:p-6" data-reveal style={{ ["--i" as string]: index }}>
-            <p className="flex items-center gap-2 text-xs font-semibold text-day-muted">
-              <DayIcon name={stat.icon} className="h-4 w-4" />
-              {stat.label}
-            </p>
-            <p className={`day-num day-display mt-4 text-5xl sm:text-6xl ${stat.tone}`}>
-              <CountUp value={stat.value} />
-            </p>
-          </div>
-        ))}
       </section>
 
       {state.competitors.length ? <FollowPicker teams={state.competitors.map((team) => ({ id: team.id, name: team.name }))} /> : null}
@@ -196,7 +226,7 @@ export default async function DayLivePage() {
       <HeldBack reveal={state.reveal} phases={Array.from({ length: phase }, (_, index) => index + 1)} />
 
       {/* ------------------------------------------------- now on the maze */}
-      <section className="space-y-6">
+      <section className="space-y-7">
         <SectionTitle
           kicker={live.length ? "Happening now" : showQueue ? `Qualifying · ${queue.queue.ran} of ${queue.queue.total} have run` : "Now and next"}
           action={
@@ -225,7 +255,7 @@ export default async function DayLivePage() {
           />
         ) : site.focus ? (
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-            <div className="day-card relative overflow-hidden p-6 sm:p-8" data-reveal>
+            <div className={`${site.focus.state === "now" ? "day-floor" : "day-card"} day-posts p-6 sm:p-8`} data-reveal>
               <p className={`flex items-center gap-2 text-sm font-semibold ${site.focus.state === "now" ? "text-day-live" : "text-day-muted"}`}>
                 {site.focus.state === "now" ? <span className="day-live-dot" aria-hidden="true" /> : null}
                 {site.focus.state === "now" ? "Happening now" : "Up next"}
@@ -238,13 +268,13 @@ export default async function DayLivePage() {
               </p>
               {site.focus.description ? <p className="mt-4 max-w-xl text-day-muted">{site.focus.description}</p> : null}
               {focusProgress !== null ? (
-                <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-day-ink/10" aria-hidden="true">
-                  <div className="h-full rounded-full bg-day-live" style={{ width: `${Math.round(focusProgress * 100)}%` }} />
+                <div className="mt-6 h-1.5 bg-day-line/[0.15]" aria-hidden="true">
+                  <div className="h-full bg-day-live" style={{ width: `${Math.round(focusProgress * 100)}%` }} />
                 </div>
               ) : null}
             </div>
             {site.after ? (
-              <div className="day-card p-6 sm:p-8" data-reveal style={{ ["--i" as string]: 1 }}>
+              <div className="day-card day-posts p-6 sm:p-8" data-reveal style={{ ["--i" as string]: 1 }}>
                 <p className="text-sm font-semibold text-day-muted">After that</p>
                 <p className="day-display mt-4 text-2xl text-day-ink sm:text-3xl">{site.after.title}</p>
                 <p className="day-num mt-3 text-day-muted">
@@ -255,171 +285,132 @@ export default async function DayLivePage() {
             ) : null}
           </div>
         ) : (
-          <Empty icon="schedule" title="The running order goes up soon">
+          <Empty title="The running order goes up soon">
             The organisers publish the day&rsquo;s timings here, and this page follows them as the day goes.
           </Empty>
         )}
       </section>
 
       {/* ----------------------------------------------- road to the final */}
-      <section className="space-y-6">
-        <SectionTitle kicker="Six phases" action={<MoreLink href="/day/bracket">The bracket</MoreLink>}>
+      <section className="space-y-10">
+        <SectionTitle kicker="Six phases, forty teams to one" action={<MoreLink href="/day/bracket">The bracket</MoreLink>}>
           The road to the final
         </SectionTitle>
-        {/* Revealed as one strip: on a phone it scrolls sideways, and a card
-            waiting off to the side would never cross the viewport to appear. */}
-        <ol
-          className="day-no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-6"
-          data-reveal
-        >
-          {road.map((step) => {
-            const now = step.phase === phase;
-            const done = step.phase < phase;
-            return (
-              <li
-                key={step.phase}
-                className={`day-card relative w-[62vw] shrink-0 snap-start overflow-hidden p-5 sm:w-auto ${now ? "ring-2 ring-day-crimson/60" : ""}`}
-              >
-                {now ? <div className="day-stripe-x absolute inset-x-0 top-0 h-1" aria-hidden="true" /> : null}
-                <p className={`text-xs font-semibold ${now ? "text-day-crimson" : "text-day-faint"}`}>
-                  Phase {step.phase}
-                  {now ? " · now" : done ? " · done" : ""}
-                </p>
-                <p className={`day-display mt-3 text-xl ${done ? "text-day-faint" : "text-day-ink"}`}>{step.label}</p>
-                <p className="day-num mt-6 text-3xl text-day-ink">
-                  {step.teams}
-                  <span className="ml-1 text-sm font-medium text-day-muted">{step.phase === 6 ? "finalists" : "teams"}</span>
-                </p>
-                <p className="mt-2 text-xs leading-relaxed text-day-muted">{phaseInfo(step.phase).blurb}</p>
-              </li>
-            );
-          })}
-        </ol>
+        <Road steps={road} current={phase} />
       </section>
 
       {/* ------------------------------------------------------ qualifying */}
-      <section className="grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <div className="space-y-6">
-          <SectionTitle kicker="Phase 1" action={<MoreLink href="/day/standings">All {state.table.length}</MoreLink>}>
+      <section className="grid grid-cols-[minmax(0,1fr)] gap-12 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-14">
+        <div className="space-y-7">
+          <SectionTitle kicker="Phase 1, the top eight" action={<MoreLink href="/day/standings">All {state.table.length}</MoreLink>}>
             Qualifying
           </SectionTitle>
           {ranked.length ? (
-            <ol className="day-card divide-y divide-day-line/[0.06] overflow-hidden" data-reveal>
+            <ol className="day-card day-posts divide-y divide-day-line/[0.08]" data-reveal>
               {ranked.slice(0, 8).map((row) => (
                 <li key={row.teamId} data-team={row.teamId}>
-                  <Link href={`/day/teams/${row.teamId}`} className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-day-ink/[0.03]">
-                    <span
-                      className={`day-num day-display w-8 text-center text-2xl ${row.rank === 1 ? "text-day-gold" : "text-day-faint"}`}
-                    >
-                      {row.rank}
-                    </span>
-                    <Crest name={row.name} size={26} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold text-day-ink group-hover:underline">{row.name}</span>
-                      <span className="day-num block text-xs text-day-muted">
-                        {row.runs ? `${row.runs} ${row.runs === 1 ? "run" : "runs"} · best ${formatTime(row.official)}` : "No run reached the centre"}
+                  <Link href={`/day/teams/${row.teamId}`} className="group grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-day-ink/[0.03] sm:gap-4 sm:px-5">
+                    <PlaceBlock rank={row.rank} />
+                    <Crest name={row.name} size={24} />
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold text-day-ink underline-offset-2 group-hover:underline">{row.name}</span>
+                      <span className="mt-1 flex items-center gap-2.5 text-[0.8125rem] text-day-muted">
+                        <RunTicks log={row.log} />
+                        <span className="day-num truncate">{row.runs ? `best ${formatTime(row.official)}` : "no run reached the centre"}</span>
                       </span>
-                      {leader && row.best ? (
-                        <span className="mt-2 block h-1 overflow-hidden rounded-full bg-day-ink/[0.06]" aria-hidden="true">
-                          <span
-                            className={`block h-full rounded-full ${row.rank === 1 ? "bg-day-gold" : "bg-day-plum/70"}`}
-                            style={{ width: `${Math.max(4, Math.round((row.best / leader) * 100))}%` }}
-                          />
-                        </span>
-                      ) : null}
                     </span>
-                    <span className="day-num day-display text-2xl text-day-ink">{formatPoints(row.best)}</span>
+                    <span className="text-right">
+                      <span className={`day-num day-display block text-[1.7rem] leading-none ${row.rank === 1 ? "text-day-gold" : "text-day-ink"}`}>{formatPoints(row.best)}</span>
+                      <span className="day-num mt-1 block text-xs font-semibold text-day-faint">{gapToLeader(row.best, leader) || (row.rank === 1 ? "leads" : "")}</span>
+                    </span>
                   </Link>
                 </li>
               ))}
             </ol>
           ) : (
-            <Empty icon="timer" title="No match sheets yet">
-              The table fills in as each team finishes its eight minutes.
-            </Empty>
+            <Empty title="No match sheets yet">The table fills in as each team finishes its eight minutes.</Empty>
           )}
         </div>
 
-        <div className="space-y-6">
-          <SectionTitle kicker="How it is scored">The formula</SectionTitle>
-          <div className="day-card overflow-hidden p-6 sm:p-8" data-reveal>
-            <p className="day-display text-2xl leading-snug text-day-ink sm:text-3xl">
+        <div className="space-y-7">
+          <SectionTitle kicker="How a place is earned">The formula</SectionTitle>
+          <div className="day-card day-posts p-6 sm:p-8" data-reveal>
+            <p className="day-display text-[1.6rem] leading-[1.15] text-day-ink sm:text-[1.9rem]">
               <span className="text-day-crimson">Score</span> = successful runs ÷ official time × 1000
             </p>
             <ul className="mt-6 space-y-3 text-day-muted">
-              <li className="flex gap-3">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-day-crimson" aria-hidden="true" />
-                Every run that reaches the centre in the eight minutes counts.
-              </li>
-              <li className="flex gap-3">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-day-crimson" aria-hidden="true" />
-                The official time is the fastest of those runs.
-              </li>
-              <li className="flex gap-3">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-day-crimson" aria-hidden="true" />
-                Four runs with a best of 25 s scores 160.0; one run of 18 s scores 55.6.
-              </li>
+              {[
+                "Every run that reaches the centre in the eight minutes counts.",
+                "The official time is the fastest of those runs.",
+                "Ties go to the faster official time.",
+              ].map((line) => (
+                <li key={line} className="flex gap-3">
+                  <Post className="mt-[0.45rem] bg-day-crimson" />
+                  {line}
+                </li>
+              ))}
             </ul>
-            <p className="mt-6 text-sm text-day-faint">The top {QUALIFIERS} go through to the knockout.</p>
+            <div className="day-sunk mt-6 px-4 py-3">
+              <p className="text-[0.8125rem] font-semibold text-day-muted">For example</p>
+              <p className="day-num mt-1 text-day-ink">4 runs, best 25.0 s: 4 ÷ 25.0 × 1000 = 160.0</p>
+              <p className="day-num text-day-ink">1 run of 18.0 s: 1 ÷ 18.0 × 1000 = 55.6</p>
+            </div>
+            <p className="mt-5 text-sm font-medium text-day-muted">The top {QUALIFIERS} go through to the knockout.</p>
           </div>
         </div>
       </section>
 
       {/* ---------------------------------------------- results and news */}
-      <section className="grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-2">
-        <div className="space-y-6">
-          <SectionTitle kicker="Latest" action={results.length ? <MoreLink href="/day/bracket">Every match</MoreLink> : undefined}>
+      <section className="grid grid-cols-[minmax(0,1fr)] gap-12 lg:grid-cols-2 lg:gap-14">
+        <div className="space-y-7">
+          <SectionTitle kicker="Latest from the knockout" action={results.length ? <MoreLink href="/day/bracket">Every match</MoreLink> : undefined}>
             Results
           </SectionTitle>
           {results.length ? (
-            <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
               {results.map((match) => (
                 <MatchCard key={match.id} match={match} nameOf={nameOf} arena={match.arena} />
               ))}
             </div>
           ) : (
-            <Empty icon="flag" title="No results yet">
-              Head-to-head results land here the moment the knockout starts.
-            </Empty>
+            <Empty title="No results yet">Head-to-head results land here the moment the knockout starts.</Empty>
           )}
         </div>
 
-        <div className="space-y-6">
-          <SectionTitle kicker="From the desk" action={site.announcements.length ? <MoreLink href="/day/news">All news</MoreLink> : undefined}>
+        <div className="space-y-7">
+          <SectionTitle kicker="From the organisers' desk" action={site.announcements.length ? <MoreLink href="/day/news">All news</MoreLink> : undefined}>
             News
           </SectionTitle>
           {site.announcements.length ? (
-            <ul className="space-y-3">
-              {site.announcements.slice(0, 4).map((item, index) => (
-                <li key={item.id} className="day-card p-5" data-reveal style={{ ["--i" as string]: index }}>
-                  <p className="flex items-center gap-2 text-xs font-semibold text-day-faint">
-                    {item.isPinned ? <span className="rounded-full bg-day-gold/15 px-2 py-0.5 text-day-gold">Pinned</span> : null}
-                    {item.tone === "URGENT" ? <span className="rounded-full bg-day-live/10 px-2 py-0.5 text-day-live">Urgent</span> : null}
-                    {postedAgo(item.createdAt, site.now)}
+            <ul className="day-card day-posts divide-y divide-day-line/[0.08]" data-reveal>
+              {site.announcements.slice(0, 4).map((item) => (
+                <li key={item.id} className="px-5 py-4 sm:px-6 sm:py-5">
+                  <p className="flex flex-wrap items-center gap-2 text-[0.8125rem] font-semibold text-day-faint">
+                    {item.isPinned ? <span className="day-chip bg-day-gold/15 text-day-gold">Pinned</span> : null}
+                    {item.tone === "URGENT" ? <span className="day-chip bg-day-live/10 text-day-live">Urgent</span> : null}
+                    <span className="day-num">{postedAgo(item.createdAt, site.now)}</span>
                   </p>
-                  {item.title ? <p className="mt-2 font-semibold text-day-ink">{item.title}</p> : null}
-                  <p className="mt-1.5 whitespace-pre-line leading-relaxed text-day-muted">{item.body}</p>
+                  {item.title ? <p className="mt-2 font-bold text-day-ink">{item.title}</p> : null}
+                  <p className="mt-1 whitespace-pre-line leading-relaxed text-day-muted">{item.body}</p>
                 </li>
               ))}
             </ul>
           ) : (
-            <Empty icon="megaphone" title="Nothing from the desk yet">
-              Anything the organisers need you to know pops up here as it happens.
-            </Empty>
+            <Empty title="Nothing from the desk yet">Anything the organisers need you to know pops up here as it happens.</Empty>
           )}
         </div>
       </section>
 
       {/* ------------------------------------------------ from the hall */}
-      {gallery.photos.length ? (
-        <section className="space-y-6">
-          <SectionTitle kicker="From the hall" action={<MoreLink href="/day/photos">All {gallery.count} photos</MoreLink>}>
+      {bigPhoto ? (
+        <section className="space-y-7">
+          <SectionTitle kicker="Taken in the hall today" action={<MoreLink href="/day/photos">All {gallery.count} photos</MoreLink>}>
             Photos
           </SectionTitle>
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6" data-reveal>
-            {gallery.photos.map((photo) => (
-              <li key={photo.id}>
-                <Link href="/day/photos" className="day-card day-lift block overflow-hidden">
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4" data-reveal>
+            {[bigPhoto, ...smallPhotos].map((photo, index) => (
+              <li key={photo.id} className={index === 0 ? "col-span-2 row-span-2" : ""}>
+                <Link href="/day/photos" className="group block h-full overflow-hidden rounded-[3px] bg-day-ink/[0.06]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={photo.url}
@@ -427,7 +418,7 @@ export default async function DayLivePage() {
                     width={photo.width ?? undefined}
                     height={photo.height ?? undefined}
                     loading="lazy"
-                    className="aspect-square w-full bg-day-ink/[0.06] object-cover"
+                    className="aspect-square h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
                   />
                 </Link>
               </li>
@@ -437,37 +428,22 @@ export default async function DayLivePage() {
       ) : null}
 
       {/* ------------------------------------------------ find your way */}
-      <section className="space-y-6">
-        <SectionTitle kicker="Everything for the day">Find your way</SectionTitle>
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {EXPLORE.map((item, index) => (
-            <Link key={item.href} href={item.href} className="day-card day-lift group flex flex-col p-6" data-reveal style={{ ["--i" as string]: index }}>
-              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-day-crimson/10 text-day-crimson">
-                <DayIcon name={item.icon} className="h-6 w-6" />
-              </span>
-              <p className="day-display mt-8 text-2xl text-day-ink">{item.title}</p>
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-day-muted">{item.blurb}</p>
-              <DayIcon name="arrow" className="mt-6 h-5 w-5 text-day-ink transition-transform duration-500 group-hover:translate-x-1.5" />
-            </Link>
+      <section className="space-y-7">
+        <SectionTitle kicker="Everything else for the day">Find your way</SectionTitle>
+        <ul className="border-t-2 border-day-line/85" data-reveal>
+          {EXPLORE.map((item) => (
+            <li key={item.href} className="border-b border-day-line/[0.14]">
+              <Link
+                href={item.href}
+                className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-1 py-5 transition-colors hover:bg-day-ink/[0.03] sm:px-2 md:grid-cols-[16rem_minmax(0,1fr)_auto]"
+              >
+                <span className="day-display text-[1.6rem] text-day-ink transition-colors group-hover:text-day-crimson sm:text-[1.9rem]">{item.title}</span>
+                <span className="order-3 col-span-2 text-day-muted md:order-none md:col-span-1">{item.blurb}</span>
+                <DayIcon name="arrow" className="h-5 w-5 text-day-ink transition-transform duration-300 group-hover:translate-x-1" />
+              </Link>
+            </li>
           ))}
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------ sign-off */}
-      <section className="day-card relative overflow-hidden px-6 py-14 text-center sm:py-20" data-reveal>
-        <div className="day-checker absolute inset-x-0 bottom-0 h-4 opacity-[0.07]" aria-hidden="true" />
-        <div className="mx-auto flex max-w-2xl flex-col items-center">
-          <ChapterLogo className="h-24 w-24" />
-          <p className="day-kicker mt-6">Brought to you by</p>
-          <p className="day-display mt-3 text-3xl text-day-ink sm:text-4xl">IEEE RAS HTU Student Chapter</p>
-          <p className="mt-4 text-day-muted">
-            Following a team? Open{" "}
-            <Link href="/day/teams" className="font-semibold text-day-ink underline decoration-day-crimson/40 underline-offset-4">
-              Teams
-            </Link>{" "}
-            and tap it for its members, every run it made and whether it went through.
-          </p>
-        </div>
+        </ul>
       </section>
     </div>
   );

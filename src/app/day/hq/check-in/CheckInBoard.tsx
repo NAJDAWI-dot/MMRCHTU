@@ -112,26 +112,26 @@ function TeamRow({ team, open, onToggle }: { team: CheckInTeam; open: boolean; o
             <span className="block truncate text-lg font-bold text-day-ink">{team.name}</span>
             <span className="mt-1 flex flex-wrap gap-1.5 text-[11px] font-semibold">
               {team.checkedIn ? (
-                <span className="rounded-full bg-day-good/10 px-2 py-0.5 text-day-good">Here {team.checkedInAt}</span>
+                <span className="rounded-[2px] bg-day-good/10 px-2 py-0.5 text-day-good">Here {team.checkedInAt}</span>
               ) : team.withdrawn ? (
-                <span className="rounded-full bg-day-live/10 px-2 py-0.5 text-day-live">Withdrawn</span>
+                <span className="rounded-[2px] bg-day-live/10 px-2 py-0.5 text-day-live">Withdrawn</span>
               ) : (
-                <span className="rounded-full bg-day-ink/[0.06] px-2 py-0.5 text-day-muted">Not here yet</span>
+                <span className="rounded-[2px] bg-day-ink/[0.06] px-2 py-0.5 text-day-muted">Not here yet</span>
               )}
-              <span className="day-num rounded-full bg-day-ink/[0.06] px-2 py-0.5 text-day-muted">
+              <span className="day-num rounded-[2px] bg-day-ink/[0.06] px-2 py-0.5 text-day-muted">
                 {here}/{team.members.length} members
               </span>
               <span
-                className={`rounded-full px-2 py-0.5 ${
+                className={`rounded-[2px] px-2 py-0.5 ${
                   team.inspection === "PASSED" ? "bg-day-good/10 text-day-good" : team.inspection === "FAILED" ? "bg-day-live/10 text-day-live" : "bg-day-ink/[0.06] text-day-muted"
                 }`}
               >
                 {team.inspection === "PASSED" ? "Inspected" : team.inspection === "FAILED" ? "Failed inspection" : "To inspect"}
               </span>
-              <span className={`rounded-full px-2 py-0.5 ${team.payment.paid ? "bg-day-good/10 text-day-good" : "bg-day-gold/15 text-day-gold"}`}>{team.payment.label}</span>
-              {team.pit ? <span className="rounded-full bg-day-plum/10 px-2 py-0.5 text-day-plum">Pit {team.pit}</span> : null}
-              {team.badges ? <span className="rounded-full bg-day-plum/10 px-2 py-0.5 text-day-plum">Badges out</span> : null}
-              {team.runOrder ? <span className="day-num rounded-full bg-day-ink/[0.06] px-2 py-0.5 text-day-muted">Runs #{team.runOrder}</span> : null}
+              <span className={`rounded-[2px] px-2 py-0.5 ${team.payment.paid ? "bg-day-good/10 text-day-good" : "bg-day-gold/15 text-day-gold"}`}>{team.payment.label}</span>
+              {team.pit ? <span className="rounded-[2px] bg-day-plum/10 px-2 py-0.5 text-day-plum">Pit {team.pit}</span> : null}
+              {team.badges ? <span className="rounded-[2px] bg-day-plum/10 px-2 py-0.5 text-day-plum">Badges out</span> : null}
+              {team.runOrder ? <span className="day-num rounded-[2px] bg-day-ink/[0.06] px-2 py-0.5 text-day-muted">Runs #{team.runOrder}</span> : null}
             </span>
           </span>
           <DayIcon name="more" className={`h-5 w-5 shrink-0 text-day-faint transition-transform ${open ? "rotate-90" : ""}`} />
@@ -147,7 +147,7 @@ function TeamRow({ team, open, onToggle }: { team: CheckInTeam; open: boolean; o
             <fieldset className="space-y-3">
               <legend className="day-kicker mb-2">Members · tick who is here</legend>
               {team.members.map((member) => (
-                <label key={member.id} className="flex cursor-pointer items-start gap-3 rounded-xl bg-day-surface p-3 ring-1 ring-day-line/[0.07]">
+                <label key={member.id} className="flex cursor-pointer items-start gap-3 rounded-[4px] bg-day-surface p-3 ring-1 ring-day-line/[0.07]">
                   <input
                     type="checkbox"
                     name="present"
@@ -173,7 +173,7 @@ function TeamRow({ team, open, onToggle }: { team: CheckInTeam; open: boolean; o
                   </span>
                 </label>
               ))}
-              <div className="rounded-xl bg-day-surface p-3 text-sm ring-1 ring-day-line/[0.07]">
+              <div className="rounded-[4px] bg-day-surface p-3 text-sm ring-1 ring-day-line/[0.07]">
                 <p className="flex items-center justify-between gap-3">
                   <span className="font-semibold text-day-ink">Fee</span>
                   <span className={team.payment.paid ? "font-semibold text-day-good" : "font-semibold text-day-gold"}>
@@ -291,7 +291,7 @@ export function CheckInBoard({ teams }: { teams: CheckInTeam[] }) {
               if (event.key === "Enter" && shown.length === 1) setOpenId(shown[0]!.id);
             }}
             placeholder="Team, member, email, phone, robot or pit.  Press / to search"
-            className="day-input h-14 rounded-2xl pl-12 text-lg"
+            className="day-input h-14 rounded-[4px] pl-12 text-lg"
             autoComplete="off"
           />
         </label>

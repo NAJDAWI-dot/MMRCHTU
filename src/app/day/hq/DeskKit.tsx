@@ -21,7 +21,7 @@ export function Notice({ state }: { state: DeskState }) {
   return (
     <p
       role="status"
-      className={`day-banner-in flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium ${
+      className={`day-banner-in flex items-start gap-2 rounded-[4px] px-3.5 py-2.5 text-sm font-medium ${
         state.ok ? "bg-day-good/10 text-day-good" : "bg-day-live/10 text-day-live"
       }`}
     >
@@ -118,7 +118,7 @@ export function ArmedForm({
       {armed ? (
         <form
           action={formAction}
-          className={`day-dialog space-y-4 rounded-2xl border p-4 ${destructive ? "border-day-live/30 bg-day-live/[0.05]" : "border-day-plum/30 bg-day-plum/[0.05]"}`}
+          className={`day-dialog space-y-4 rounded-[4px] border p-4 ${destructive ? "border-day-live/30 bg-day-live/[0.05]" : "border-day-plum/30 bg-day-plum/[0.05]"}`}
         >
           <div className="text-sm text-day-ink">{warning}</div>
           {children}
@@ -145,12 +145,12 @@ export function ArmedForm({
 export function DeskHead({ icon, title, lead, children }: { icon: DayIconName; title: string; lead?: ReactNode; children?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-5">
-      <div className="flex items-start gap-4">
-        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-day-crimson/10 text-day-crimson">
-          <DayIcon name={icon} className="h-6 w-6" />
-        </span>
+      <div>
         <div>
-          <h1 className="day-display text-3xl text-day-ink sm:text-4xl">{title}</h1>
+          <h1 className="day-display flex items-center gap-3 text-3xl text-day-ink sm:text-[2.6rem]">
+            <DayIcon name={icon} className="h-7 w-7 shrink-0 text-day-crimson" />
+            {title}
+          </h1>
           {lead ? <p className="mt-2 max-w-2xl text-day-muted">{lead}</p> : null}
         </div>
       </div>
@@ -165,8 +165,8 @@ export function Toggle({ name, defaultChecked, label, hint }: { name: string; de
     <label className="flex cursor-pointer items-start gap-3">
       <span className="relative mt-0.5 inline-flex shrink-0">
         <input type="checkbox" name={name} defaultChecked={defaultChecked} className="peer sr-only" />
-        <span className="h-6 w-11 rounded-full bg-day-ink/15 transition-colors peer-checked:bg-day-good peer-focus-visible:ring-2 peer-focus-visible:ring-day-crimson" />
-        <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-300 peer-checked:translate-x-5" />
+        <span className="h-6 w-11 rounded-[5px] bg-day-ink/15 transition-colors peer-checked:bg-day-good peer-focus-visible:ring-2 peer-focus-visible:ring-day-crimson" />
+        <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-[3px] bg-white shadow transition-transform duration-300 peer-checked:translate-x-5" />
       </span>
       <span>
         <span className="block text-sm font-semibold text-day-ink">{label}</span>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type PointerEvent } from "react";
+import { useMemo, useState } from "react";
 import { Crest } from "@/components/day-site/Crest";
 import { DayIcon } from "@/components/day-site/icons";
 import { JourneyBadge } from "@/components/day-site/ui";
@@ -48,35 +48,10 @@ function matches(team: TeamCardData, filter: FilterKey): boolean {
   return ["NOT_QUALIFIED", "ELIMINATED"].includes(state);
 }
 
-/** The header's tint says where the team stands before a word is read. */
-const HEADER_TINT: Record<Journey["state"], string> = {
-  REGISTERED: "from-day-ink/[0.05] to-day-ink/[0.02]",
-  QUALIFYING: "from-day-plum/20 to-day-plum/[0.04]",
-  NOT_QUALIFIED: "from-day-ink/[0.06] to-transparent",
-  QUALIFIED: "from-day-good/20 to-day-good/[0.04]",
-  ALIVE: "from-day-good/20 to-day-good/[0.04]",
-  ELIMINATED: "from-day-ink/[0.06] to-transparent",
-  RUNNER_UP: "from-day-plum/25 to-day-plum/[0.05]",
-  CHAMPION: "from-day-gold/35 to-day-gold/[0.06]",
-};
-
-/** Tilts the card towards the pointer, a few degrees, like a card in the hand. */
-function tilt(event: PointerEvent<HTMLAnchorElement>) {
-  if (event.pointerType !== "mouse") return;
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const card = event.currentTarget;
-  const box = card.getBoundingClientRect();
-  const x = (event.clientX - box.left) / box.width - 0.5;
-  const y = (event.clientY - box.top) / box.height - 0.5;
-  card.style.transform = `perspective(900px) rotateX(${(-y * 6).toFixed(2)}deg) rotateY(${(x * 8).toFixed(2)}deg) translateY(-4px)`;
-  card.style.setProperty("--shine-x", `${((x + 0.5) * 100).toFixed(1)}%`);
-  card.style.setProperty("--shine-y", `${((y + 0.5) * 100).toFixed(1)}%`);
-}
-
-function untilt(event: PointerEvent<HTMLAnchorElement>) {
-  event.currentTarget.style.transform = "";
-}
-
+/**
+ * A team's plate: its maze crest, its name run wide, what it is and where it
+ * stands, and its numbers. A crest greys out once the team is out.
+ */
 function TeamCard({ team }: { team: TeamCardData }) {
   const out = ["NOT_QUALIFIED", "ELIMINATED"].includes(team.journey.state);
   const corner = team.seed ? `Seed ${team.seed}` : team.rank ? `#${team.rank}` : null;
@@ -84,73 +59,38 @@ function TeamCard({ team }: { team: TeamCardData }) {
     <Link
       href={`/day/teams/${team.id}`}
       data-team={team.id}
-      onPointerMove={tilt}
-      onPointerLeave={untilt}
-      className={`day-card group relative flex h-full flex-col overflow-hidden transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:shadow-[var(--day-shadow-lift)] ${
-        team.journey.state === "CHAMPION" ? "ring-2 ring-day-gold/60" : ""
-      }`}
+      className={`day-card day-lift day-posts group flex h-full flex-col ${team.journey.state === "CHAMPION" ? "border-day-gold" : ""}`}
     >
-      {/* The header: crest large, on a tint and a faint grid. */}
-      <div className={`relative flex h-36 items-center justify-center bg-gradient-to-br ${HEADER_TINT[team.journey.state]}`}>
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 opacity-[0.5]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgb(var(--day-line) / 0.07) 1px, transparent 1px), linear-gradient(90deg, rgb(var(--day-line) / 0.07) 1px, transparent 1px)",
-            backgroundSize: "18px 18px",
-            maskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)",
-            WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)",
-          }}
-        />
-        <span className={`relative transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-rotate-3 group-hover:scale-[1.06] ${out ? "opacity-60 grayscale" : ""}`}>
-          <Crest name={team.name} size={64} ring={team.journey.state === "CHAMPION"} />
+      <div className="flex flex-1 items-center gap-4 p-4">
+        <span className={`transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-rotate-3 ${out ? "opacity-55 grayscale" : ""}`}>
+          <Crest name={team.name} size={40} ring={team.journey.state === "CHAMPION"} />
         </span>
-        {corner ? (
-          <span className="day-num absolute left-4 top-4 rounded-full bg-day-surface/90 px-2.5 py-1 text-xs font-bold text-day-ink shadow-sm">
-            {corner}
+        <span className="min-w-0 flex-1">
+          <span className="day-display block truncate text-[1.3rem] leading-tight text-day-ink underline-offset-4 group-hover:underline" title={team.name}>
+            {team.name}
           </span>
-        ) : null}
-        {team.checkedIn ? (
-          <span className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-day-surface/90 px-2.5 py-1 text-xs font-semibold text-day-good shadow-sm">
-            <span className="h-1.5 w-1.5 rounded-full bg-day-good" aria-hidden="true" />
-            Here
+          <span className="mt-1 block truncate text-[0.8125rem] text-day-muted">
+            {[team.robotName ? `Robot ${team.robotName}` : null, team.university || null, `${team.members} member${team.members === 1 ? "" : "s"}`]
+              .filter(Boolean)
+              .join(" · ")}
           </span>
-        ) : null}
-        {/* A soft light that follows the pointer across the card. */}
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-          style={{ background: "radial-gradient(22rem circle at var(--shine-x, 50%) var(--shine-y, 0%), rgb(255 255 255 / 0.18), transparent 45%)" }}
-        />
+        </span>
+        {corner ? <span className="day-num shrink-0 self-start text-[0.8125rem] font-bold text-day-muted">{corner}</span> : null}
       </div>
-
-      <div className="flex flex-1 flex-col p-5">
-        <p className="day-display truncate text-2xl text-day-ink" title={team.name}>
-          {team.name}
-        </p>
-        <p className="mt-1 truncate text-sm text-day-muted">
-          {[team.robotName ? `Robot ${team.robotName}` : null, team.university || null, `${team.members} member${team.members === 1 ? "" : "s"}`]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
-        <div className="mt-4">
+      <div className="flex items-center justify-between gap-3 border-t border-day-line/[0.1] px-4 py-2.5">
+        <span className="flex min-w-0 items-center gap-2">
           <JourneyBadge journey={team.journey} />
-        </div>
-        <dl className="mt-5 grid grid-cols-3 gap-2 border-t border-day-line/[0.07] pt-4">
-          <div>
-            <dt className="text-[11px] font-semibold text-day-faint">Score</dt>
-            <dd className="day-num day-display mt-1 text-xl text-day-ink">{team.score}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] font-semibold text-day-faint">Runs</dt>
-            <dd className="day-num day-display mt-1 text-xl text-day-ink">{team.runs || "–"}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] font-semibold text-day-faint">Best time</dt>
-            <dd className="day-num day-display mt-1 text-xl text-day-ink">{team.best}</dd>
-          </div>
-        </dl>
+          {team.checkedIn ? (
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-day-good">
+              <span className="h-1.5 w-1.5 bg-day-good" aria-hidden="true" />
+              Here
+            </span>
+          ) : null}
+        </span>
+        <span className="day-num shrink-0 text-sm text-day-muted">
+          <span className="font-bold text-day-ink">{team.score}</span>
+          {team.runs ? ` · ${team.runs} run${team.runs === 1 ? "" : "s"} · ${team.best}` : ""}
+        </span>
       </div>
     </Link>
   );
@@ -182,7 +122,7 @@ export function TeamGrid({ teams }: { teams: TeamCardData[] }) {
 
   return (
     <div className="space-y-8">
-      <div className="day-card flex flex-col gap-4 p-3 sm:p-4 lg:flex-row lg:items-center">
+      <div className="sticky top-[66px] z-30 -mx-4 flex flex-col gap-3 border-b border-day-line/[0.12] bg-day-bg px-4 py-3 sm:-mx-6 sm:px-6 lg:flex-row lg:items-center">
         <label className="relative flex-1">
           <span className="sr-only">Find a team</span>
           <DayIcon name="search" className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-day-faint" />
@@ -191,7 +131,7 @@ export function TeamGrid({ teams }: { teams: TeamCardData[] }) {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Team, robot or university"
-            className="day-input h-12 rounded-full pl-12"
+            className="day-input h-12 pl-12"
           />
         </label>
         <div className="day-no-scrollbar -mx-1 overflow-x-auto px-1">
@@ -221,9 +161,9 @@ export function TeamGrid({ teams }: { teams: TeamCardData[] }) {
         Showing {shown.length} of {teams.length}
       </p>
 
-      <ul className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((team, index) => (
-          <li key={team.id} data-reveal style={{ ["--i" as string]: index % 8 }}>
+          <li key={team.id} data-reveal style={{ ["--i" as string]: index % 6 }}>
             <TeamCard team={team} />
           </li>
         ))}

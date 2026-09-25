@@ -71,7 +71,7 @@ export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: b
         </div>
 
         {locked ? (
-          <p className="rounded-2xl bg-day-gold/10 p-4 text-sm text-day-ink">
+          <p className="rounded-[4px] bg-day-gold/10 p-4 text-sm text-day-ink">
             Qualifying is closed and the bracket is drawn. Reopen qualifying on this page to change a sheet.
           </p>
         ) : (
@@ -99,7 +99,7 @@ export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: b
             {team ? (
               <DeskForm key={team.id} action={saveSheet} className="space-y-5">
                 <input type="hidden" name="teamId" value={team.id} />
-                <div className="flex items-center gap-3 rounded-2xl bg-day-sunk p-3">
+                <div className="flex items-center gap-3 rounded-[4px] bg-day-sunk p-3">
                   <Crest name={team.name} size={28} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-bold text-day-ink">{team.name}</p>
@@ -161,7 +161,7 @@ export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: b
                   <p className="flex min-w-0 items-center gap-2 font-semibold text-day-ink">
                     <span className="truncate">{item.name}</span>
                     {item.sheet?.recordedBy === "test-data" ? (
-                      <span className="shrink-0 rounded-full bg-day-plum/15 px-2 py-0.5 text-[10px] font-bold text-day-plum">Test data</span>
+                      <span className="shrink-0 rounded-[2px] bg-day-plum/15 px-2 py-0.5 text-[10px] font-bold text-day-plum">Test data</span>
                     ) : null}
                   </p>
                   <p className="text-xs text-day-muted">
@@ -190,9 +190,9 @@ export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: b
                   </p>
                 </div>
                 {item.qualified ? (
-                  <span className="rounded-full bg-day-good/15 px-2 py-0.5 text-[11px] font-bold text-day-good">Through</span>
+                  <span className="rounded-[2px] bg-day-good/15 px-2 py-0.5 text-[11px] font-bold text-day-good">Through</span>
                 ) : null}
-                {item.rank ? <span className="day-num rounded-full bg-day-ink/[0.06] px-2 py-0.5 text-xs font-bold text-day-muted">#{item.rank}</span> : null}
+                {item.rank ? <span className="day-num rounded-[2px] bg-day-ink/[0.06] px-2 py-0.5 text-xs font-bold text-day-muted">#{item.rank}</span> : null}
                 <span className="day-num day-display w-16 text-right text-2xl text-day-ink">{item.sheet ? formatPoints(item.sheet.score) : ""}</span>
               </div>
               {item.sheet && item.sheet.log.length ? (
@@ -218,7 +218,7 @@ export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: b
                       </button>
                     </form>
                   ) : null}
-                  <form action={setQualifyOverride} className="ml-auto flex overflow-hidden rounded-xl ring-1 ring-day-line/[0.12]" aria-label={`Who decides whether ${item.name} goes through`}>
+                  <form action={setQualifyOverride} className="ml-auto flex overflow-hidden rounded-[4px] ring-1 ring-day-line/[0.12]" aria-label={`Who decides whether ${item.name} goes through`}>
                     <input type="hidden" name="teamId" value={item.id} />
                     {(
                       [

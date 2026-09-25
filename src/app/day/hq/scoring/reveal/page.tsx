@@ -23,7 +23,7 @@ function RevealSwitch({ phase, kind, shown, label }: { phase: number; kind: "res
         role="switch"
         aria-checked={shown}
         aria-label={`${label}: ${shown ? "shown to the public" : "hidden from the public"}`}
-        className={`group flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left ring-1 transition-colors ${
+        className={`group flex w-full items-center justify-between gap-3 rounded-[4px] px-4 py-3 text-left ring-1 transition-colors ${
           shown ? "bg-day-good/10 ring-day-good/30 hover:bg-day-good/15" : "bg-day-ink/[0.04] ring-day-line/[0.12] hover:bg-day-ink/[0.07]"
         }`}
       >
@@ -31,8 +31,8 @@ function RevealSwitch({ phase, kind, shown, label }: { phase: number; kind: "res
           <span className="block text-sm font-semibold text-day-ink">{label}</span>
           <span className={`block text-xs font-semibold ${shown ? "text-day-good" : "text-day-muted"}`}>{shown ? "Shown to everyone" : "Hidden from the public"}</span>
         </span>
-        <span className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition-colors ${shown ? "bg-day-good" : "bg-day-ink/20"}`} aria-hidden="true">
-          <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform duration-300 ${shown ? "translate-x-6" : "translate-x-1"}`} />
+        <span className={`relative inline-flex h-7 w-12 shrink-0 rounded-[5px] transition-colors ${shown ? "bg-day-good" : "bg-day-ink/20"}`} aria-hidden="true">
+          <span className={`absolute top-1 h-5 w-5 rounded-[3px] bg-white shadow transition-transform duration-300 ${shown ? "translate-x-6" : "translate-x-1"}`} />
         </span>
       </button>
     </DeskForm>
@@ -76,11 +76,7 @@ export default async function RevealDeskPage() {
 
       <section className="day-card flex flex-wrap items-center justify-between gap-5 p-5 sm:p-6">
         <div className="flex items-center gap-4">
-          <span
-            className={`grid h-12 w-12 place-items-center rounded-2xl ${anythingHidden(reveal) ? "bg-day-gold/15 text-day-gold" : "bg-day-good/15 text-day-good"}`}
-          >
-            <DayIcon name={anythingHidden(reveal) ? "lock" : "eye"} className="h-6 w-6" />
-          </span>
+          <DayIcon name={anythingHidden(reveal) ? "lock" : "eye"} className={`h-7 w-7 shrink-0 ${anythingHidden(reveal) ? "text-day-gold" : "text-day-good"}`} />
           <div>
             <p className="day-display text-2xl text-day-ink">{anythingHidden(reveal) ? `${hiddenCount} of 12 held back` : "Everything is public"}</p>
             <p className="text-sm text-day-muted">Holding back who went through also hides the next round&rsquo;s pairings, which would give it away.</p>
@@ -112,9 +108,9 @@ export default async function RevealDeskPage() {
                 <p className="mt-1 text-xs text-day-muted">{progressOf(phase)}</p>
               </div>
               {!resultsShown(reveal, phase) || !advanceShown(reveal, phase) ? (
-                <span className="rounded-full bg-day-gold/15 px-2.5 py-1 text-[11px] font-bold text-day-gold">Held back</span>
+                <span className="rounded-[2px] bg-day-gold/15 px-2.5 py-1 text-[11px] font-bold text-day-gold">Held back</span>
               ) : (
-                <span className="rounded-full bg-day-good/15 px-2.5 py-1 text-[11px] font-bold text-day-good">Public</span>
+                <span className="rounded-[2px] bg-day-good/15 px-2.5 py-1 text-[11px] font-bold text-day-good">Public</span>
               )}
             </div>
             <div className="grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2">

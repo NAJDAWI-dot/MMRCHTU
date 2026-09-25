@@ -19,8 +19,7 @@ export interface QueueCardsProps {
 export function QueueCards({ now, onDeck, inHole, calledAt, onDeckEta, inHoleEta }: QueueCardsProps) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-      <div className="day-card relative overflow-hidden p-6 sm:p-8" data-reveal>
-        {now ? <div className="day-stripe-x absolute inset-x-0 top-0 h-1.5" aria-hidden="true" /> : null}
+      <div className={`${now ? "day-floor" : "day-card"} day-posts p-6 sm:p-8`} data-reveal>
         <p className={`flex items-center gap-2 text-sm font-semibold ${now ? "text-day-live" : "text-day-muted"}`}>
           {now ? <span className="day-live-dot" aria-hidden="true" /> : null}
           {now ? "On the maze" : "First up"}
@@ -48,7 +47,7 @@ export function QueueCards({ now, onDeck, inHole, calledAt, onDeckEta, inHoleEta
             ]
           : [{ label: "Then", entry: inHole, eta: inHoleEta, tone: "text-day-plum" }]
         ).map((slot, index) => (
-          <li key={slot.label} className="day-card p-5 sm:p-6" data-reveal style={{ ["--i" as string]: index + 1 }}>
+          <li key={slot.label} className="day-card day-posts p-5 sm:p-6" data-reveal style={{ ["--i" as string]: index + 1 }}>
             <p className={`text-sm font-semibold ${slot.tone}`}>{slot.label}</p>
             {slot.entry ? (
               <Link href={`/day/teams/${slot.entry.id}`} data-team={slot.entry.id} className="group mt-3 flex items-center gap-3">
