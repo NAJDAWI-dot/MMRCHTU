@@ -99,6 +99,8 @@ It rejects the AI landing-page kit: pill badges, stat-card rows, eyebrow labels 
 - One family, Archivo, used at three widths: wide for names, normal for reading, narrow for numbers.
 - Posts and walls as the structural ornament; the crimson route as the one line of colour that moves.
 - Flat surfaces, hairline edges, square-ish corners.
+- Behind every page, a real 16 by 16 board: walls with a crimson side, posts, every cell's flood-fill number, and Cheddar running the route as the page scrolls.
+- Cheddar and friends (the five drawings in public/brand/cheddar) only ever in space that was empty.
 
 ## 2. Colors: The Maze Palette
 
@@ -165,6 +167,18 @@ Flat. Surfaces sit on the page with a hairline edge and never cast a shadow at r
 ### Timing rows
 - Place in a square block (gold, ink, crimson for the podium), crest, wide name, narrow numbers, gap to the leader. A row that moved since your last look shows its change (▲2) and slides to its new place.
 
+### The board (backdrop)
+- A 16 by 16 maze fixed behind the page, drawn like the real one: wall tops in ink, a crimson side under each, posts at every lattice point, and each cell's flood-fill distance to the centre in narrow numerals (the goal's zeros in gold).
+- The top-down Cheddar runs the shortest route from his corner as the page scrolls, sensors sweeping ahead, the route drawn in crimson behind him; he reaches the centre at the bottom of the page.
+- The board fades toward the middle of the screen, where the reading is; the mouse fades less, so he is clear in the margins and a ghost behind text. Pages whose own lines would tangle with it (the bracket) ask for a quieter floor.
+
+### Mice
+- **The micromouse:** the top-down drawing, nose turned to lead, runs the hero maze and the board.
+- **The peeker:** one of three mice looks over the wall under a page title, in the empty right of the head, from large screens up.
+- **The face:** looks into an empty section over its top edge.
+- **The dancer:** stands on the footer's chequered finish line, and celebrates the champions (live page, hall screen, reveal).
+- Always decoration: hidden from screen readers, never in the way of a click, never over content; still, not gone, under reduced motion.
+
 ### Navigation
 - A flat bar. The current page is marked by a crimson wall under it that slides between items. On phones a solid tab bar docks to the bottom edge.
 
@@ -175,9 +189,11 @@ Flat. Surfaces sit on the page with a hairline edge and never cast a shadow at r
 - **Do** set every number in the narrow tabular width.
 - **Do** keep the route crimson and let it be the only moving line.
 - **Do** give every animation a reduced-motion fallback that shows the end state.
+- **Do** put a mouse only where the space was empty, and check it at phone width.
 
 ### Don't:
 - **Don't** use pill badges, stat-card rows, eyebrow labels, icon tiles in rounded squares, glass bars or gradient text.
 - **Don't** add soft drop shadows to panels at rest.
 - **Don't** use a colour for decoration; gold, rose and green are meanings.
 - **Don't** put a card inside a card.
+- **Don't** let a mouse sit over text, numbers or a control, even for a moment.

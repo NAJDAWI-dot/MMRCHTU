@@ -1,11 +1,12 @@
+import { MICE, TOP_MOUSE_TURN } from "@/components/day-site/DayMice";
 import { CELL, MAZE_GOLD, generateMaze, seededRandom } from "@/lib/maze";
 
 /**
  * The home page's maze: a real ten by ten one, the size MMRC 26 runs on,
  * carved from a fixed seed so every visitor and the server draw the same
  * walls. Drawn like the real thing: square walls, a post at every point where
- * walls can meet, the gold centre, and a micromouse running its solution over
- * and over, leaving its crimson route behind it.
+ * walls can meet, the gold centre, and Cheddar, seen from above, running its
+ * solution over and over and leaving his crimson route behind him.
  *
  * The run is SMIL and the trail is CSS, both on a 5.5 second loop, so there is
  * no script on the page for it at all. With reduced motion the trail is drawn
@@ -15,11 +16,14 @@ import { CELL, MAZE_GOLD, generateMaze, seededRandom } from "@/lib/maze";
 const RUN_S = 5.5;
 const SIZE = 10;
 const POST = 4.2;
+/** Cheddar, nose to tail, in maze units: a little under a cell, like a real micromouse. */
+const MOUSE = 17;
 
 export function HeroMaze({ className = "" }: { className?: string }) {
   const maze = generateMaze(SIZE, seededRandom(2026), 0.18);
   const route = maze.routes[0]!;
   const span = SIZE * CELL;
+  const mouseH = (MOUSE * MICE.top.height) / MICE.top.width;
   let posts = "";
   for (let row = 0; row <= SIZE; row++) {
     for (let col = 0; col <= SIZE; col++) {
@@ -55,11 +59,20 @@ export function HeroMaze({ className = "" }: { className?: string }) {
         <rect x={0} y={0} width={span} height={span} />
       </g>
       <path d={posts} style={{ fill: "rgb(var(--day-ink))" }} />
-      <g className="day-run-mouse" style={{ fill: "rgb(var(--day-crimson))" }}>
-        <g>
-          <rect x={-4.6} y={-3.4} width={9.2} height={9.2} rx={2} />
-          <circle cx={-3.4} cy={-3.6} r={2.4} />
-          <circle cx={3.4} cy={-3.6} r={2.4} />
+      <g className="day-run-mouse">
+        <g opacity={0}>
+          {/* Out of sight until the run starts, rather than parked on a corner post. */}
+          <set attributeName="opacity" to="1" begin="0.6s" fill="freeze" />
+          {/* Cheddar from above, turned so his nose leads along the route. */}
+          <image
+            href={MICE.top.src}
+            width={MOUSE}
+            height={mouseH}
+            x={-MOUSE / 2}
+            y={-mouseH / 2}
+            transform={`rotate(${TOP_MOUSE_TURN})`}
+            preserveAspectRatio="xMidYMid meet"
+          />
           <animateMotion
             path={route.solution}
             dur={`${RUN_S}s`}
@@ -68,6 +81,7 @@ export function HeroMaze({ className = "" }: { className?: string }) {
             keyPoints="0;1;1"
             keyTimes="0;0.7;1"
             calcMode="linear"
+            rotate="auto"
           />
         </g>
       </g>

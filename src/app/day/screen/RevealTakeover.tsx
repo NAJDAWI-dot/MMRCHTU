@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Crest } from "@/components/day-site/Crest";
+import { DayMouse } from "@/components/day-site/DayMice";
 import type { RevealShow } from "@/lib/reveal-show";
 
 const PLAYED = "mmrc-screen-reveals";
@@ -150,6 +151,13 @@ export function RevealTakeover({ show, onDone }: { show: RevealShow; onDone: () 
             </p>
             <div className="reveal-burst pointer-events-none absolute left-1/2 top-[42%] h-[60vh] w-[60vh] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgb(var(--day-gold)/0.6),transparent_65%)]" aria-hidden="true" />
             {reduced ? null : <Confetti count={140} />}
+            {/* Cheddar dancing for them, down in both corners of the screen. */}
+            <div className="reveal-row absolute bottom-[3vh] left-[4vw] w-[26vh]" style={{ animationDelay: "1600ms" }}>
+              <DayMouse name="dance" move="hop" />
+            </div>
+            <div className="reveal-row absolute bottom-[3vh] right-[4vw] w-[26vh]" style={{ animationDelay: "1750ms" }}>
+              <DayMouse name="dance" move="hop" flip />
+            </div>
           </div>
         ) : (
           <div className="flex w-full max-w-[150vh] flex-col items-center gap-[3.5vh]">

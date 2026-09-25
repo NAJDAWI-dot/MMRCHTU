@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Crest } from "@/components/day-site/Crest";
+import { DayMouse } from "@/components/day-site/DayMice";
 import { SponsorLogo } from "@/components/day-site/SponsorLogo";
 import { DayIcon } from "@/components/day-site/icons";
 import { QUALIFIERS, matchesInRound, phaseInfo } from "@/lib/bracket";
@@ -70,7 +71,9 @@ export default async function HallScreenPage() {
       key: "now",
       label: "Champions",
       node: (
-        <div className="grid h-full place-items-center text-center">
+        <div className="relative grid h-full place-items-center text-center">
+          <DayMouse name="dance" move="hop" className="absolute bottom-0 left-[4vw] w-[24vh]" />
+          <DayMouse name="dance" move="hop" flip className="absolute bottom-0 right-[4vw] w-[24vh]" />
           <div>
             <DayIcon name="trophy" className="mx-auto h-[9vh] w-[9vh] text-day-gold" />
             <p className="day-kicker mt-[4vh] text-[2.4vh]">Champions of MMRC 26</p>
@@ -197,7 +200,10 @@ export default async function HallScreenPage() {
       key: "now",
       label: "Welcome",
       node: (
-        <div className="grid h-full place-items-center text-center">
+        <div className="relative grid h-full place-items-center text-center">
+          {/* Cheddar and a friend either side of the name, standing on the bottom edge. */}
+          <DayMouse name="stand" move="tilt" className="absolute bottom-0 left-[3vw] w-[22vh]" />
+          <DayMouse name="peer" move="tilt" flip className="absolute bottom-0 right-[3vw] w-[20vh]" />
           <div>
             <p className="font-brand text-[18vh] leading-none text-day-ink">MMRC 26</p>
             <p className="day-display mt-[3vh] text-[5.5vh] text-day-crimson">Competition day</p>

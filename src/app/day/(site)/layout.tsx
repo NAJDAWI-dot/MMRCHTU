@@ -8,6 +8,7 @@ import { DAY_SPLASH_SCRIPT, DaySplash } from "@/components/day-site/DaySplash";
 import { canViewDaySite } from "@/lib/day-access";
 import { loadDayShell } from "@/lib/day-shell";
 import { FollowDock } from "@/components/day-site/Follow";
+import { FinishMouse } from "@/components/day-site/DayMice";
 import { loadQueue } from "@/lib/day-queue";
 import { followCards } from "@/lib/follow";
 import { loadPublicCompetition } from "@/lib/public-competition";
@@ -43,7 +44,9 @@ export default async function DaySiteLayout({ children }: { children: React.Reac
       </main>
 
       {/* The finish: the maze floor, with a chequered line across the top. */}
-      <footer className="day-floor rounded-none pb-24 lg:pb-0">
+      <footer className="day-floor relative rounded-none pb-24 lg:pb-0">
+        {/* Cheddar dancing on the finish line, in the space under the page. */}
+        <FinishMouse />
         <div className="day-checker h-3 opacity-80" style={{ ["--size" as string]: "6px" }} aria-hidden="true" />
         <div className="mx-auto grid max-w-7xl gap-12 px-4 py-14 sm:px-6 md:grid-cols-[1.6fr_1fr_1fr] md:py-16">
           <div>

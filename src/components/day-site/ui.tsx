@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Crest } from "@/components/day-site/Crest";
+import { EmptyMouse, PeekingMouse } from "@/components/day-site/DayMice";
 import { RunChips } from "@/components/day-site/RunChips";
 import { DayIcon, type DayIconName } from "@/components/day-site/icons";
 import { phaseInfo, type Journey, type ResolvedMatch } from "@/lib/bracket";
@@ -55,7 +56,9 @@ export function PageHead({
           </div>
         ) : null}
       </div>
-      <div data-reveal="wall" aria-hidden="true">
+      <div data-reveal="wall" aria-hidden="true" className="relative">
+        {/* A mouse looking over the wall, in the empty space a page head leaves on the right. */}
+        {children ? null : <PeekingMouse page={title} />}
         <div className="day-wall" />
       </div>
     </header>
@@ -181,38 +184,12 @@ export function StatTile({
   );
 }
 
-/** A dead end in a maze, with the mouse in it: what an empty section looks like. */
-function DeadEnd({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
-      <g fill="none" stroke="rgb(var(--day-ink))" strokeWidth="3.2" strokeLinecap="square">
-        <path d="M14 50 V14 H50 V50" />
-        <path d="M26 50 V26 H38 V50" strokeOpacity="0.35" />
-      </g>
-      <path d="M32 62 V40" stroke="rgb(var(--day-crimson))" strokeWidth="3.2" strokeLinecap="square" strokeDasharray="3 4" />
-      <rect x="28" y="33" width="8" height="8" fill="rgb(var(--day-crimson))" />
-      <g fill="rgb(var(--day-ink))">
-        {[
-          [14, 14],
-          [50, 14],
-          [14, 50],
-          [50, 50],
-          [26, 26],
-          [38, 26],
-        ].map(([x, y]) => (
-          <rect key={`${x}-${y}`} x={x! - 3} y={y! - 3} width="6" height="6" />
-        ))}
-      </g>
-    </svg>
-  );
-}
-
-/** Nothing here yet: said plainly, with the way on. */
+/** Nothing here yet: said plainly, with the way on, and a mouse looking in to check. */
 export function Empty({ title, children }: { icon?: DayIconName; title: string; children?: ReactNode }) {
   return (
-    <div className="rounded-[3px] border border-dashed border-day-line/25 px-6 py-12 text-center sm:py-16" data-reveal>
-      <DeadEnd className="mx-auto h-16 w-16" />
-      <p className="day-display mt-5 text-2xl text-day-ink">{title}</p>
+    <div className="relative mt-9 rounded-[3px] border border-dashed border-day-line/25 px-6 pb-12 pt-14 text-center sm:pb-16" data-reveal>
+      <EmptyMouse />
+      <p className="day-display text-2xl text-day-ink">{title}</p>
       {children ? <div className="mx-auto mt-2 max-w-md text-pretty leading-relaxed text-day-muted">{children}</div> : null}
     </div>
   );

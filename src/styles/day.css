@@ -108,9 +108,11 @@ html.lenis body {
 }
 
 /* ------------------------------------------------------------ backdrop
-   The floor of a sixteen by sixteen maze, faint, fixed behind the page, with
-   the crimson route of a mouse drawing itself towards the centre as the page
-   is scrolled. Stronger at the edges, quiet where the reading happens. */
+   A sixteen by sixteen micromouse maze, fixed behind the page and drawn like
+   the real board: walls with a top and a crimson side, posts, the gold room,
+   and every cell's flood-fill number. A mouse runs it as the page scrolls
+   (see DayBackdrop). Stronger at the edges, quiet where the reading happens;
+   the mouse has its own layer so the fade never swallows it. */
 
 .day-backdrop {
   position: fixed;
@@ -126,39 +128,95 @@ html.lenis body {
   inset: 0;
   width: 100%;
   height: 100%;
-  -webkit-mask-image: radial-gradient(ellipse 62% 56% at 50% 46%, rgb(0 0 0 / 0.18), black 92%);
-  mask-image: radial-gradient(ellipse 62% 56% at 50% 46%, rgb(0 0 0 / 0.18), black 92%);
+}
+
+.day-maze {
+  -webkit-mask-image: radial-gradient(ellipse 64% 58% at 50% 46%, rgb(0 0 0 / 0.14), black 94%);
+  mask-image: radial-gradient(ellipse 64% 58% at 50% 46%, rgb(0 0 0 / 0.14), black 94%);
+}
+
+/* The mouse: clear out in the margins, a ghost where the text is. */
+.day-maze-runner {
+  opacity: 0.85;
+  -webkit-mask-image: radial-gradient(ellipse 52% 50% at 50% 46%, rgb(0 0 0 / 0.22), black 88%);
+  mask-image: radial-gradient(ellipse 52% 50% at 50% 46%, rgb(0 0 0 / 0.22), black 88%);
 }
 
 /* Pages whose own lines would tangle with the maze's ask for a quieter floor. */
-.day-root:has([data-quiet-floor]) .day-backdrop svg {
+.day-root:has([data-quiet-floor]) .day-maze {
   opacity: 0.3;
 }
 
+.day-root:has([data-quiet-floor]) .day-maze-runner {
+  opacity: 0.35;
+}
+
+.day-maze-flood {
+  fill: rgb(var(--day-line) / 0.075);
+  font-family: var(--font-day), system-ui, sans-serif;
+  font-weight: 650;
+  font-stretch: 80%;
+  font-variation-settings: "wdth" 80;
+}
+
+/* The goal room's zeros, in gold. */
+.day-maze-flood .day-maze-goal {
+  fill: rgb(var(--day-gold) / 0.45);
+}
+
 .day-maze-walls {
-  stroke: rgb(var(--day-line) / 0.05);
+  stroke: rgb(var(--day-line) / 0.07);
+}
+
+.day-maze-sides {
+  stroke: rgb(var(--day-crimson) / 0.085);
 }
 
 .day-maze-posts {
-  fill: rgb(var(--day-line) / 0.1);
+  fill: rgb(var(--day-line) / 0.13);
+}
+
+.day-maze-post-sides {
+  fill: rgb(var(--day-crimson) / 0.1);
 }
 
 .day-maze-route {
-  stroke: rgb(var(--day-crimson) / 0.3);
+  stroke: rgb(var(--day-crimson) / 0.34);
   stroke-dasharray: 1 1;
-  stroke-dashoffset: calc(1 - var(--day-progress, 0) * 0.94 - 0.06);
+}
+
+.day-maze-sensors {
+  stroke: rgb(var(--day-crimson) / 0.55);
+  stroke-dasharray: 1.2 1.6;
+}
+
+/* At night the board is the real one: light tops, crimson sides, a dark floor. */
+.dark .day-maze-flood {
+  fill: rgb(var(--day-line) / 0.07);
 }
 
 .dark .day-maze-walls {
-  stroke: rgb(var(--day-line) / 0.045);
+  stroke: rgb(var(--day-line) / 0.08);
+}
+
+.dark .day-maze-sides {
+  stroke: rgb(var(--day-crimson) / 0.13);
 }
 
 .dark .day-maze-posts {
-  fill: rgb(var(--day-line) / 0.09);
+  fill: rgb(var(--day-line) / 0.13);
+}
+
+.dark .day-maze-post-sides {
+  fill: rgb(var(--day-crimson) / 0.16);
 }
 
 .dark .day-maze-route {
-  stroke: rgb(var(--day-crimson) / 0.34);
+  stroke: rgb(var(--day-crimson) / 0.4);
+}
+
+.dark .day-maze-runner {
+  opacity: 0.75;
 }
 
 /* The reading progress along the header's bottom edge: the route again. */
@@ -385,6 +443,78 @@ html.lenis body {
   100% {
     stroke-dashoffset: 0;
     opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------ the mice
+   Cheddar and friends (DayMice). A peeker rises over its wall once the title
+   is in, then now and again ducks down and comes back up. The dancer hops now
+   and again; the face in an empty box tilts its head. All of it still under
+   reduced motion. */
+
+.day-peek-mouse {
+  animation:
+    day-peek-rise 1100ms var(--day-ease) 450ms both,
+    day-peek-duck 11s ease-in-out 4s infinite;
+}
+
+@keyframes day-peek-rise {
+  from {
+    transform: translate3d(0, 105%, 0);
+  }
+}
+
+@keyframes day-peek-duck {
+  0%,
+  84%,
+  100% {
+    transform: none;
+  }
+  88%,
+  93% {
+    transform: translate3d(0, 62%, 0);
+  }
+}
+
+.day-mouse-hop {
+  transform-origin: 50% 100%;
+  animation: day-mouse-hop 7s ease-in-out 1.5s infinite;
+}
+
+@keyframes day-mouse-hop {
+  0%,
+  78%,
+  100% {
+    transform: none;
+  }
+  82% {
+    transform: translate3d(0, -12%, 0) rotate(-5deg);
+  }
+  86% {
+    transform: none;
+  }
+  90% {
+    transform: translate3d(0, -7%, 0) rotate(4deg);
+  }
+  94% {
+    transform: none;
+  }
+}
+
+.day-mouse-tilt {
+  transform-origin: 50% 85%;
+  animation: day-mouse-tilt 8s ease-in-out infinite;
+}
+
+@keyframes day-mouse-tilt {
+  0%,
+  60%,
+  100% {
+    transform: none;
+  }
+  70%,
+  80% {
+    transform: rotate(-8deg);
   }
 }
 
@@ -955,9 +1085,10 @@ html.lenis body {
     display: none;
   }
 
-  .day-maze-route {
-    stroke-dashoffset: 0;
-    stroke: rgb(var(--day-crimson) / 0.18);
+  .day-peek-mouse,
+  .day-mouse-hop,
+  .day-mouse-tilt {
+    animation: none;
   }
 
   .day-btn,

@@ -3,6 +3,7 @@ import { Crest } from "@/components/day-site/Crest";
 import { DayCountdown } from "@/components/day-site/DayCountdown";
 import { CellKey, DayCells, type DayCell } from "@/components/day-site/DayCells";
 import { HeroMaze } from "@/components/day-site/HeroMaze";
+import { CelebratingMouse } from "@/components/day-site/DayMice";
 import { DayIcon } from "@/components/day-site/icons";
 import { FollowPicker } from "@/components/day-site/Follow";
 import { Road } from "@/components/day-site/Road";
@@ -196,7 +197,10 @@ export default async function DayLivePage() {
         {/* The maze on its floor, or the champions once there are some. */}
         <div className="relative" data-reveal>
           {champion ? (
-            <Link href={`/day/teams/${champion.id}`} className="day-floor day-posts group block overflow-hidden text-center">
+            <Link href={`/day/teams/${champion.id}`} className="day-floor day-posts group relative block overflow-hidden text-center">
+              {/* Two dancers for the champions, down in the corners. */}
+              <CelebratingMouse className="absolute bottom-3 left-3 w-16 sm:w-20" />
+              <CelebratingMouse className="absolute bottom-3 right-3 w-16 sm:w-20" flip />
               <div className="day-checker h-3 opacity-80" style={{ ["--size" as string]: "6px" }} aria-hidden="true" />
               <div className="px-8 py-12 sm:px-10 sm:py-16">
                 <DayIcon name="trophy" className="mx-auto h-10 w-10 text-day-gold" />
