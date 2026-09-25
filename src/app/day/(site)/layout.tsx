@@ -3,11 +3,12 @@ import { notFound } from "next/navigation";
 import { DayAutoRefresh } from "@/components/day/DayAutoRefresh";
 import { DayAlerts } from "@/components/day-site/DayAlerts";
 import { DayMotion } from "@/components/day-site/DayMotion";
-import { ChapterLogo, DayHeader } from "@/components/day-site/DayNav";
+import { DayHeader } from "@/components/day-site/DayNav";
 import { DAY_SPLASH_SCRIPT, DaySplash } from "@/components/day-site/DaySplash";
 import { canViewDaySite } from "@/lib/day-access";
 import { loadDayShell } from "@/lib/day-shell";
 import { FollowDock } from "@/components/day-site/Follow";
+import { FinishMouse } from "@/components/day-site/DayMice";
 import { loadQueue } from "@/lib/day-queue";
 import { followCards } from "@/lib/follow";
 import { loadPublicCompetition } from "@/lib/public-competition";
@@ -42,53 +43,57 @@ export default async function DaySiteLayout({ children }: { children: React.Reac
         {children}
       </main>
 
-      <footer className="relative border-t border-day-line/[0.08] pb-28 lg:pb-0">
-        <div className="day-checker h-3 opacity-[0.08]" aria-hidden="true" />
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
-          <div className="flex items-start gap-4">
-            <ChapterLogo className="h-16 w-16 shrink-0" />
-            <div>
-              <p className="font-brand text-2xl text-day-ink">MMRC 26</p>
-              <p className="mt-1 max-w-xs text-sm text-day-muted">
-                The Micromouse Robotics Competition, run by the IEEE RAS HTU Student Chapter.
-              </p>
-            </div>
+      {/* The finish: the maze floor, with a chequered line across the top. */}
+      <footer className="day-floor relative rounded-none pb-24 lg:pb-0">
+        {/* Cheddar dancing on the finish line, in the space under the page. */}
+        <FinishMouse />
+        <div className="day-checker h-3 opacity-80" style={{ ["--size" as string]: "6px" }} aria-hidden="true" />
+        <div className="mx-auto grid max-w-7xl gap-12 px-4 py-14 sm:px-6 md:grid-cols-[1.6fr_1fr_1fr] md:py-16">
+          <div>
+            <p className="font-brand text-[2.6rem] leading-none text-day-ink">MMRC 26</p>
+            <p className="mt-4 max-w-sm leading-relaxed text-day-muted">
+              The Micromouse Robotics Competition, run by the IEEE RAS HTU Student Chapter at Al Hussein Technical University.
+            </p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo/lockup-htu-chapter-white.png" alt="IEEE RAS HTU Student Chapter" width={80} height={80} className="mt-7 h-14 w-14 object-contain" />
           </div>
-          <nav aria-label="The day">
-            <p className="day-kicker">The day</p>
-            <ul className="mt-3 space-y-2 text-sm">
-              {[
+          {[
+            {
+              label: "The day",
+              links: [
                 ["/day/standings", "Standings"],
                 ["/day/bracket", "Bracket"],
                 ["/day/schedule", "Schedule"],
                 ["/day/competitors", "For competitors"],
                 ["/day/venue", "Getting there"],
-              ].map(([href, label]) => (
-                <li key={href}>
-                  <Link href={href!} className="text-day-muted transition-colors hover:text-day-ink">
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-          <nav aria-label="More from MMRC">
-            <p className="day-kicker">More</p>
-            <ul className="mt-3 space-y-2 text-sm">
-              {[
+              ],
+            },
+            {
+              label: "More from MMRC",
+              links: [
                 ["/faq", "FAQ"],
                 ["/micromouse", "How a micromouse works"],
                 ["/game", "Pac Mouse"],
                 ["/gallery", "Photos"],
-              ].map(([href, label]) => (
-                <li key={href}>
-                  <Link href={href!} className="text-day-muted transition-colors hover:text-day-ink">
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
+              ],
+            },
+          ].map((group) => (
+            <nav key={group.label} aria-label={group.label}>
+              <p className="flex items-center gap-2 text-sm font-semibold text-day-muted">
+                <span className="h-1.5 w-1.5 bg-day-crimson" aria-hidden="true" />
+                {group.label}
+              </p>
+              <ul className="mt-4 space-y-1">
+                {group.links.map(([href, label]) => (
+                  <li key={href}>
+                    <Link href={href!} className="inline-flex min-h-[2.25rem] items-center font-semibold text-day-ink underline-offset-4 hover:underline">
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
         </div>
       </footer>
     </>

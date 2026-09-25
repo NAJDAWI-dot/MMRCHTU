@@ -3,7 +3,7 @@ import Link from "next/link";
 import { CenteredScroll } from "@/components/day-site/CenteredScroll";
 import { Crest } from "@/components/day-site/Crest";
 import { DayIcon } from "@/components/day-site/icons";
-import { Empty, HeldBack, MatchCard, MoreLink, PageHead } from "@/components/day-site/ui";
+import { Empty, HeldBack, MatchCard, MoreLink, PageHead, SectionTitle } from "@/components/day-site/ui";
 import { advanceShown } from "@/lib/reveal";
 import { KNOCKOUT_ROUNDS, phaseInfo } from "@/lib/bracket";
 import { type BracketMatch } from "@/lib/competition";
@@ -19,13 +19,13 @@ type NameOf = (id: string | null) => string | null;
 /** One match, small: the unit the tree is built from. */
 function Cell({ match, nameOf }: { match: BracketMatch | undefined; nameOf: NameOf }) {
   if (!match || match.void) {
-    return <div className="h-[4.5rem] rounded-2xl border border-dashed border-day-line/10" aria-hidden="true" />;
+    return <div className="h-[4.5rem] rounded-[3px] border border-dashed border-day-line/[0.14]" aria-hidden="true" />;
   }
   const live = match.status === "LIVE";
   return (
     <div
-      className={`overflow-hidden rounded-2xl border bg-day-surface text-[13px] shadow-[var(--day-shadow)] ${
-        live ? "border-day-live/60 ring-2 ring-day-live/30" : match.winnerId ? "border-day-gold/40" : "border-day-line/10"
+      className={`overflow-hidden rounded-[3px] border text-[13px] ${
+        live ? "day-floor border-day-live" : match.winnerId ? "border-day-line/25 bg-day-surface" : "border-day-line/[0.14] bg-day-surface"
       }`}
     >
       {[
@@ -39,13 +39,13 @@ function Cell({ match, nameOf }: { match: BracketMatch | undefined; nameOf: Name
           <div
             key={index}
             data-team={side.id ?? undefined}
-            className={`flex h-9 items-center gap-1.5 px-2.5 ${index === 0 ? "border-b border-day-line/[0.07]" : ""} ${won ? "bg-day-gold/10" : ""}`}
+            className={`flex h-9 items-center gap-1.5 px-2.5 ${index === 0 ? "border-b border-day-line/[0.1]" : ""} ${won ? "bg-day-gold/[0.12]" : ""}`}
           >
-            <span className="day-num w-4 shrink-0 text-right text-[10px] text-day-faint">{side.seed ?? ""}</span>
+            <span className="day-num w-4 shrink-0 text-right text-[11px] font-semibold text-day-faint">{side.seed ?? ""}</span>
             {side.id && name ? (
               <Link
                 href={`/day/teams/${side.id}`}
-                className={`min-w-0 flex-1 truncate font-semibold hover:underline ${won ? "text-day-ink" : lost ? "text-day-faint line-through decoration-day-line/30" : "text-day-ink"}`}
+                className={`min-w-0 flex-1 truncate hover:underline ${won ? "font-bold text-day-ink" : lost ? "font-medium text-day-faint" : "font-semibold text-day-ink"}`}
                 title={name}
               >
                 {name}
@@ -54,7 +54,7 @@ function Cell({ match, nameOf }: { match: BracketMatch | undefined; nameOf: Name
               <span className="min-w-0 flex-1 truncate italic text-day-faint">{match.round === 2 ? "Bye" : "TBD"}</span>
             )}
             {live && index === 0 ? <span className="day-live-dot" aria-label="Live" /> : null}
-            <span className={`day-num ${won ? "font-bold text-day-gold" : "text-day-muted"}`}>
+            <span className={`day-num text-[14px] ${won ? "font-bold text-day-ink" : "text-day-muted"}`}>
               {match.walkover || side.score === null ? "" : formatPoints(side.score)}
             </span>
           </div>
@@ -111,7 +111,8 @@ export default async function DayBracketPage() {
   const liveCount = state.bracket.filter((m) => m.status === "LIVE").length;
 
   return (
-    <div className="space-y-12">
+    // A quiet floor: the maze behind would cross the bracket's own lines.
+    <div className="space-y-12" data-quiet-floor>
       <PageHead
         kicker={liveCount ? `${liveCount} match${liveCount === 1 ? "" : "es"} on the maze now` : "Phases 2 to 6"}
         title="The bracket"
@@ -136,9 +137,9 @@ export default async function DayBracketPage() {
           {/* The tree, from large screens up. */}
           <CenteredScroll className="day-bleed day-scroll-x hidden overflow-x-auto pb-4 lg:block">
             <div className="mx-auto min-w-[1640px] max-w-[1720px]" data-lenis-prevent-wheel>
-              <div className="day-bracket mb-4 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-day-faint" style={{ minHeight: 0 }}>
+              <div className="day-bracket mb-5 border-b-2 border-day-line/85 pb-3 text-center text-[0.8125rem] font-semibold text-day-muted" style={{ minHeight: 0 }}>
                 {["Round of 32", "Round of 16", "Quarters", "Semis", "Final", "Semis", "Quarters", "Round of 16", "Round of 32"].map((label, index) => (
-                  <span key={index} className={label === "Final" ? "text-day-crimson" : ""}>
+                  <span key={index} className={label === "Final" ? "font-bold text-day-crimson" : ""}>
                     {label}
                   </span>
                 ))}
@@ -150,16 +151,14 @@ export default async function DayBracketPage() {
                 <Column matches={half(5, "left")} side="left" nameOf={nameOf} />
 
                 <div className="flex flex-col items-center justify-center gap-6">
-                  <span className="grid h-16 w-16 place-items-center rounded-2xl bg-day-gold/15 text-day-gold ring-1 ring-day-gold/40">
-                    <DayIcon name="trophy" className="h-8 w-8" />
-                  </span>
+                  <DayIcon name="trophy" className="h-10 w-10 text-day-gold" />
                   <div className="w-full">
                     <Cell match={final} nameOf={nameOf} />
                   </div>
                   {champion ? (
                     <Link href={`/day/teams/${champion.id}`} className="flex flex-col items-center gap-3 text-center">
                       <Crest name={champion.name} size={56} ring />
-                      <span className="day-kicker text-day-gold">Champions</span>
+                      <span className="text-sm font-bold text-day-gold">Champions</span>
                       <span className="day-display text-2xl leading-tight text-day-ink">{champion.name}</span>
                     </Link>
                   ) : (
@@ -178,10 +177,10 @@ export default async function DayBracketPage() {
           {/* Round by round, below that. */}
           <div className="space-y-12 lg:hidden">
             {champion ? (
-              <Link href={`/day/teams/${champion.id}`} className="day-card flex items-center gap-4 p-5 ring-2 ring-day-gold/50">
+              <Link href={`/day/teams/${champion.id}`} className="day-floor day-posts flex items-center gap-4 p-5">
                 <Crest name={champion.name} size={52} ring />
                 <span>
-                  <span className="day-kicker block text-day-gold">Champions</span>
+                  <span className="block text-sm font-bold text-day-gold">Champions</span>
                   <span className="day-display mt-1 block text-2xl text-day-ink">{champion.name}</span>
                 </span>
               </Link>
@@ -193,10 +192,9 @@ export default async function DayBracketPage() {
               const reached = matches.some((m) => m.teamAId || m.teamBId);
               return (
                 <section key={round} aria-labelledby={`r-${round}`} className="space-y-4">
-                  <h2 id={`r-${round}`} className="day-display text-3xl text-day-ink" data-reveal>
-                    <span className="day-kicker mb-1 block">Phase {round}</span>
+                  <SectionTitle id={`r-${round}`} kicker={`Phase ${round}`}>
                     {phaseInfo(round).name}
-                  </h2>
+                  </SectionTitle>
                   {reached ? (
                     <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
                       {matches.map((match) => (

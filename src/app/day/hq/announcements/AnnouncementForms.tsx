@@ -31,7 +31,6 @@ type Draft = { title: string; body: string; tone: AlertTone };
 function Preview({ title, body, tone }: Draft) {
   return (
     <div className="day-card relative overflow-hidden p-5" aria-hidden="true">
-      <div className="day-stripe-x absolute inset-x-0 top-0 h-1" />
       <p className={`day-kicker ${tone === "URGENT" ? "text-day-live" : tone === "GOOD" ? "text-day-good" : "text-day-plum"}`}>{ALERT_TONE_LABELS[tone]}</p>
       <p className="day-display mt-2 text-xl text-day-ink">{title || (tone === "URGENT" ? "Heads up" : "From the organisers")}</p>
       <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-day-muted">{body || "Your message appears here."}</p>
@@ -137,10 +136,10 @@ export function AnnouncementCard({ row, posted }: { row: AnnouncementRow; posted
   return (
     <li className={`day-card p-5 ${row.isAlert && row.isPublished ? "ring-2 ring-day-live/30" : row.isPinned ? "ring-1 ring-day-gold/50" : ""}`}>
       <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-        <span className={`rounded-full px-2 py-0.5 ${TONE_STYLE[row.tone]}`}>{ALERT_TONE_LABELS[row.tone]}</span>
-        {row.isAlert ? <span className="rounded-full bg-day-live/10 px-2 py-0.5 text-day-live">Alert · in the top bar</span> : null}
-        {row.isPinned ? <span className="rounded-full bg-day-gold/15 px-2 py-0.5 text-day-gold">Pinned</span> : null}
-        {!row.isPublished ? <span className="rounded-full bg-day-ink/[0.06] px-2 py-0.5 text-day-muted">Draft</span> : null}
+        <span className={`rounded-[2px] px-2 py-0.5 ${TONE_STYLE[row.tone]}`}>{ALERT_TONE_LABELS[row.tone]}</span>
+        {row.isAlert ? <span className="rounded-[2px] bg-day-live/10 px-2 py-0.5 text-day-live">Alert · in the top bar</span> : null}
+        {row.isPinned ? <span className="rounded-[2px] bg-day-gold/15 px-2 py-0.5 text-day-gold">Pinned</span> : null}
+        {!row.isPublished ? <span className="rounded-[2px] bg-day-ink/[0.06] px-2 py-0.5 text-day-muted">Draft</span> : null}
         <span className="text-day-faint">{posted}</span>
       </div>
 

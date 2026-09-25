@@ -5,7 +5,7 @@
  */
 export function SponsorLogo({ name, logoUrl, className = "", nameClass = "text-2xl" }: { name: string; logoUrl: string; className?: string; nameClass?: string }) {
   return (
-    <div className={`flex items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 ${className}`}>
+    <div className={`flex items-center justify-center overflow-hidden rounded-[4px] bg-white shadow-sm ring-1 ring-black/5 ${className}`}>
       {logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={logoUrl} alt={name} className="max-h-full max-w-full object-contain" />

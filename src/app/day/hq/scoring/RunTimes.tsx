@@ -117,7 +117,7 @@ export function RunTimes({
             <li key={index} className="flex items-center gap-2">
               <span className="day-num w-7 shrink-0 text-right text-xs font-bold text-day-faint">R{index + 1}</span>
               <input type="hidden" name={resultName} value={row.ok ? "yes" : "no"} />
-              <div className="flex shrink-0 overflow-hidden rounded-xl ring-1 ring-day-line/[0.12]" role="group" aria-label={`${run} result`}>
+              <div className="flex shrink-0 overflow-hidden rounded-[4px] ring-1 ring-day-line/[0.12]" role="group" aria-label={`${run} result`}>
                 <button
                   type="button"
                   aria-pressed={row.ok}
@@ -172,7 +172,7 @@ export function RunTimes({
                       <span className="sr-only">Official time</span>
                     </span>
                   ) : best ? (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-day-gold/15 px-2 py-0.5 text-[10px] font-bold text-day-gold">Official</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-[2px] bg-day-gold/15 px-2 py-0.5 text-[10px] font-bold text-day-gold">Official</span>
                   ) : null}
                 </div>
               ) : (
@@ -207,7 +207,7 @@ export function RunTimes({
                 type="button"
                 aria-label={`Remove run ${index + 1}`}
                 onClick={() => setRows((current) => (current.length > 1 ? current.filter((_, i) => i !== index) : [EMPTY]))}
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-day-faint transition-colors hover:bg-day-live/10 hover:text-day-live"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-[4px] text-day-faint transition-colors hover:bg-day-live/10 hover:text-day-live"
               >
                 <DayIcon name="close" className="h-4 w-4" />
               </button>
@@ -240,7 +240,7 @@ export function RunTimes({
         )}
       </div>
 
-      <div className={`rounded-2xl bg-day-ink p-4 text-day-on-ink ${compact ? "" : "sm:p-5"}`} aria-live="polite">
+      <div className={`rounded-[4px] bg-day-ink p-4 text-day-on-ink ${compact ? "" : "sm:p-5"}`} aria-live="polite">
         <div className={`grid gap-3 ${compact ? "grid-cols-[auto_minmax(0,1fr)_auto]" : "grid-cols-3"}`}>
           <div>
             <p className="text-[11px] font-semibold opacity-60">Successful</p>
@@ -293,7 +293,7 @@ export function MatchClock() {
   const seconds = Math.floor((left % 60000) / 1000);
   const low = left < 60000;
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-day-sunk px-4 py-2.5 ring-1 ring-day-line/[0.07]">
+    <div className="flex items-center gap-3 rounded-[4px] bg-day-sunk px-4 py-2.5 ring-1 ring-day-line/[0.07]">
       <DayIcon name="timer" className={`h-5 w-5 ${low ? "text-day-live" : "text-day-muted"}`} />
       <span className={`day-num day-display text-2xl ${low ? "text-day-live" : "text-day-ink"}`} aria-label="Match time left">
         {minutes}:{String(seconds).padStart(2, "0")}

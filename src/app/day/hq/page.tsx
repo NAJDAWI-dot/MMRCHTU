@@ -59,11 +59,10 @@ export default async function DayHqPage() {
 
   return (
     <div className="space-y-10">
-      <section className="day-card relative overflow-hidden p-6 sm:p-10">
-        <div className="day-stripe-x absolute inset-x-0 top-0 h-1.5" aria-hidden="true" />
+      <section className="day-floor day-posts p-6 sm:p-10">
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div>
-            <p className="day-kicker">
+            <p className="text-sm font-semibold text-day-crimson">
               Hello {admin.username} · {roles.length ? roles.map((role) => ROLE_LABELS[role]).join(", ") : "no role yet"}
             </p>
             <h1 className="day-display mt-3 text-4xl text-day-ink sm:text-6xl">
@@ -100,8 +99,8 @@ export default async function DayHqPage() {
                   {stat.value}
                   <span className="ml-1 text-base font-semibold text-day-faint">/ {stat.of}</span>
                 </dd>
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-day-ink/10" aria-hidden="true">
-                  <div className={`h-full rounded-full ${stat.tone}`} style={{ width: `${stat.of ? Math.round((stat.value / stat.of) * 100) : 0}%` }} />
+                <div className="mt-3 h-1.5 overflow-hidden bg-day-ink/10" aria-hidden="true">
+                  <div className={`h-full ${stat.tone}`} style={{ width: `${stat.of ? Math.round((stat.value / stat.of) * 100) : 0}%` }} />
                 </div>
               </Link>
             ))}
@@ -112,10 +111,10 @@ export default async function DayHqPage() {
       <section className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {DESKS.filter((desk) => desk.href !== "/day/hq" && canOpen(roles, desk.href)).map((desk) => (
           <Link key={desk.href} href={desk.href} className="day-card day-lift group flex flex-col p-6">
-            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-day-crimson/10 text-day-crimson">
-              <DayIcon name={desk.icon} className="h-6 w-6" />
-            </span>
-            <p className="day-display mt-6 text-2xl text-day-ink">{desk.label}</p>
+            <p className="day-display flex items-center gap-2.5 text-2xl text-day-ink">
+              <DayIcon name={desk.icon} className="h-5 w-5 shrink-0 text-day-crimson" />
+              {desk.label}
+            </p>
             <p className="mt-1.5 flex-1 text-sm text-day-muted">{desk.blurb}</p>
             <p className="mt-5 flex items-center justify-between text-sm font-semibold text-day-ink">
               <span className="day-num text-day-faint">{counts[desk.href] ?? ""}</span>
@@ -125,10 +124,10 @@ export default async function DayHqPage() {
         ))}
         {canOpen(roles, "/admin/competition-day") ? (
           <Link href="/admin/competition-day" className="day-card day-lift group flex flex-col p-6">
-            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-day-crimson/10 text-day-crimson">
-              <DayIcon name="schedule" className="h-6 w-6" />
-            </span>
-            <p className="day-display mt-6 text-2xl text-day-ink">Running order</p>
+            <p className="day-display flex items-center gap-2.5 text-2xl text-day-ink">
+              <DayIcon name="schedule" className="h-5 w-5 shrink-0 text-day-crimson" />
+              Running order
+            </p>
             <p className="mt-1.5 flex-1 text-sm text-day-muted">The day&rsquo;s timings, written on the Competition Day screen. The day site follows them.</p>
             <p className="mt-5 flex items-center justify-between text-sm font-semibold text-day-ink">
               <span className="day-num text-day-faint">{slots} line{slots === 1 ? "" : "s"}</span>

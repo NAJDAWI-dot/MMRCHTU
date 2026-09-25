@@ -47,7 +47,7 @@ export interface MatchRow {
 
 function Side({ name, id, seed, score, sheet, winner }: { name: string; id: string | null; seed: number | null; score: number | null; sheet: SideSheet; winner: boolean }) {
   return (
-    <div className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${winner ? "bg-day-good/10" : ""}`}>
+    <div className={`flex items-center gap-3 rounded-[4px] px-3 py-2.5 ${winner ? "bg-day-good/10" : ""}`}>
       <span className="day-num w-6 shrink-0 text-right text-xs text-day-faint">{seed ?? ""}</span>
       {id ? <Crest name={name} size={22} /> : <span className="h-[30px] w-[30px] shrink-0 rounded-[28%] border border-dashed border-day-line/20" />}
       <span className="min-w-0 flex-1">

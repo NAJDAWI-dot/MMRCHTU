@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Crest } from "@/components/day-site/Crest";
+import { EmptyMouse, PeekingMouse } from "@/components/day-site/DayMice";
 import { RunChips } from "@/components/day-site/RunChips";
 import { DayIcon, type DayIconName } from "@/components/day-site/icons";
 import { phaseInfo, type Journey, type ResolvedMatch } from "@/lib/bracket";
@@ -9,7 +10,16 @@ import { clockTime } from "@/lib/day-mode";
 import { heldBackLines, type Reveal } from "@/lib/reveal";
 import { MAZE_CELLS, formatPoints, formatReached, outcomeText, scoreSheet, workingOf } from "@/lib/score-sheet";
 
-/** The heading every day page opens with, arriving a line at a time. */
+/** A maze post: the small square where walls meet, used as a marker. */
+export function Post({ className = "bg-day-crimson" }: { className?: string }) {
+  return <span className={`inline-block h-2 w-2 shrink-0 ${className}`} aria-hidden="true" />;
+}
+
+/**
+ * The heading every day page opens with: the title rising from behind its
+ * wall, the line of context after it (never a label above it), and the wall
+ * that closes the head off from the page.
+ */
 export function PageHead({
   kicker,
   title,
@@ -22,37 +32,57 @@ export function PageHead({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-6">
-      <div className="max-w-3xl">
-        <p className="day-kicker day-line-in">{kicker}</p>
-        <h1 className="day-display mt-3 text-[2.6rem] text-day-ink sm:text-6xl lg:text-7xl">
-          <span className="day-line-in" style={{ ["--i" as string]: 1 }}>
-            {title}
-          </span>
-        </h1>
-        {lead ? (
-          <p className="day-line-in mt-5 max-w-2xl text-base leading-relaxed text-day-muted sm:text-lg" style={{ ["--i" as string]: 2 }}>
-            {lead}
+    <header className="space-y-7">
+      <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
+        <div className="min-w-0 max-w-4xl">
+          <h1 className="day-display text-[clamp(2.6rem,7vw,5.25rem)] text-day-ink">
+            <span className="day-rise">
+              <span>{title}</span>
+            </span>
+          </h1>
+          <p className="day-line-in mt-5 flex items-center gap-2.5 text-[0.95rem] font-semibold text-day-crimson" style={{ ["--i" as string]: 1 }}>
+            <Post />
+            <span>{kicker}</span>
           </p>
+          {lead ? (
+            <p className="day-line-in mt-3 max-w-[62ch] text-pretty text-base leading-relaxed text-day-muted sm:text-[1.0625rem]" style={{ ["--i" as string]: 2 }}>
+              {lead}
+            </p>
+          ) : null}
+        </div>
+        {children ? (
+          <div className="day-line-in" style={{ ["--i" as string]: 3 }}>
+            {children}
+          </div>
         ) : null}
       </div>
-      {children ? (
-        <div className="day-line-in" style={{ ["--i" as string]: 3 }}>
-          {children}
-        </div>
-      ) : null}
-    </div>
+      <div data-reveal="wall" aria-hidden="true" className="relative">
+        {/* A mouse looking over the wall, in the empty space a page head leaves on the right. */}
+        {children ? null : <PeekingMouse page={title} />}
+        <div className="day-wall" />
+      </div>
+    </header>
   );
 }
 
-export function SectionTitle({ kicker, children, action }: { kicker?: ReactNode; children: ReactNode; action?: ReactNode }) {
+/**
+ * A section's title standing on a wall that runs out to the section's link.
+ * The context, when there is some, reads after the title, never above it.
+ */
+export function SectionTitle({ kicker, children, action, id }: { kicker?: ReactNode; children: ReactNode; action?: ReactNode; id?: string }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3" data-reveal>
-      <div>
-        {kicker ? <p className="day-kicker">{kicker}</p> : null}
-        <h2 className="day-display mt-2 text-3xl text-day-ink sm:text-4xl">{children}</h2>
+    <div data-reveal="wall">
+      <div className="flex items-end justify-between gap-4">
+        <h2 id={id} className="day-display min-w-0 text-[1.7rem] text-day-ink sm:text-[2.15rem]">
+          {children}
+        </h2>
+        {/* On a laptop the wall runs from the title out to the link. */}
+        <div className="day-wall mb-[0.6rem] hidden flex-1 sm:block" aria-hidden="true" />
+        {action ? <div className="shrink-0 pb-0.5">{action}</div> : null}
       </div>
-      {action}
+      {/* On a phone there is no room beside the title, so it runs under it. */}
+      <div className="day-wall mt-3 sm:hidden" aria-hidden="true" />
+      {kicker ? <p className="mt-2 text-sm font-medium text-day-muted">{kicker}</p> : null}
     </div>
   );
 }
@@ -60,81 +90,107 @@ export function SectionTitle({ kicker, children, action }: { kicker?: ReactNode;
 /** "See all →", the way out of a section into its page. */
 export function MoreLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} className="group inline-flex items-center gap-1.5 text-sm font-semibold text-day-ink">
+    <Link
+      href={href}
+      className="group inline-flex min-h-[2.75rem] items-center gap-1.5 text-sm font-semibold text-day-ink underline-offset-4 hover:underline"
+    >
       {children}
-      <DayIcon name="arrow" className="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1" />
+      <DayIcon name="arrow" className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
     </Link>
   );
 }
 
 const JOURNEY_TONES: Record<Journey["state"], string> = {
-  REGISTERED: "bg-day-ink/[0.06] text-day-muted",
+  REGISTERED: "bg-day-ink/[0.07] text-day-muted",
   QUALIFYING: "bg-day-plum/10 text-day-plum",
-  NOT_QUALIFIED: "bg-day-ink/[0.06] text-day-faint",
-  QUALIFIED: "bg-day-good/10 text-day-good",
-  ALIVE: "bg-day-good/10 text-day-good",
-  ELIMINATED: "bg-day-ink/[0.06] text-day-muted",
+  NOT_QUALIFIED: "bg-day-ink/[0.07] text-day-faint",
+  QUALIFIED: "bg-day-good/[0.12] text-day-good",
+  ALIVE: "bg-day-good/[0.12] text-day-good",
+  ELIMINATED: "bg-day-ink/[0.07] text-day-muted",
   RUNNER_UP: "bg-day-plum/10 text-day-plum",
   CHAMPION: "bg-day-gold/15 text-day-gold",
 };
 
 export function JourneyBadge({ journey, size = "sm" }: { journey: Journey; size?: "sm" | "lg" }) {
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full font-semibold ${JOURNEY_TONES[journey.state]} ${
-        size === "lg" ? "px-4 py-1.5 text-sm" : "px-2.5 py-1 text-[11px]"
-      }`}
-    >
+    <span className={`day-chip ${JOURNEY_TONES[journey.state]} ${size === "lg" ? "min-h-[2rem] px-3 text-sm" : ""}`}>
       {journey.state === "CHAMPION" ? <DayIcon name="trophy" className="h-3.5 w-3.5" /> : null}
-      {journey.state === "ALIVE" ? <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" /> : null}
+      {journey.state === "ALIVE" ? <span className="h-1.5 w-1.5 bg-current" aria-hidden="true" /> : null}
       {journey.label}
     </span>
   );
 }
 
+type Tone = "ink" | "gold" | "good" | "live" | "crimson";
+
+const TONE_TEXT: Record<Tone, string> = {
+  ink: "text-day-ink",
+  gold: "text-day-gold",
+  good: "text-day-good",
+  live: "text-day-live",
+  crimson: "text-day-crimson",
+};
+
+export interface ReadoutItem {
+  label: string;
+  value: ReactNode;
+  hint?: ReactNode;
+  tone?: Tone;
+}
+
+/**
+ * A few numbers read together, like a scoreboard: one panel, the cells
+ * divided by walls, a label over each number. Two across on a phone.
+ */
+export function Readout({ items, label }: { items: ReadoutItem[]; label?: string }) {
+  const across = ["", "sm:grid-cols-1", "sm:grid-cols-2", "sm:grid-cols-3", "sm:grid-cols-4"][Math.min(items.length, 4)];
+  return (
+    <dl aria-label={label} className={`day-card day-posts grid grid-cols-2 gap-px overflow-hidden bg-day-line/[0.12] ${across}`}>
+      {items.map((item) => (
+        <div key={item.label} className="bg-day-surface px-4 py-4 sm:px-5 sm:py-5">
+          <dt className="text-[0.8125rem] font-semibold text-day-muted">{item.label}</dt>
+          <dd className={`day-num day-display mt-1.5 text-[2.4rem] leading-none sm:text-5xl ${TONE_TEXT[item.tone ?? "ink"]}`}>{item.value}</dd>
+          {item.hint ? <dd className="mt-2 truncate text-xs font-medium text-day-muted">{item.hint}</dd> : null}
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** One number on its own, for the desks. The public pages read numbers together in a Readout. */
 export function StatTile({
   label,
   value,
   hint,
   tone = "ink",
   icon,
-  index = 0,
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
-  tone?: "ink" | "gold" | "good" | "live" | "crimson";
+  tone?: Tone;
   icon?: DayIconName;
   index?: number;
 }) {
-  const colour = {
-    ink: "text-day-ink",
-    gold: "text-day-gold",
-    good: "text-day-good",
-    live: "text-day-live",
-    crimson: "text-day-crimson",
-  }[tone];
   return (
-    <div className="day-card p-5" data-reveal style={{ ["--i" as string]: index }}>
-      <p className="flex items-center gap-2 text-xs font-semibold text-day-muted">
+    <div className="day-card p-5">
+      <p className="flex items-center gap-2 text-[0.8125rem] font-semibold text-day-muted">
         {icon ? <DayIcon name={icon} className="h-4 w-4" /> : null}
         {label}
       </p>
-      <p className={`day-num day-display mt-3 text-4xl sm:text-5xl ${colour}`}>{value}</p>
+      <p className={`day-num day-display mt-2 text-4xl sm:text-5xl ${TONE_TEXT[tone]}`}>{value}</p>
       {hint ? <p className="mt-2 text-xs text-day-muted">{hint}</p> : null}
     </div>
   );
 }
 
-/** Nothing here yet: said plainly, with the way on. */
-export function Empty({ icon = "flag", title, children }: { icon?: DayIconName; title: string; children?: ReactNode }) {
+/** Nothing here yet: said plainly, with the way on, and a mouse looking in to check. */
+export function Empty({ title, children }: { icon?: DayIconName; title: string; children?: ReactNode }) {
   return (
-    <div className="day-card flex flex-col items-center px-6 py-14 text-center" data-reveal>
-      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-day-crimson/10 text-day-crimson">
-        <DayIcon name={icon} className="h-7 w-7" />
-      </span>
-      <p className="day-display mt-5 text-2xl text-day-ink">{title}</p>
-      {children ? <div className="mx-auto mt-2 max-w-md text-day-muted">{children}</div> : null}
+    <div className="relative mt-9 rounded-[3px] border border-dashed border-day-line/25 px-6 pb-12 pt-14 text-center sm:pb-16" data-reveal>
+      <EmptyMouse />
+      <p className="day-display text-2xl text-day-ink">{title}</p>
+      {children ? <div className="mx-auto mt-2 max-w-md text-pretty leading-relaxed text-day-muted">{children}</div> : null}
     </div>
   );
 }
@@ -144,17 +200,15 @@ export function HeldBack({ reveal, phases }: { reveal?: Reveal; phases: readonly
   const lines = heldBackLines(reveal, phases);
   if (!lines.length) return null;
   return (
-    <div className="day-card flex items-start gap-4 p-4 ring-1 ring-day-gold/30 sm:p-5" role="note" data-reveal>
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-day-gold/15 text-day-gold">
-        <DayIcon name="lock" className="h-5 w-5" />
-      </span>
-      <div className="space-y-0.5 pt-0.5">
+    <div className="flex items-start gap-3.5 rounded-[3px] border border-day-gold/40 bg-day-gold/[0.07] p-4 sm:p-5" role="note" data-reveal>
+      <DayIcon name="lock" className="mt-0.5 h-5 w-5 shrink-0 text-day-gold" />
+      <div className="space-y-0.5">
         {lines.map((line) => (
           <p key={line} className="text-sm font-semibold text-day-ink">
             {line}
           </p>
         ))}
-        <p className="text-xs text-day-muted">Keep this page open: it updates the moment they are revealed.</p>
+        <p className="text-[0.8125rem] text-day-muted">Keep this page open: it updates the moment they are revealed.</p>
       </div>
     </div>
   );
@@ -203,8 +257,9 @@ export function SheetView({
 }
 
 /**
- * Two teams, face to face, like a scoreboard: crests, names, seeds and the
- * score, with the winner in full ink and the loser faded.
+ * Two teams, face to face, like a scoreboard: seeds, crests, names and the
+ * score, the winner ticked in gold and the loser faded. A match on the maze
+ * right now stands on the dark maze floor.
  */
 export function MatchCard({
   match,
@@ -227,64 +282,58 @@ export function MatchCard({
   ];
   const time = match.scheduledAt && !match.winnerId ? clockTime(match.scheduledAt) : "";
   return (
-    <div
-      className={`day-card overflow-hidden ${live ? "ring-2 ring-day-live/50" : ""}`}
-      data-reveal
-    >
-      <div className="flex items-center justify-between gap-3 border-b border-day-line/[0.07] px-5 py-3 text-xs font-semibold">
-        <span className="flex items-center gap-2 text-day-muted">
+    <div className={`${live ? "day-floor" : "day-card"} day-posts`} data-reveal>
+      <div className="flex items-center justify-between gap-3 border-b border-day-line/[0.1] px-4 py-2.5 text-[0.8125rem] font-semibold sm:px-5">
+        <span className="flex min-w-0 items-center gap-2 text-day-muted">
           {live ? <span className="day-live-dot" aria-hidden="true" /> : null}
-          <span className={live ? "text-day-live" : ""}>{live ? "On the maze now" : phaseInfo(match.round).name}</span>
-          {time ? <span className="day-num text-day-faint">· {time}</span> : null}
-          {arena ? <span className="text-day-faint">· {arena}</span> : null}
+          <span className={`truncate ${live ? "text-day-live" : ""}`}>{live ? "On the maze now" : phaseInfo(match.round).name}</span>
+          {time ? <span className="day-num shrink-0 text-day-faint">· {time}</span> : null}
+          {arena ? <span className="shrink-0 text-day-faint">· {arena}</span> : null}
         </span>
-        <span className="text-day-faint">
+        <span className="shrink-0 text-day-faint">
           {match.walkover ? "Bye" : match.winnerOverride ? "Judges' decision" : match.winnerId ? "Final" : `Match ${match.slot + 1}`}
         </span>
       </div>
-      <div className="divide-y divide-day-line/[0.06]">
+      <div className="divide-y divide-day-line/[0.08]">
         {sides.map((side, index) => {
           const name = nameOf(side.id);
           const won = !!match.winnerId && match.winnerId === side.id;
           const lost = !!match.winnerId && !!side.id && match.winnerId !== side.id;
           return (
-            <div key={index} data-team={side.id ?? undefined} className={`px-5 py-3.5 ${highlight && side.id === highlight ? "bg-day-crimson/[0.05]" : ""}`}>
+            <div key={index} data-team={side.id ?? undefined} className={`px-4 py-3 sm:px-5 ${highlight && side.id === highlight ? "bg-day-crimson/[0.05]" : ""}`}>
               <div className="flex items-center gap-3">
+                <span className="day-num w-5 shrink-0 text-right text-[0.8125rem] font-semibold text-day-faint" title={side.seed ? `Seed ${side.seed}` : undefined}>
+                  {side.seed ?? ""}
+                </span>
                 {name ? (
-                  <Crest name={name} size={26} ring={won && match.round === 6} />
+                  <Crest name={name} size={24} ring={won && match.round === 6} />
                 ) : (
-                  <span className="h-[35px] w-[35px] shrink-0 rounded-[28%] border border-dashed border-day-line/20" />
+                  <span className="h-8 w-8 shrink-0 rounded-[3px] border border-dashed border-day-line/25" />
                 )}
                 <div className="min-w-0 flex-1">
                   {side.id && name ? (
                     <Link
                       href={`/day/teams/${side.id}`}
-                      className={`block truncate text-[15px] font-semibold hover:underline ${lost ? "text-day-faint" : "text-day-ink"}`}
+                      className={`block truncate text-[15px] underline-offset-2 hover:underline ${won ? "font-bold text-day-ink" : lost ? "font-medium text-day-faint" : "font-semibold text-day-ink"}`}
                     >
                       {name}
                     </Link>
                   ) : (
-                    <span className="block truncate text-[15px] italic text-day-faint">
-                      {match.round === 2 ? "Bye" : "To be decided"}
-                    </span>
+                    <span className="block truncate text-[15px] italic text-day-faint">{match.round === 2 ? "Bye" : "To be decided"}</span>
                   )}
-                  {side.seed ? <span className="text-[11px] font-medium text-day-faint">Seed {side.seed}</span> : null}
+                  {side.seed ? <span className="sr-only">Seed {side.seed}</span> : null}
                 </div>
                 {won ? (
-                  <span className="grid h-5 w-5 place-items-center rounded-full bg-day-good text-day-on-ink" aria-label="Winner">
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-[2px] bg-day-gold text-day-on-ink" aria-label="Winner">
                     <DayIcon name="check" className="h-3 w-3" />
                   </span>
                 ) : null}
-                <span
-                  className={`day-num day-display min-w-[3.5ch] text-right text-3xl ${
-                    won ? "text-day-ink" : lost ? "text-day-faint" : "text-day-ink"
-                  }`}
-                >
+                <span className={`day-num day-display min-w-[3.5ch] text-right text-[1.9rem] leading-none ${lost ? "text-day-faint" : "text-day-ink"}`}>
                   {match.walkover ? "" : formatPoints(side.score)}
                 </span>
               </div>
               {showSheets && (side.times.length > 0 || side.remaining !== null || side.log.length > 0) ? (
-                <div className="mt-3 pl-[47px]">
+                <div className="mt-3 pl-[4.25rem]">
                   <SheetView times={side.times} remaining={side.remaining} log={side.log} compact />
                 </div>
               ) : null}
@@ -296,28 +345,28 @@ export function MatchCard({
   );
 }
 
-/** A guide's blocks, in the day site's type. */
+/** A guide's blocks, in the day site's type: headings on walls, lists ruled and ticked. */
 export function GuideView({ blocks }: { blocks: GuideBlock[] }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       {blocks.map((block, index) =>
         block.kind === "heading" ? (
-          <h2 key={index} className="day-display pt-6 text-3xl text-day-ink first:pt-0" data-reveal>
-            {block.text}
-          </h2>
+          <div key={index} className="pt-8 first:pt-0">
+            <SectionTitle>{block.text}</SectionTitle>
+          </div>
         ) : block.kind === "list" ? (
-          <ul key={index} className="grid grid-cols-[minmax(0,1fr)] gap-2.5 sm:grid-cols-2">
+          <ul key={index} className="grid max-w-5xl gap-x-10 border-t border-day-line/[0.12] sm:grid-cols-2" data-reveal>
             {block.items.map((item, i) => (
-              <li key={i} className="day-card flex gap-3 p-4 text-day-muted" data-reveal style={{ ["--i" as string]: i }}>
-                <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-day-good/15 text-day-good">
+              <li key={i} className="flex gap-3.5 border-b border-day-line/[0.12] py-3.5">
+                <span className="mt-[0.2rem] grid h-[1.1rem] w-[1.1rem] shrink-0 place-items-center rounded-[2px] bg-day-good text-day-on-ink">
                   <DayIcon name="check" className="h-3 w-3" />
                 </span>
-                <span className="leading-relaxed">{item}</span>
+                <span className="leading-relaxed text-day-ink">{item}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p key={index} className="max-w-3xl text-lg leading-relaxed text-day-muted" data-reveal>
+          <p key={index} className="max-w-[65ch] text-pretty text-lg leading-relaxed text-day-muted" data-reveal>
             {block.text}
           </p>
         ),

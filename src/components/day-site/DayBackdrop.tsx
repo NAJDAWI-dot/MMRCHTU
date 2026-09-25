@@ -1,92 +1,81 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { MICE, TOP_MOUSE_TURN } from "@/components/day-site/DayMice";
+import { floodDistances } from "@/lib/flood";
+import { CELL, generateMaze, seededRandom } from "@/lib/maze";
+
+/** Cells per side: the classic micromouse maze is sixteen by sixteen. */
+const SIZE = 16;
+/** A post's side, in the maze's own units (a cell is 20). */
+const POST = 2.8;
+/** How far a wall's crimson side shows under its top, like the real maze seen from above and in front. */
+const DEPTH = 1.1;
+/** The mouse, nose to tail, in maze units. */
+const MOUSE = 17;
+/** Where the route begins: a little way in, so the mouse is already running at the top of a page. */
+const HEAD_START = 0.04;
 
 /**
- * The day site's artwork, redrawn from the main site's poster background.
+ * The floor the day site stands on: a real sixteen by sixteen micromouse
+ * maze, carved from a fixed seed so the server and every visitor draw the same
+ * one, and drawn the way the real board looks: walls with a white top and a
+ * crimson side, a post wherever walls can meet, the gold room in the centre.
  *
- * The same pieces in the same corners (the maze top left, the rings top right,
- * the running-track arcs bottom left, the chequered flag bottom right, stars and
- * halftone dots between them), drawn as vectors so they stay sharp at any
- * size, take their inks from the theme, and move at their own depth as the
- * page scrolls. A noise mask wears their edges like the printed original.
+ * Each cell carries its flood-fill number, its distance in moves from the
+ * centre, which is how a micromouse actually works the maze out. And a mouse
+ * runs it: as the page scrolls, it follows the shortest route in from its
+ * corner, its sensors sweeping ahead and its route drawn in crimson behind it,
+ * arriving in the gold room at the bottom of the page. The header's progress
+ * line reads the same number.
  *
- * Fixed behind everything and hidden from assistive technology: decoration.
+ * Fixed behind everything and hidden from assistive technology: it is the
+ * floor, not content. The maze fades where the reading happens, and so does
+ * the mouse, a little less: bold out in the margins, a ghost behind the text,
+ * so it never sits over anything that matters. With reduced motion the route
+ * is drawn whole and the mouse waits in the centre.
  */
-
-function star(cx: number, cy: number, outer: number, inner = outer * 0.45): string {
-  const points: string[] = [];
-  for (let i = 0; i < 10; i++) {
-    const r = i % 2 === 0 ? outer : inner;
-    const angle = (Math.PI / 5) * i - Math.PI / 2;
-    points.push(`${(cx + r * Math.cos(angle)).toFixed(1)},${(cy + r * Math.sin(angle)).toFixed(1)}`);
-  }
-  return `M${points.join("L")}Z`;
-}
-
-/** A halftone patch: a grid of dots shrinking away from one corner. */
-function Halftone({ size, fill, fade = "tl" }: { size: number; fill: string; fade?: "tl" | "br" }) {
-  const step = 14;
-  const count = Math.floor(size / step);
-  const dots: { x: number; y: number; r: number }[] = [];
-  for (let row = 0; row < count; row++) {
-    for (let col = 0; col < count; col++) {
-      const dx = fade === "tl" ? col : count - 1 - col;
-      const dy = fade === "tl" ? row : count - 1 - row;
-      const d = Math.hypot(dx, dy) / count;
-      const r = (1 - d) * 5.2;
-      if (r > 0.6) dots.push({ x: col * step + (row % 2 ? step / 2 : 0), y: row * step, r });
-    }
-  }
-  return (
-    <svg viewBox={`0 0 ${size} ${size}`}>
-      {dots.map((dot, i) => (
-        <circle key={i} cx={dot.x} cy={dot.y} r={dot.r} style={{ fill }} />
-      ))}
-    </svg>
-  );
-}
-
-const MAZE = [
-  "M0 40 H120 V110 H60 V180",
-  "M160 0 V70 H250 V150 H190",
-  "M40 230 H150 V300 H90 V380",
-  "M200 200 H300 V120 H360",
-  "M300 260 V340 H220 V420",
-  "M0 300 H40",
-  "M110 440 H200 V520",
-  "M260 470 H360 V380",
-  "M20 400 V500",
-];
-
-const STARS: { x: string; y: string; s: number; tone: string; i: number }[] = [
-  { x: "22%", y: "5%", s: 22, tone: "var(--art-crimson)", i: 0 },
-  { x: "23%", y: "15%", s: 16, tone: "var(--art-deep)", i: 1 },
-  { x: "76%", y: "5%", s: 26, tone: "var(--art-plum)", i: 2 },
-  { x: "78%", y: "15%", s: 18, tone: "var(--art-deep)", i: 3 },
-  { x: "86%", y: "36%", s: 18, tone: "var(--art-crimson)", i: 4 },
-  { x: "12%", y: "74%", s: 26, tone: "var(--art-deep)", i: 5 },
-  { x: "19%", y: "81%", s: 16, tone: "var(--art-crimson)", i: 6 },
-  { x: "89%", y: "73%", s: 16, tone: "var(--art-crimson)", i: 7 },
-  { x: "84%", y: "80%", s: 22, tone: "var(--art-rose)", i: 8 },
-];
-
-const at = (depth: number, style: CSSProperties): CSSProperties => ({ ...style, ["--depth" as string]: depth });
-
 export function DayBackdrop() {
-  const ref = useRef<HTMLDivElement>(null);
+  const maze = useMemo(() => generateMaze(SIZE, seededRandom(1626), 0.12), []);
+  const route = maze.routes[0]!;
+  const flood = useMemo(() => floodDistances(maze), [maze]);
+  const posts = useMemo(() => {
+    let d = "";
+    for (let row = 0; row <= SIZE; row++) {
+      for (let col = 0; col <= SIZE; col++) {
+        d += `M${col * CELL - POST / 2} ${row * CELL - POST / 2}h${POST}v${POST}h-${POST}z`;
+      }
+    }
+    return d;
+  }, []);
+
+  const routeRef = useRef<SVGPathElement>(null);
+  const mouseRef = useRef<SVGGElement>(null);
 
   useEffect(() => {
-    const root = ref.current;
-    if (!root) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const path = routeRef.current;
+    const mouse = mouseRef.current;
+    if (!path || !mouse) return;
+    const length = path.getTotalLength();
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const bars = () => document.querySelectorAll<HTMLElement>(".day-progress");
 
     let frame = 0;
     const update = () => {
       frame = 0;
       const max = document.documentElement.scrollHeight - window.innerHeight;
-      root.style.setProperty("--day-y", `${-window.scrollY}px`);
-      document.documentElement.style.setProperty("--day-progress", String(max > 0 ? Math.min(1, window.scrollY / max) : 0));
+      const read = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      bars().forEach((bar) => bar.style.setProperty("--day-progress", String(read)));
+
+      const run = still.matches ? 1 : HEAD_START + read * (1 - HEAD_START);
+      path.style.strokeDashoffset = String(1 - run);
+      // Where the mouse is, and which way it faces: along the route either side of it.
+      const at = Math.min(length, run * length);
+      const here = path.getPointAtLength(at);
+      const ahead = path.getPointAtLength(Math.min(length, at + 2));
+      const behind = path.getPointAtLength(Math.max(0, at - 2));
+      const angle = (Math.atan2(ahead.y - behind.y, ahead.x - behind.x) * 180) / Math.PI;
+      mouse.setAttribute("transform", `translate(${here.x.toFixed(2)} ${here.y.toFixed(2)}) rotate(${angle.toFixed(1)})`);
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(update);
@@ -94,93 +83,88 @@ export function DayBackdrop() {
     update();
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
+    still.addEventListener?.("change", onScroll);
+    // A page that grows after it loads (photos, a refresh) moves the finish.
+    const grow = new ResizeObserver(onScroll);
+    grow.observe(document.body);
     return () => {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
+      still.removeEventListener?.("change", onScroll);
+      grow.disconnect();
       cancelAnimationFrame(frame);
     };
   }, []);
 
+  const span = SIZE * CELL;
+  const viewBox = `-6 -6 ${span + 12} ${span + 12}`;
+  const top = MICE.top;
+  const mouseH = (MOUSE * top.height) / top.width;
+
   return (
-    <div ref={ref} className="day-backdrop" aria-hidden="true">
-      {/* The maze, top left. */}
-      <div className="day-art day-worn" style={at(0.12, { left: "-3%", top: "-5%", width: "clamp(150px, 20vw, 360px)", aspectRatio: "420 / 540", opacity: 0.32 })}>
-        <svg viewBox="0 0 420 540">
-          <g fill="none" style={{ stroke: "rgb(var(--art-rose))" }} strokeWidth="18" strokeLinecap="square" strokeLinejoin="miter">
-            {MAZE.map((d, i) => (
-              <path key={i} d={d} />
-            ))}
+    <div className="day-backdrop" aria-hidden="true">
+      <svg viewBox={viewBox} preserveAspectRatio="xMidYMid slice" className="day-maze">
+        {/* Flood fill: every cell's distance from the centre. */}
+        <g className="day-maze-flood" textAnchor="middle" fontSize={3.6}>
+          {flood.map((distance, index) => (
+            <text
+              key={index}
+              x={(index % SIZE) * CELL + CELL / 2}
+              y={Math.floor(index / SIZE) * CELL + CELL / 2 + 1.3}
+              className={distance === 0 ? "day-maze-goal" : undefined}
+            >
+              {distance}
+            </text>
+          ))}
+        </g>
+        <path
+          ref={routeRef}
+          className="day-maze-route"
+          d={route.solution}
+          pathLength={1}
+          fill="none"
+          strokeWidth={2.4}
+          strokeLinecap="square"
+          strokeLinejoin="miter"
+          style={{ strokeDashoffset: 1 - HEAD_START }}
+        />
+        {/* The walls: the crimson side first, then the top over it. */}
+        <g className="day-maze-sides" fill="none" strokeWidth={1.1} strokeLinecap="square" transform={`translate(0 ${DEPTH})`}>
+          {maze.walls.map((d, i) => (
+            <path key={i} d={d} />
+          ))}
+          <rect x={0} y={0} width={span} height={span} />
+        </g>
+        <g className="day-maze-walls" fill="none" strokeWidth={1.1} strokeLinecap="square">
+          {maze.walls.map((d, i) => (
+            <path key={i} d={d} />
+          ))}
+          <rect x={0} y={0} width={span} height={span} />
+        </g>
+        <path className="day-maze-post-sides" d={posts} transform={`translate(0 ${DEPTH})`} />
+        <path className="day-maze-posts" d={posts} />
+      </svg>
+
+      {/* The mouse, on a layer of its own with a gentler fade than the maze's. */}
+      <svg viewBox={viewBox} preserveAspectRatio="xMidYMid slice" className="day-maze-runner">
+        <g ref={mouseRef} transform={`translate(${route.start.x} ${route.start.y})`}>
+          {/* Its sensors: one ahead, one to each side, reading the walls. */}
+          <g className="day-maze-sensors" strokeWidth={0.7} strokeLinecap="round">
+            <path d="M8 0H22" />
+            <path d="M6 -3L15 -11" />
+            <path d="M6 3L15 11" />
           </g>
-        </svg>
-      </div>
-
-      {/* The rings, top right, with a dashed orbit turning slowly inside. */}
-      <div className="day-art day-worn" style={at(0.2, { right: "clamp(-220px, -10vw, -90px)", top: "clamp(-240px, -14vw, -110px)", width: "clamp(260px, 32vw, 560px)", aspectRatio: "1" })}>
-        <svg viewBox="0 0 400 400">
-          <circle cx="200" cy="200" r="180" fill="none" style={{ stroke: "rgb(var(--art-crimson))" }} strokeWidth="34" />
-          <circle cx="200" cy="200" r="132" fill="none" style={{ stroke: "rgb(var(--art-deep))" }} strokeWidth="34" />
-          <circle cx="200" cy="200" r="86" fill="none" style={{ stroke: "rgb(var(--art-plum) / 0.8)" }} strokeWidth="22" />
-          <g className="day-spin">
-            <circle cx="200" cy="200" r="58" fill="none" style={{ stroke: "rgb(var(--art-rose) / 0.8)" }} strokeWidth="4" strokeDasharray="6 12" />
-          </g>
-        </svg>
-      </div>
-
-      {/* Halftone, right edge. */}
-      <div className="day-art" style={at(0.28, { right: "-1%", top: "34%", width: "clamp(110px, 12vw, 200px)", aspectRatio: "1", opacity: 0.5 })}>
-        <Halftone size={200} fill="rgb(var(--art-rose))" fade="br" />
-      </div>
-
-      {/* The running-track arcs, bottom left. */}
-      <div className="day-art day-worn" style={at(-0.1, { left: "clamp(-120px, -6vw, -40px)", bottom: "clamp(-200px, -12vw, -90px)", width: "clamp(260px, 34vw, 620px)", aspectRatio: "620 / 360" })}>
-        <svg viewBox="0 0 620 360">
-          <g fill="none" strokeWidth="42">
-            <path d="M0 330 H330 A210 210 0 0 1 540 540" style={{ stroke: "rgb(var(--art-plum))" }} transform="translate(0,-150)" />
-            <path d="M0 372 H330 A168 168 0 0 1 498 540" style={{ stroke: "rgb(var(--art-deep))" }} transform="translate(0,-150)" />
-            <path d="M0 414 H330 A126 126 0 0 1 456 540" style={{ stroke: "rgb(var(--art-crimson))" }} transform="translate(0,-150)" />
-          </g>
-        </svg>
-      </div>
-
-      {/* Halftone, bottom left. */}
-      <div className="day-art" style={at(0.06, { left: "0.5%", bottom: "18%", width: "clamp(90px, 10vw, 170px)", aspectRatio: "1", opacity: 0.55 })}>
-        <Halftone size={170} fill="rgb(var(--art-deep))" />
-      </div>
-
-      {/* The chequered flag, bottom right. */}
-      <div className="day-art day-worn" style={at(-0.16, { right: "clamp(-160px, -8vw, -60px)", bottom: "clamp(-160px, -8vw, -60px)", width: "clamp(200px, 22vw, 380px)", aspectRatio: "1" })}>
-        <svg viewBox="0 0 300 300">
-          <g transform="rotate(-45 150 150) translate(0 90)">
-            {Array.from({ length: 4 }, (_, row) =>
-              Array.from({ length: 10 }, (_, col) => (
-                <rect
-                  key={`${row}-${col}`}
-                  x={col * 30 - 0}
-                  y={row * 30}
-                  width="30"
-                  height="30"
-                  style={{ fill: (row + col) % 2 ? "rgb(var(--art-sand))" : "rgb(var(--art-rose))" }}
-                />
-              )),
-            )}
-          </g>
-        </svg>
-      </div>
-
-      {/* Stars, twinkling in turn. */}
-      {STARS.map((s) => (
-        <div
-          key={s.i}
-          className="day-art"
-          style={at(0.1 + (s.i % 4) * 0.05, { left: s.x, top: s.y, width: s.s, height: s.s })}
-        >
-          <svg viewBox="-12 -12 24 24">
-            <path className="day-twinkle" style={{ ["--i" as string]: s.i, fill: `rgb(${s.tone})` }} d={star(0, 0, 11)} />
-          </svg>
-        </div>
-      ))}
-
-      <div className="day-grain" />
+          <image
+            href={top.src}
+            width={MOUSE}
+            height={mouseH}
+            x={-MOUSE / 2}
+            y={-mouseH / 2}
+            transform={`rotate(${TOP_MOUSE_TURN})`}
+            preserveAspectRatio="xMidYMid meet"
+          />
+        </g>
+      </svg>
     </div>
   );
 }

@@ -29,11 +29,9 @@ function Icon({ tone }: { tone: DayAlert["tone"] }) {
   return (
     <span
       aria-hidden="true"
-      className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${
-        tone === "URGENT" ? "bg-day-live/10 text-day-live" : tone === "GOOD" ? "bg-day-good/10 text-day-good" : "bg-day-plum/10 text-day-plum"
-      }`}
+      className={`mt-1 shrink-0 ${tone === "URGENT" ? "text-day-live" : tone === "GOOD" ? "text-day-good" : "text-day-plum"}`}
     >
-      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         {tone === "GOOD" ? (
           <path d="M20 6 9 17l-5-5" />
         ) : tone === "URGENT" ? (
@@ -123,7 +121,7 @@ export function DayAlerts({ alerts }: { alerts: DayAlert[] }) {
                         onClick={() => setReopened(alert.id)}
                         className="flex items-center gap-2.5 whitespace-nowrap px-6 py-1.5 text-[13px] font-medium hover:underline"
                       >
-                        <span className={`h-1.5 w-1.5 rounded-full ${TONE_DOT[alert.tone]}`} aria-hidden="true" />
+                        <span className={`h-1.5 w-1.5 ${TONE_DOT[alert.tone]}`} aria-hidden="true" />
                         {alert.title ? <span className="font-bold">{alert.title}</span> : null}
                         <span className="opacity-85">{alert.body.replace(/\s+/g, " ")}</span>
                       </button>
@@ -144,14 +142,13 @@ export function DayAlerts({ alerts }: { alerts: DayAlert[] }) {
             aria-modal="true"
             aria-labelledby="day-alert-title"
             aria-describedby="day-alert-body"
-            className="day-dialog day-card relative w-full max-w-lg overflow-hidden p-6 sm:p-7"
+            className="day-dialog day-card day-posts relative w-full max-w-lg p-6 shadow-[var(--day-shadow-lift)] sm:p-7"
             data-lenis-prevent
           >
-            <div className="day-stripe-x absolute inset-x-0 top-0 h-1.5" aria-hidden="true" />
             <div className="flex items-start gap-4">
               <Icon tone={open.tone} />
               <div className="min-w-0 flex-1">
-                <p className={`day-kicker ${TONE_TEXT[open.tone]}`}>
+                <p className={`text-sm font-bold ${TONE_TEXT[open.tone]}`}>
                   {ALERT_TONE_LABELS[open.tone]}
                   {!reopened && pending.length > 1 ? ` · 1 of ${pending.length}` : ""}
                 </p>

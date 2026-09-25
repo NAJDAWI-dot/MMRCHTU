@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Crest } from "@/components/day-site/Crest";
+import { DayMouse } from "@/components/day-site/DayMice";
 import type { RevealShow } from "@/lib/reveal-show";
 
 const PLAYED = "mmrc-screen-reveals";
@@ -128,14 +129,14 @@ export function RevealTakeover({ show, onDone }: { show: RevealShow; onDone: () 
       <div className="relative flex h-full flex-col items-center justify-center px-[6vh] text-center">
         {counting ? (
           <div className="flex flex-col items-center gap-[7vh]">
-            <p className="day-kicker text-[2.4vh] tracking-[0.3em] text-[rgb(var(--day-gold))]">{show.kicker}</p>
+            <p className="day-kicker text-[2.4vh] text-[rgb(var(--day-gold))]">{show.kicker}</p>
             <p key={number} className="reveal-count day-num day-display text-[30vh] leading-none">
               {number}
             </p>
           </div>
         ) : show.mode === "champion" && show.champion ? (
           <div className="flex flex-col items-center gap-[3vh]">
-            <p className="reveal-title day-kicker text-[2.8vh] tracking-[0.3em] text-[rgb(var(--day-gold))]">{show.kicker}</p>
+            <p className="reveal-title day-kicker text-[2.8vh] text-[rgb(var(--day-gold))]">{show.kicker}</p>
             <div className="reveal-row" style={{ animationDelay: "300ms" }}>
               <Crest name={show.champion.name} size={220} ring />
             </div>
@@ -150,11 +151,18 @@ export function RevealTakeover({ show, onDone }: { show: RevealShow; onDone: () 
             </p>
             <div className="reveal-burst pointer-events-none absolute left-1/2 top-[42%] h-[60vh] w-[60vh] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgb(var(--day-gold)/0.6),transparent_65%)]" aria-hidden="true" />
             {reduced ? null : <Confetti count={140} />}
+            {/* Cheddar dancing for them, down in both corners of the screen. */}
+            <div className="reveal-row absolute bottom-[3vh] left-[4vw] w-[26vh]" style={{ animationDelay: "1600ms" }}>
+              <DayMouse name="dance" move="hop" />
+            </div>
+            <div className="reveal-row absolute bottom-[3vh] right-[4vw] w-[26vh]" style={{ animationDelay: "1750ms" }}>
+              <DayMouse name="dance" move="hop" flip />
+            </div>
           </div>
         ) : (
           <div className="flex w-full max-w-[150vh] flex-col items-center gap-[3.5vh]">
             <div>
-              <p className="reveal-title day-kicker text-[2.4vh] tracking-[0.3em] text-[rgb(var(--day-gold))]">{show.kicker}</p>
+              <p className="reveal-title day-kicker text-[2.4vh] text-[rgb(var(--day-gold))]">{show.kicker}</p>
               <h2 className="reveal-title day-display mt-[1vh] text-[9vh] leading-none" style={{ animationDelay: "150ms" }}>
                 {show.title}
               </h2>
@@ -165,7 +173,7 @@ export function RevealTakeover({ show, onDone }: { show: RevealShow; onDone: () 
               <div className="w-full space-y-[1.6vh]" aria-live="polite">
                 {show.rows[0] ? (
                   <div
-                    className={`flex items-center gap-[3vh] rounded-[2.4vh] px-[4vh] py-[2vh] ring-2 ring-[rgb(var(--day-gold)/0.7)] ${firstIn ? "reveal-row" : "invisible"}`}
+                    className={`flex items-center gap-[3vh] rounded-[0.5vh] border-2 border-[rgb(var(--day-gold)/0.7)] px-[4vh] py-[2vh] ${firstIn ? "reveal-row" : "invisible"}`}
                     style={{ background: "linear-gradient(100deg, rgb(var(--day-gold) / 0.22), rgb(var(--day-gold) / 0.06))" }}
                   >
                     <span className="reveal-shine day-num day-display w-[9vh] text-left text-[9vh] leading-none">1</span>
@@ -184,7 +192,7 @@ export function RevealTakeover({ show, onDone }: { show: RevealShow; onDone: () 
                     return (
                       <li
                         key={row.name + index}
-                        className={`flex items-center gap-[2.4vh] rounded-[1.8vh] px-[2.6vh] py-[1.1vh] ${visible ? "reveal-row" : "invisible"}`}
+                        className={`flex items-center gap-[2.4vh] rounded-[0.4vh] px-[2.6vh] py-[1.1vh] ${visible ? "reveal-row" : "invisible"}`}
                         style={{ background: "rgb(255 255 255 / 0.06)" }}
                       >
                         <span className="day-num day-display w-[5vh] text-left text-[3.6vh] opacity-60">{index + 1}</span>
@@ -204,7 +212,7 @@ export function RevealTakeover({ show, onDone }: { show: RevealShow; onDone: () 
                 {show.rows.map((row, index) => (
                   <li
                     key={row.name + index}
-                    className={`flex items-center gap-[1.4vh] rounded-[1.6vh] px-[1.8vh] py-[1.2vh] text-left ${index < shownRows ? "reveal-row" : "invisible"}`}
+                    className={`flex items-center gap-[1.4vh] rounded-[0.4vh] px-[1.8vh] py-[1.2vh] text-left ${index < shownRows ? "reveal-row" : "invisible"}`}
                     style={{ background: "rgb(255 255 255 / 0.06)" }}
                   >
                     <Crest name={row.name} size={34} />

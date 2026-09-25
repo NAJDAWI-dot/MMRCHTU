@@ -23,7 +23,7 @@ export default async function DayHqLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-day-line/[0.08] bg-day-bg/80 backdrop-blur-xl backdrop-saturate-150">
+      <header className="sticky top-0 z-40 border-b border-day-line/[0.12] bg-day-bg">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
           <Wordmark href="/day/hq" label="Day HQ" />
           <div className="flex items-center gap-2">

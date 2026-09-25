@@ -49,7 +49,7 @@ export default {
         },
         /*
           The competition day site. Every value is a theme variable set in
-          src/styles/day.css, cream paper in light and plum night in dark, so a
+          src/styles/day.css, chalk in light and the maze floor at night, so a
           day page never names a colour that only works in one theme.
         */
         day: {

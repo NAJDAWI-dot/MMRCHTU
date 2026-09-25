@@ -14,7 +14,7 @@ export function Crest({ name, size = 40, ring = false }: { name: string; size?: 
   return (
     <span
       aria-hidden="true"
-      className={`inline-flex shrink-0 items-center justify-center rounded-[28%] border bg-day-sunk ${
+      className={`inline-flex shrink-0 items-center justify-center rounded-[4px] border bg-day-sunk ${
         ring ? "border-day-gold/60 shadow-[0_0_0_4px_rgb(var(--day-gold)/0.14)]" : "border-day-line/10"
       }`}
       style={{ width: box, height: box }}

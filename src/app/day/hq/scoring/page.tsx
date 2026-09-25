@@ -289,7 +289,7 @@ export default async function QualifyingDeskPage() {
                 sheets are marked, and removing them removes only them: a real sheet is never touched.
               </p>
             </div>
-            <span className={`rounded-full px-3 py-1 text-xs font-bold ${testSheets ? "bg-day-plum/15 text-day-plum" : "bg-day-ink/[0.06] text-day-muted"}`}>
+            <span className={`rounded-[2px] px-3 py-1 text-xs font-bold ${testSheets ? "bg-day-plum/15 text-day-plum" : "bg-day-ink/[0.06] text-day-muted"}`}>
               {testSheets ? `${testSheets} test sheet${testSheets === 1 ? "" : "s"} in` : "No test data"}
             </span>
           </div>

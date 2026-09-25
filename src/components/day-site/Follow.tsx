@@ -58,7 +58,7 @@ export function FollowButton({ id, name }: { id: string; name: string }) {
       type="button"
       onClick={() => setFollow(followed ? "" : id)}
       aria-pressed={followed}
-      className={`day-btn day-btn-sm ${followed ? "bg-day-gold text-day-on-ink hover:bg-day-gold/90" : "day-btn-soft"}`}
+      className={`day-btn day-btn-sm ${followed ? "border-day-gold bg-day-gold text-day-on-ink hover:bg-day-gold/90" : "day-btn-soft"}`}
       title={followed ? `Stop following ${name}` : `Follow ${name} across the day site`}
     >
       <DayIcon name="star" className="h-4 w-4" />
@@ -71,13 +71,11 @@ export function FollowButton({ id, name }: { id: string; name: string }) {
 export function FollowPicker({ teams }: { teams: { id: string; name: string }[] }) {
   const id = useFollow();
   return (
-    <label className="day-card flex flex-wrap items-center gap-3 p-4 sm:p-5" data-reveal>
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-day-gold/15 text-day-gold">
-        <DayIcon name="star" className="h-5 w-5" />
-      </span>
+    <label className="flex flex-wrap items-center gap-x-4 gap-y-3 border-y border-day-line/[0.12] py-4" data-reveal>
+      <DayIcon name="star" className={`h-5 w-5 shrink-0 ${id ? "text-day-gold" : "text-day-muted"}`} />
       <span className="min-w-0 flex-1">
         <span className="block font-semibold text-day-ink">{id ? "Following" : "Follow a team"}</span>
-        <span className="block text-xs text-day-muted">It lights up everywhere on the day site, with what is next for it in the corner.</span>
+        <span className="block text-[0.8125rem] text-day-muted">It lights up in gold everywhere on the day site, with what is next for it in the corner.</span>
       </span>
       <select value={id} onChange={(event) => setFollow(event.target.value)} className="day-input h-11 w-full sm:w-64" aria-label="The team to follow">
         <option value="">Nobody</option>
@@ -128,17 +126,17 @@ export function FollowDock({ cards }: { cards: FollowCard[] }) {
 
   return (
     <>
-      <style>{`[data-team="${card.id}"]{background-color:rgb(var(--day-gold)/0.09)!important;box-shadow:inset 3px 0 0 rgb(var(--day-gold));}[data-team="${card.id}"]:is(a,li){border-radius:inherit}`}</style>
+      <style>{`[data-team="${card.id}"]{background-color:rgb(var(--day-gold)/0.1)!important;outline:2px solid rgb(var(--day-gold)/0.7);outline-offset:-2px}[data-cell-team="${card.id}"]{outline:2px solid rgb(var(--day-gold));outline-offset:2px}`}</style>
       <aside
-        className="day-follow fixed bottom-24 right-3 z-40 w-[min(22rem,calc(100vw-1.5rem))] lg:bottom-6 lg:right-6"
+        className="day-follow fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-3 z-40 w-[min(22rem,calc(100vw-1.5rem))] lg:bottom-6 lg:right-6"
         aria-label={`Following ${card.name}`}
       >
         {open ? (
-          <div className={`day-card overflow-hidden shadow-[var(--day-shadow-lift)] ring-1 ${card.live ? "ring-day-live/50" : "ring-day-gold/40"}`}>
+          <div className={`day-card day-posts shadow-[var(--day-shadow-lift)] ${card.live ? "border-day-live/50" : "border-day-gold/50"}`}>
             <div className="flex items-center gap-3 p-4">
               <Crest name={card.name} size={30} ring={card.tone === "gold"} />
               <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-1.5 text-[11px] font-semibold text-day-gold">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-day-gold">
                   <DayIcon name="star" className="h-3 w-3" />
                   Following
                 </p>
@@ -146,11 +144,11 @@ export function FollowDock({ cards }: { cards: FollowCard[] }) {
                   {card.name}
                 </Link>
               </div>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Fold the card away" className="grid h-9 w-9 place-items-center rounded-xl text-day-faint hover:bg-day-ink/[0.06]">
+              <button type="button" onClick={() => setOpen(false)} aria-label="Fold the card away" className="grid h-10 w-10 place-items-center rounded-[6px] text-day-muted hover:bg-day-ink/[0.06]">
                 <DayIcon name="more" className="h-4 w-4 rotate-90" />
               </button>
             </div>
-            <div className="border-t border-day-line/[0.07] bg-day-sunk/60 px-4 py-3" aria-live="polite">
+            <div className="border-t border-day-line/[0.1] bg-day-sunk px-4 py-3" aria-live="polite">
               <p className="text-xs font-semibold text-day-muted">{card.status}</p>
               <p className={`mt-0.5 flex items-center gap-2 text-sm font-semibold ${TONE[card.tone]}`}>
                 {card.live ? <span className="day-live-dot" aria-hidden="true" /> : null}
@@ -170,7 +168,7 @@ export function FollowDock({ cards }: { cards: FollowCard[] }) {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className={`day-card ml-auto flex items-center gap-2 rounded-full py-2 pl-2 pr-4 shadow-[var(--day-shadow-lift)] ring-1 ${card.live ? "ring-day-live/50" : "ring-day-gold/40"}`}
+            className={`day-card ml-auto flex min-h-[2.75rem] items-center gap-2 py-1.5 pl-1.5 pr-3.5 shadow-[var(--day-shadow-lift)] ${card.live ? "border-day-live/50" : "border-day-gold/50"}`}
             aria-label={`${card.name}: ${card.next}. Open the card`}
           >
             <Crest name={card.name} size={22} />

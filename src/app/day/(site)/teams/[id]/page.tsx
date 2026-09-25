@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Crest } from "@/components/day-site/Crest";
 import { DayIcon, type DayIconName } from "@/components/day-site/icons";
 import { FollowButton } from "@/components/day-site/Follow";
-import { JourneyBadge, MatchCard, SectionTitle, SheetView, StatTile } from "@/components/day-site/ui";
+import { JourneyBadge, MatchCard, Readout, SectionTitle, SheetView } from "@/components/day-site/ui";
 import { INSPECTION_LABELS, QUALIFIERS, ordinal, phaseInfo } from "@/lib/bracket";
 import { publicMembers } from "@/lib/competition";
 import { loadPublicCompetition } from "@/lib/public-competition";
@@ -70,11 +70,11 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
           : { tone: "live", icon: "timer", title: `Outside the top ${QUALIFIERS} for now`, body: `${ordinal(standing.rank)} right now.` }
         : { tone: "ink", icon: "timer", title: "Yet to run", body: "The table updates the moment this team's eight minutes are recorded." };
 
-  const toneClass: Record<Tone, string> = {
-    good: "bg-day-good/10 text-day-good",
-    gold: "bg-day-gold/15 text-day-gold",
-    live: "bg-day-live/10 text-day-live",
-    ink: "bg-day-ink/[0.06] text-day-muted",
+  const toneText: Record<Tone, string> = {
+    good: "text-day-good",
+    gold: "text-day-gold",
+    live: "text-day-live",
+    ink: "text-day-ink",
   };
 
   const chips = [
@@ -95,65 +95,63 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
         All teams
       </Link>
 
-      {/* ------------------------------------------------------------ hero */}
-      <section className="day-card relative overflow-hidden">
-        <div className="day-stripe-x h-2" aria-hidden="true" />
-        <div className="grid grid-cols-[minmax(0,1fr)] items-center gap-8 p-6 sm:p-10 md:grid-cols-[auto_minmax(0,1fr)]">
-          <div className="day-line-in flex justify-center md:justify-start">
-            <Crest name={team.name} size={120} ring={team.journey.state === "CHAMPION"} />
+      {/* ------------------------------------------------------------ hero
+          The team's own maze, large on the floor, and its name beside it. */}
+      <section className="grid grid-cols-[minmax(0,1fr)] items-center gap-8 md:grid-cols-[auto_minmax(0,1fr)] md:gap-12">
+        <div className="day-floor day-posts day-line-in mx-auto grid place-items-center p-7 sm:p-9 md:mx-0">
+          <Crest name={team.name} size={150} ring={team.journey.state === "CHAMPION"} />
+          <p className="mt-4 text-center text-xs font-semibold text-day-muted">Its crest: a maze drawn from its name</p>
+        </div>
+        <div className="min-w-0 text-center md:text-left">
+          <p className="day-line-in flex items-center justify-center gap-2.5 text-[0.95rem] font-semibold text-day-crimson md:justify-start" style={{ ["--i" as string]: 1 }}>
+            <span className="h-2 w-2 bg-day-crimson" aria-hidden="true" />
+            {team.robotName ? `Robot ${team.robotName}` : "Team"}
+          </p>
+          <h1 className="day-display mt-3 break-words text-[clamp(2.6rem,7vw,5rem)] text-day-ink">
+            <span className="day-rise">
+              <span>{team.name}</span>
+            </span>
+          </h1>
+          <div className="day-line-in mt-6 flex flex-wrap items-center justify-center gap-2 md:justify-start" style={{ ["--i" as string]: 2 }}>
+            <JourneyBadge journey={team.journey} size="lg" />
+            <FollowButton id={team.id} name={team.name} />
           </div>
-          <div className="min-w-0 text-center md:text-left">
-            <p className="day-kicker day-line-in" style={{ ["--i" as string]: 1 }}>
-              {team.robotName ? `Robot · ${team.robotName}` : "Team"}
-            </p>
-            <h1 className="day-display day-line-in mt-3 break-words text-5xl text-day-ink sm:text-7xl" style={{ ["--i" as string]: 2 }}>
-              {team.name}
-            </h1>
-            <div className="day-line-in mt-6 flex flex-wrap justify-center gap-2 md:justify-start" style={{ ["--i" as string]: 3 }}>
-              <JourneyBadge journey={team.journey} size="lg" />
-              <FollowButton id={team.id} name={team.name} />
-              {chips.map((chip) => (
-                <span key={chip.text} className={`rounded-full px-4 py-1.5 text-sm font-semibold ${chip.tone}`}>
-                  {chip.text}
-                </span>
-              ))}
-            </div>
-          </div>
+          <ul className="day-line-in mt-4 flex flex-wrap justify-center gap-1.5 md:justify-start" style={{ ["--i" as string]: 3 }}>
+            {chips.map((chip) => (
+              <li key={chip.text} className={`day-chip min-h-[1.75rem] px-2.5 text-[0.8125rem] ${chip.tone}`}>
+                {chip.text}
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
-      {/* --------------------------------------------------------- verdict */}
-      <section className="day-card flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:p-8" data-reveal>
-        <span className={`grid h-16 w-16 shrink-0 place-items-center rounded-2xl ${toneClass[verdict.tone]}`}>
-          <DayIcon name={verdict.icon} className="h-8 w-8" />
-        </span>
-        <div>
-          <p className="day-kicker">Qualification</p>
-          <p className="day-display mt-2 text-3xl text-day-ink sm:text-4xl">{verdict.title}</p>
-          <p className="mt-2 text-day-muted">{verdict.body}</p>
+      {/* ------------------------------------------ verdict and numbers */}
+      <section className="space-y-4" data-reveal>
+        <div className="flex items-start gap-4 border-y-2 border-day-line/85 py-5">
+          <DayIcon name={verdict.icon} className={`mt-1 h-7 w-7 shrink-0 ${toneText[verdict.tone]}`} />
+          <div>
+            <p className="text-sm font-semibold text-day-muted">Qualification</p>
+            <p className={`day-display mt-1 text-3xl sm:text-4xl ${verdict.tone === "ink" ? "text-day-ink" : toneText[verdict.tone]}`}>{verdict.title}</p>
+            <p className="mt-2 max-w-[60ch] text-day-muted">{verdict.body}</p>
+          </div>
         </div>
-      </section>
-
-      {/* ----------------------------------------------------------- stats */}
-      <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatTile label="Qualifying rank" icon="standings" value={standing?.rank ? ordinal(standing.rank) : "–"} tone="gold" index={0} />
-        <StatTile label="Score" icon="bolt" value={formatPoints(standing?.best)} tone="crimson" index={1} />
-        <StatTile label="Official time" icon="timer" value={formatTime(standing?.official)} hint="The fastest successful run" index={2} />
-        <StatTile
-          label={team.journey.seed ? `Seed ${team.journey.seed}` : "Knockout"}
-          icon="trophy"
-          value={wins}
-          hint={`Match${wins === 1 ? "" : "es"} won`}
-          tone="good"
-          index={3}
+        <Readout
+          label="This team in numbers"
+          items={[
+            { label: "Qualifying place", value: standing?.rank ? ordinal(standing.rank) : "–", tone: "gold" },
+            { label: "Score", value: formatPoints(standing?.best), tone: "crimson" },
+            { label: "Official time", value: formatTime(standing?.official), hint: "The fastest successful run" },
+            { label: team.journey.seed ? `Seed ${team.journey.seed}` : "Knockout", value: wins, hint: `Match${wins === 1 ? "" : "es"} won`, tone: "good" },
+          ]}
         />
       </section>
 
-      <section className="grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+      <section className="grid grid-cols-[minmax(0,1fr)] gap-12 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-14">
         {/* ------------------------------------------------ the match sheet */}
-        <div className="space-y-6">
-          <SectionTitle kicker="Phase 1">The match sheet</SectionTitle>
-          <div className="day-card p-6 sm:p-8" data-reveal>
+        <div className="space-y-7">
+          <SectionTitle kicker="Phase 1, run by run">The match sheet</SectionTitle>
+          <div className="day-card day-posts p-6 sm:p-8" data-reveal>
             {standing?.recorded ? (
               <>
                 <div className="flex flex-wrap items-end justify-between gap-4">
@@ -169,10 +167,10 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
                     <p className="day-num day-display mt-1 text-5xl text-day-crimson">{formatPoints(standing.best)}</p>
                   </div>
                 </div>
-                <div className="mt-6 border-t border-day-line/[0.07] pt-6">
+                <div className="mt-6 border-t border-day-line/[0.1] pt-6">
                   <SheetView times={standing.times} remaining={standing.remaining} log={standing.log} score={standing.best} />
                 </div>
-                <p className="mt-6 text-xs text-day-faint">
+                <p className="mt-6 text-[0.8125rem] leading-relaxed text-day-muted">
                   Score = successful runs ÷ official time × 1000. The official time, in gold, is the fastest run. Crossed runs did not reach the centre
                   and do not count.
                 </p>
@@ -184,12 +182,12 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
         </div>
 
         {/* -------------------------------------------------------- members */}
-        <div className="space-y-6">
+        <div className="space-y-7">
           <SectionTitle kicker={`${members.length} member${members.length === 1 ? "" : "s"}`}>The team</SectionTitle>
-          <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">
-            {members.map((member, index) => (
-              <li key={member.id} className="day-card flex items-center gap-4 p-4" data-reveal style={{ ["--i" as string]: index }}>
-                <span className="day-display grid h-12 w-12 shrink-0 place-items-center rounded-full bg-day-plum/10 text-lg text-day-plum">
+          <ul className="day-card day-posts divide-y divide-day-line/[0.08]" data-reveal>
+            {members.map((member) => (
+              <li key={member.id} className="flex items-center gap-4 px-4 py-3.5 sm:px-5">
+                <span className="day-display grid h-11 w-11 shrink-0 place-items-center rounded-[3px] bg-day-plum/10 text-base text-day-plum">
                   {`${member.firstName.charAt(0)}${member.lastName.charAt(0)}`.toUpperCase()}
                 </span>
                 <span className="min-w-0">
@@ -200,26 +198,28 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
                 </span>
               </li>
             ))}
-            {members.length === 0 ? <li className="day-card p-4 text-day-muted">No members listed.</li> : null}
+            {members.length === 0 ? <li className="p-4 text-day-muted">No members listed.</li> : null}
           </ul>
         </div>
       </section>
 
       {/* ------------------------------------------------ bracket journey */}
       {path.length ? (
-        <section className="space-y-6">
-          <SectionTitle kicker="Phases 2 to 6">The road through the bracket</SectionTitle>
-          <ol className="relative space-y-5 border-l-2 border-day-line/10 pl-6 sm:pl-8">
+        <section className="space-y-7">
+          <SectionTitle kicker="Phases 2 to 6, as the route runs">The road through the bracket</SectionTitle>
+          <ol className="relative space-y-6 pl-8 sm:pl-10">
+            <span aria-hidden="true" className="absolute bottom-2 left-[5px] top-3 w-[2px] bg-day-crimson" />
             {path.map((match) => (
               <li key={match.id} className="relative">
                 <span
                   aria-hidden="true"
-                  className={`absolute -left-[33px] top-4 h-4 w-4 rounded-full border-4 border-day-bg sm:-left-[41px] ${
-                    match.winnerId === team.id ? "bg-day-good" : match.winnerId ? "bg-day-live" : "bg-day-faint"
+                  className={`absolute -left-8 top-1 h-3 w-3 sm:-left-10 ${
+                    match.winnerId === team.id ? "bg-day-good" : match.winnerId ? "bg-day-live" : "border-2 border-day-crimson bg-day-bg"
                   }`}
                 />
-                <p className="mb-2 text-sm font-semibold text-day-muted">
+                <p className="mb-2.5 text-sm font-semibold text-day-muted">
                   Phase {match.round} · {phaseInfo(match.round).name}
+                  {match.winnerId ? (match.winnerId === team.id ? " · won" : " · lost") : ""}
                 </p>
                 <MatchCard match={match} nameOf={nameOf} live={match.status === "LIVE"} highlight={team.id} arena={match.arena} showSheets />
               </li>

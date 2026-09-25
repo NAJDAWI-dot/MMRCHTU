@@ -169,7 +169,7 @@ export function HallScreen({
           <header className="flex items-center justify-between gap-[3vh] px-[4vh] pb-[1.5vh] pt-[3vh]">
             <div className="flex min-w-0 items-center gap-[2vh]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/logo/mmrc-mark.png" alt="" className="h-[7vh] w-[7vh] rounded-[1.4vh] object-contain p-[0.8vh]" style={{ backgroundColor: MMRC_PLATE }} />
+              <img src="/brand/logo/mmrc-mark.png" alt="" className="h-[7vh] w-[7vh] rounded-[0.5vh] object-contain p-[0.8vh]" style={{ backgroundColor: MMRC_PLATE }} />
               <div className="min-w-0 leading-none">
                 <p className="font-brand text-[4.2vh] text-day-ink">MMRC 26</p>
                 <p className="day-kicker mt-[0.8vh] truncate text-[1.6vh]">Competition day</p>
@@ -231,7 +231,7 @@ export function HallScreen({
                         )
                       }
                       aria-current={panel.key === current?.key ? "true" : undefined}
-                      className={`rounded-full px-[1.4vh] py-[0.5vh] text-[1.6vh] font-semibold transition-colors ${
+                      className={`rounded-[2px] px-[1.4vh] py-[0.5vh] text-[1.6vh] font-semibold transition-colors ${
                         panel.key === current?.key ? "bg-day-ink text-day-on-ink" : "text-day-faint hover:text-day-ink"
                       }`}
                     >

@@ -16,21 +16,20 @@ export function DeskTabs({ roles }: { roles: readonly AdminRole[] }) {
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
   return (
     <nav aria-label="Day HQ desks" className="day-no-scrollbar -mx-4 overflow-x-auto px-4 sm:-mx-6 sm:px-6">
-      <ul className="flex w-max gap-1 pb-3">
+      <ul className="flex w-max">
         {desks.map((desk) => {
           const active = desk.href === current;
           return (
-            <li key={desk.href}>
+            <li key={desk.href} className="relative">
               <Link
                 href={desk.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex h-9 items-center gap-2 rounded-full px-3.5 text-sm font-semibold transition-colors ${
-                  active ? "bg-day-ink text-day-on-ink" : "text-day-muted hover:bg-day-ink/5 hover:text-day-ink"
-                }`}
+                className={`flex h-11 items-center gap-2 px-3 text-sm font-semibold transition-colors ${active ? "text-day-ink" : "text-day-muted hover:text-day-ink"}`}
               >
-                <DayIcon name={desk.icon} className="h-4 w-4" />
+                <DayIcon name={desk.icon} className={`h-4 w-4 ${active ? "text-day-crimson" : ""}`} />
                 {desk.label}
               </Link>
+              {active ? <span className="absolute inset-x-2 -bottom-px h-[3px] bg-day-crimson" aria-hidden="true" /> : null}
             </li>
           );
         })}

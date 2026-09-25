@@ -2499,102 +2499,192 @@ svg:hover .maze-progress-ear:nth-of-type(2) {
 }
 
 /*
-  The competition day site's building blocks: type, surfaces, buttons, inputs,
-  the segmented control, the live dot. In Tailwind's components layer, so the
-  base reset sits under them and utilities on the same element (pl-12 on a
-  search box, text-day-live on a kicker, h-12 on a button) always win.
+  The competition day site's building blocks, drawn from the maze: cells with
+  a post at each corner, walls that end in posts, and the dark maze floor that
+  live moments sit on. In Tailwind's components layer, so the base reset sits
+  under them and utilities on the same element always win.
 
   The theme values they read are set on .day-root in src/styles/day.css, with
-  the artwork, the motion and the splash.
+  the backdrop, the motion and the splash. DESIGN.md at the root says why.
 */
 
 @layer components {
-  /* ------------------------------------------------------------------ type */
+  /* ------------------------------------------------------------------ type
+     One family, Archivo, at three widths: wide for names and headings,
+     normal for reading, narrow and tabular for every number. */
 
   .day-display {
-    font-family: var(--font-day), var(--font-sans), system-ui, sans-serif;
+    font-family: var(--font-day), system-ui, sans-serif;
     font-weight: 800;
-    font-stretch: 112%;
-    font-variation-settings: "wdth" 112;
-    letter-spacing: -0.025em;
-    line-height: 0.98;
+    font-stretch: 118%;
+    font-variation-settings: "wdth" 118;
+    letter-spacing: -0.02em;
+    line-height: 0.96;
+    text-wrap: balance;
   }
 
   .day-wide {
-    font-family: var(--font-day), var(--font-sans), system-ui, sans-serif;
+    font-family: var(--font-day), system-ui, sans-serif;
     font-stretch: 118%;
     font-variation-settings: "wdth" 118;
   }
 
+  .day-narrow {
+    font-stretch: 80%;
+    font-variation-settings: "wdth" 80;
+  }
+
+  /* Every number: narrow, tabular, like a timing board. Later than
+     .day-display, so a big score keeps the display weight and goes narrow. */
   .day-num {
-    font-family: var(--font-day), var(--font-sans), system-ui, sans-serif;
+    font-family: var(--font-day), system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
-    letter-spacing: -0.02em;
+    font-stretch: 80%;
+    font-variation-settings: "wdth" 80;
+    letter-spacing: 0;
   }
 
+  /* A short line of context: sentence case, never tracked capitals. */
   .day-kicker {
-    font-family: var(--font-day), var(--font-sans), system-ui, sans-serif;
-    font-size: 0.72rem;
-    font-weight: 700;
-    font-stretch: 118%;
-    font-variation-settings: "wdth" 118;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
+    font-size: 0.8125rem;
+    font-weight: 650;
+    line-height: 1.3;
     color: rgb(var(--day-crimson));
   }
 
-  /* ------------------------------------------------------------- surfaces */
+  .day-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: rgb(var(--day-muted));
+  }
 
+  /* ------------------------------------------------------------ surfaces */
+
+  /* A cell: flat, a hairline edge, square corners. No shadow at rest. */
   .day-card {
     position: relative;
-    border-radius: 1.4rem;
+    border-radius: 3px;
     background: rgb(var(--day-surface));
-    border: 1px solid rgb(var(--day-line) / 0.09);
-    box-shadow: var(--day-shadow);
+    border: 1px solid rgb(var(--day-line) / 0.13);
+  }
+
+  /* The maze post: a small square of ink on each corner, centred on it. */
+  .day-posts::before {
+    --post: 7px;
+    --post-c: rgb(var(--day-ink));
+    content: "";
+    position: absolute;
+    inset: -1px;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      linear-gradient(var(--post-c), var(--post-c)) top left / var(--post) var(--post) no-repeat,
+      linear-gradient(var(--post-c), var(--post-c)) top right / var(--post) var(--post) no-repeat,
+      linear-gradient(var(--post-c), var(--post-c)) bottom left / var(--post) var(--post) no-repeat,
+      linear-gradient(var(--post-c), var(--post-c)) bottom right / var(--post) var(--post) no-repeat;
   }
 
   .day-sunk {
-    border-radius: 1rem;
-    background: rgb(var(--day-sunk) / 0.8);
-    border: 1px solid rgb(var(--day-line) / 0.06);
+    border-radius: 3px;
+    background: rgb(var(--day-sunk));
+    border: 1px solid rgb(var(--day-line) / 0.07);
   }
 
-  /* A card that is a link: lifts, and says so to the keyboard too. */
+  /*
+    The maze floor: the dark board the walls stand on. Anything inside takes
+    the night palette, so the same components read right on it in either theme.
+  */
+  .day-floor {
+    --day-surface: 38 21 46;
+    --day-sunk: 30 16 38;
+    --day-ink: 246 240 247;
+    --day-on-ink: 32 13 39;
+    --day-muted: 204 189 209;
+    --day-faint: 172 156 178;
+    --day-line: 246 240 247;
+    --day-crimson: 255 138 162;
+    --day-plum: 214 171 230;
+    --day-gold: 244 181 58;
+    --day-live: 255 94 142;
+    --day-good: 98 217 160;
+    position: relative;
+    border-radius: 3px;
+    background: rgb(27 12 34);
+    color: rgb(var(--day-ink));
+    color-scheme: dark;
+  }
+
+  .dark .day-floor {
+    background: rgb(10 5 14);
+    border: 1px solid rgb(var(--day-line) / 0.1);
+  }
+
+  /* A cell that is a link: its edge darkens and its posts turn crimson. */
   .day-lift {
     transition:
-      transform 500ms cubic-bezier(0.16, 1, 0.3, 1),
-      box-shadow 500ms cubic-bezier(0.16, 1, 0.3, 1),
-      border-color 300ms ease;
+      border-color 200ms ease,
+      background-color 200ms ease;
   }
 
   .day-lift:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--day-shadow-lift);
-    border-color: rgb(var(--day-line) / 0.18);
+    border-color: rgb(var(--day-line) / 0.4);
+  }
+
+  .day-lift:hover::before {
+    --post-c: rgb(var(--day-crimson));
   }
 
   .day-lift:active {
-    transform: translateY(-1px) scale(0.995);
+    background-color: rgb(var(--day-sunk));
   }
 
-  /* The three brand inks as a race stripe, like the arcs in the artwork. */
-  .day-stripe {
-    background: linear-gradient(
-      180deg,
-      rgb(var(--art-plum)) 0 33.4%,
-      rgb(var(--art-deep)) 33.4% 66.7%,
-      rgb(var(--art-crimson)) 66.7% 100%
-    );
+  /*
+    A wall: a 2px rule with a post at each end. It builds itself from the left
+    when it scrolls into view (see day.css), and is simply there without motion.
+  */
+  .day-wall {
+    position: relative;
+    height: 2px;
+    min-width: 1.5rem;
+    background: rgb(var(--day-line) / 0.85);
+    transform-origin: 0 50%;
   }
 
+  .day-wall::before,
+  .day-wall::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    margin-top: -3.5px;
+    background: rgb(var(--day-ink));
+  }
+
+  .day-wall::before {
+    left: -1px;
+  }
+
+  .day-wall::after {
+    right: -1px;
+  }
+
+  .day-wall-quiet {
+    background: rgb(var(--day-line) / 0.16);
+  }
+
+  .day-wall-quiet::before,
+  .day-wall-quiet::after {
+    background: rgb(var(--day-line) / 0.35);
+  }
+
+  /* The route: a mouse's path, in crimson. */
+  .day-stripe,
   .day-stripe-x {
-    background: linear-gradient(
-      90deg,
-      rgb(var(--art-plum)) 0 33.4%,
-      rgb(var(--art-deep)) 33.4% 66.7%,
-      rgb(var(--art-crimson)) 66.7% 100%
-    );
+    background: rgb(var(--day-crimson));
   }
 
   .day-checker {
@@ -2608,6 +2698,22 @@ svg:hover .maze-progress-ear:nth-of-type(2) {
     background-size: calc(var(--size) * 2) calc(var(--size) * 2);
   }
 
+  /* A status tag: square, small, a tint of its meaning. */
+  .day-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 1.4rem;
+    padding: 0 0.45rem;
+    border-radius: 2px;
+    font-size: 0.75rem;
+    font-weight: 650;
+    line-height: 1;
+    white-space: nowrap;
+    background: rgb(var(--day-ink) / 0.07);
+    color: rgb(var(--day-muted));
+  }
+
   /* ------------------------------------------------------------ controls */
 
   .day-btn {
@@ -2616,46 +2722,47 @@ svg:hover .maze-progress-ear:nth-of-type(2) {
     justify-content: center;
     gap: 0.5rem;
     min-height: 2.75rem;
-    padding: 0 1.15rem;
-    border-radius: 999px;
+    padding: 0 1.1rem;
+    border-radius: 6px;
+    border: 1px solid transparent;
     font-weight: 650;
     font-size: 0.925rem;
     white-space: nowrap;
     transition:
-      transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
-      background-color 200ms ease,
-      box-shadow 300ms ease,
-      opacity 200ms ease;
+      transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+      background-color 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease,
+      opacity 160ms ease;
   }
 
   .day-btn:active {
-    transform: scale(0.97);
+    transform: translateY(1px);
   }
 
   .day-btn:disabled {
-    opacity: 0.55;
+    opacity: 0.5;
     pointer-events: none;
   }
 
   .day-btn-ink {
     background: rgb(var(--day-ink));
     color: rgb(var(--day-on-ink));
-    box-shadow: 0 10px 24px -14px rgb(var(--day-ink) / 0.7);
   }
 
   .day-btn-ink:hover {
-    box-shadow: 0 16px 30px -14px rgb(var(--day-ink) / 0.75);
-    transform: translateY(-1px);
+    background: rgb(var(--day-ink) / 0.86);
   }
 
   .day-btn-soft {
     background: rgb(var(--day-ink) / 0.06);
     color: rgb(var(--day-ink));
-    border: 1px solid rgb(var(--day-line) / 0.1);
+    border-color: rgb(var(--day-line) / 0.12);
   }
 
   .day-btn-soft:hover {
     background: rgb(var(--day-ink) / 0.1);
+    border-color: rgb(var(--day-line) / 0.22);
   }
 
   .day-btn-good {
@@ -2663,40 +2770,52 @@ svg:hover .maze-progress-ear:nth-of-type(2) {
     color: rgb(var(--day-on-ink));
   }
 
+  .day-btn-good:hover {
+    background: rgb(var(--day-good) / 0.88);
+  }
+
   .day-btn-danger {
-    background: rgb(var(--day-live) / 0.1);
+    background: rgb(var(--day-live) / 0.08);
     color: rgb(var(--day-live));
-    border: 1px solid rgb(var(--day-live) / 0.3);
+    border-color: rgb(var(--day-live) / 0.35);
+  }
+
+  .day-btn-danger:hover {
+    background: rgb(var(--day-live) / 0.14);
   }
 
   .day-btn-sm {
     min-height: 2.25rem;
-    padding: 0 0.85rem;
+    padding: 0 0.8rem;
     font-size: 0.85rem;
   }
 
   .day-input {
     width: 100%;
     min-height: 2.75rem;
-    border-radius: 0.85rem;
-    border: 1px solid rgb(var(--day-line) / 0.16);
+    border-radius: 6px;
+    border: 1px solid rgb(var(--day-line) / 0.2);
     background: rgb(var(--day-surface));
-    padding: 0.55rem 0.85rem;
+    padding: 0.55rem 0.8rem;
     color: rgb(var(--day-ink));
-    font-size: 0.95rem;
+    font-size: 1rem;
     transition:
-      border-color 200ms ease,
-      box-shadow 200ms ease;
+      border-color 160ms ease,
+      box-shadow 160ms ease;
   }
 
   .day-input::placeholder {
     color: rgb(var(--day-faint));
   }
 
+  .day-input:hover {
+    border-color: rgb(var(--day-line) / 0.32);
+  }
+
   .day-input:focus {
     outline: none;
-    border-color: rgb(var(--day-plum) / 0.7);
-    box-shadow: 0 0 0 4px rgb(var(--day-plum) / 0.14);
+    border-color: rgb(var(--day-crimson));
+    box-shadow: 0 0 0 3px rgb(var(--day-crimson) / 0.16);
   }
 
   select.day-input {
@@ -2711,22 +2830,14 @@ svg:hover .maze-progress-ear:nth-of-type(2) {
     background-repeat: no-repeat;
   }
 
-  .day-label {
-    display: block;
-    margin-bottom: 0.35rem;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: rgb(var(--day-muted));
-  }
-
-  /* A segmented control, like iOS: radio inputs styled as one pill. */
+  /* A segmented control: radio inputs as one row of cells. */
   .day-segment {
     display: inline-flex;
     flex-wrap: wrap;
-    gap: 0.25rem;
-    padding: 0.25rem;
-    border-radius: 999px;
-    background: rgb(var(--day-ink) / 0.06);
+    gap: 2px;
+    padding: 2px;
+    border-radius: 7px;
+    background: rgb(var(--day-ink) / 0.07);
   }
 
   .day-segment label {
@@ -2745,21 +2856,24 @@ svg:hover .maze-progress-ear:nth-of-type(2) {
     align-items: center;
     gap: 0.4rem;
     min-height: 2.1rem;
-    padding: 0 0.9rem;
-    border-radius: 999px;
+    padding: 0 0.85rem;
+    border-radius: 5px;
     font-size: 0.85rem;
     font-weight: 600;
     color: rgb(var(--day-muted));
     transition:
-      background-color 250ms ease,
-      color 250ms ease,
-      box-shadow 250ms ease;
+      background-color 160ms ease,
+      color 160ms ease;
+  }
+
+  .day-segment label:hover span {
+    color: rgb(var(--day-ink));
   }
 
   .day-segment input:checked + span {
     background: rgb(var(--day-surface));
     color: rgb(var(--day-ink));
-    box-shadow: 0 4px 12px -6px rgb(0 0 0 / 0.35);
+    box-shadow: 0 0 0 1px rgb(var(--day-line) / 0.14);
   }
 
   .day-segment input:focus-visible + span {
@@ -2786,5 +2900,28 @@ svg:hover .maze-progress-ear:nth-of-type(2) {
     border-radius: inherit;
     background: rgb(var(--day-live));
     animation: day-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+
+  /* A name on hover, for the small cells that stand for a team. */
+  .day-tip {
+    position: relative;
+  }
+
+  .day-tip[data-tip]:hover::after,
+  .day-tip[data-tip]:focus-visible::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    z-index: 5;
+    transform: translateX(-50%);
+    padding: 0.3rem 0.55rem;
+    border-radius: 4px;
+    background: rgb(var(--day-ink));
+    color: rgb(var(--day-on-ink));
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
   }
 }

@@ -8,7 +8,7 @@ import { formatTime, type RunEntry } from "@/lib/score-sheet";
  */
 export function RunChips({ log, official, small = false }: { log: RunEntry[]; official: number | null; small?: boolean }) {
   const officialIndex = official === null ? -1 : log.findIndex((run) => run.ok && run.time === official);
-  const chip = small ? "rounded-md px-2 py-0.5 text-xs" : "rounded-lg px-2.5 py-1 text-sm";
+  const chip = small ? "rounded-[2px] px-2 py-0.5 text-xs" : "rounded-[3px] px-2.5 py-1 text-sm";
   return (
     <ol className="flex flex-wrap gap-1.5" aria-label="Runs">
       {log.map((run, index) => {

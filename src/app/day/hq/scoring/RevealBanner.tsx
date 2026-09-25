@@ -8,7 +8,7 @@ export async function RevealBanner({ phases }: { phases: readonly number[] }) {
   const lines = heldBackLines(revealOf(await getCompetitionDayConfig()), phases);
   if (!lines.length) return null;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-day-gold/10 px-4 py-3 ring-1 ring-day-gold/30" role="note">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[4px] bg-day-gold/10 px-4 py-3 ring-1 ring-day-gold/30" role="note">
       <p className="flex items-start gap-2.5 text-sm text-day-ink">
         <DayIcon name="lock" className="mt-0.5 h-4 w-4 shrink-0 text-day-gold" />
         <span>

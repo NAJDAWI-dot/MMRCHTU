@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Crest } from "@/components/day-site/Crest";
+import { DayMouse } from "@/components/day-site/DayMice";
 import { SponsorLogo } from "@/components/day-site/SponsorLogo";
 import { DayIcon } from "@/components/day-site/icons";
 import { QUALIFIERS, matchesInRound, phaseInfo } from "@/lib/bracket";
@@ -70,11 +71,11 @@ export default async function HallScreenPage() {
       key: "now",
       label: "Champions",
       node: (
-        <div className="grid h-full place-items-center text-center">
+        <div className="relative grid h-full place-items-center text-center">
+          <DayMouse name="dance" move="hop" className="absolute bottom-0 left-[4vw] w-[24vh]" />
+          <DayMouse name="dance" move="hop" flip className="absolute bottom-0 right-[4vw] w-[24vh]" />
           <div>
-            <span className="mx-auto grid h-[14vh] w-[14vh] place-items-center rounded-full bg-day-gold/15 text-day-gold">
-              <DayIcon name="trophy" className="h-[8vh] w-[8vh]" />
-            </span>
+            <DayIcon name="trophy" className="mx-auto h-[9vh] w-[9vh] text-day-gold" />
             <p className="day-kicker mt-[4vh] text-[2.4vh]">Champions of MMRC 26</p>
             <div className="mt-[3vh] flex justify-center">
               <Crest name={champion.name} size={160} ring />
@@ -111,8 +112,7 @@ export default async function HallScreenPage() {
       label: now ? "On the maze" : "First up",
       node: (
         <div className="grid h-full grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-[3vh]">
-          <div className={`day-card relative flex flex-col justify-center overflow-hidden p-[5vh] ${now ? "ring-4 ring-day-live/40" : ""}`}>
-            <div className="day-stripe-x absolute inset-x-0 top-0 h-[1vh]" aria-hidden="true" />
+          <div className={`day-card relative flex flex-col justify-center overflow-hidden p-[5vh] ${now ? "border-day-live" : ""}`}>
             <p className={`flex items-center gap-[1.2vh] text-[3vh] font-semibold ${now ? "text-day-live" : "text-day-muted"}`}>
               {now ? <span className="day-live-dot" aria-hidden="true" /> : null}
               {now ? "On the maze" : "First up"}
@@ -129,8 +129,8 @@ export default async function HallScreenPage() {
               <p className="text-[2vh] font-semibold text-day-muted">
                 {queue.queue.ran} of {queue.queue.total} in the running order have run
               </p>
-              <div className="mt-[1vh] h-[1vh] overflow-hidden rounded-full bg-day-ink/10" aria-hidden="true">
-                <div className="day-stripe-x h-full rounded-full" style={{ width: `${Math.round((queue.queue.ran / Math.max(1, queue.queue.total)) * 100)}%` }} />
+              <div className="mt-[1vh] h-[1vh] overflow-hidden bg-day-ink/10" aria-hidden="true">
+                <div className="h-full bg-day-crimson" style={{ width: `${Math.round((queue.queue.ran / Math.max(1, queue.queue.total)) * 100)}%` }} />
               </div>
             </div>
           </div>
@@ -200,10 +200,13 @@ export default async function HallScreenPage() {
       key: "now",
       label: "Welcome",
       node: (
-        <div className="grid h-full place-items-center text-center">
+        <div className="relative grid h-full place-items-center text-center">
+          {/* Cheddar and a friend either side of the name, standing on the bottom edge. */}
+          <DayMouse name="stand" move="tilt" className="absolute bottom-0 left-[3vw] w-[22vh]" />
+          <DayMouse name="peer" move="tilt" flip className="absolute bottom-0 right-[3vw] w-[20vh]" />
           <div>
             <p className="font-brand text-[18vh] leading-none text-day-ink">MMRC 26</p>
-            <p className="day-display mt-[3vh] text-[5vh] uppercase text-day-crimson">Competition day</p>
+            <p className="day-display mt-[3vh] text-[5.5vh] text-day-crimson">Competition day</p>
             {site.venue || site.dateText ? (
               <p className="mt-[4vh] text-[3vh] text-day-muted">{[site.dateText, site.venue].filter(Boolean).join(" · ")}</p>
             ) : null}
@@ -303,13 +306,13 @@ export default async function HallScreenPage() {
                       <span className="block truncate text-[3.2vh] font-semibold text-day-ink">{row.name}</span>
                       <span className="day-num block truncate text-[2vh] text-day-muted">{row.detail}</span>
                       {row.bar ? (
-                        <span className="mt-[0.8vh] block h-[0.6vh] overflow-hidden rounded-full bg-day-ink/[0.07]" aria-hidden="true">
-                          <span className={`block h-full rounded-full ${row.rank === "1" ? "bg-day-gold" : "bg-day-plum/70"}`} style={{ width: `${row.bar}%` }} />
+                        <span className="mt-[0.8vh] block h-[0.6vh] overflow-hidden bg-day-ink/[0.07]" aria-hidden="true">
+                          <span className={`block h-full ${row.rank === "1" ? "bg-day-gold" : "bg-day-plum/70"}`} style={{ width: `${row.bar}%` }} />
                         </span>
                       ) : null}
                     </span>
                     {row.badge ? (
-                      <span className={`shrink-0 rounded-full px-[1.4vh] py-[0.5vh] text-[1.8vh] font-semibold ${row.badge.className}`}>{row.badge.text}</span>
+                      <span className={`shrink-0 rounded-[2px] px-[1.4vh] py-[0.5vh] text-[1.8vh] font-semibold ${row.badge.className}`}>{row.badge.text}</span>
                     ) : null}
                     {row.score ? <span className="day-num day-display shrink-0 text-[5vh] text-day-ink">{row.score}</span> : null}
                   </li>
@@ -352,14 +355,14 @@ export default async function HallScreenPage() {
                     {item.location ? <span className="block truncate text-[2vh] text-day-muted">{item.location}</span> : null}
                   </span>
                   {now ? (
-                    <span className="flex shrink-0 items-center gap-[1vh] rounded-full bg-day-live/15 px-[1.6vh] py-[0.6vh] text-[2vh] font-semibold text-day-live">
+                    <span className="flex shrink-0 items-center gap-[1vh] rounded-[2px] bg-day-live/15 px-[1.6vh] py-[0.6vh] text-[2vh] font-semibold text-day-live">
                       <span className="day-live-dot" aria-hidden="true" />
                       Now
                     </span>
                   ) : past ? (
                     <DayIcon name="check" className="h-[3vh] w-[3vh] shrink-0 text-day-good" />
                   ) : item.id === nextId ? (
-                    <span className="shrink-0 rounded-full bg-day-ink/[0.07] px-[1.6vh] py-[0.6vh] text-[2vh] font-semibold text-day-ink">Next</span>
+                    <span className="shrink-0 rounded-[2px] bg-day-ink/[0.07] px-[1.6vh] py-[0.6vh] text-[2vh] font-semibold text-day-ink">Next</span>
                   ) : null}
                 </li>
               );
@@ -421,7 +424,7 @@ export default async function HallScreenPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={first!.url} alt={first!.caption || "The latest photo from the hall"} className="h-full w-full object-cover" />
             <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-[3vh] pb-[2.5vh] pt-[8vh] text-white">
-              <span className="block text-[1.8vh] font-semibold uppercase tracking-[0.2em] text-white/70">From the hall · {postedAgo(first!.createdAt, site.now)}</span>
+              <span className="block text-[2vh] font-semibold text-white/80">From the hall · {postedAgo(first!.createdAt, site.now)}</span>
               {first!.caption ? <span className="mt-[0.8vh] block text-[3.6vh] font-semibold">{first!.caption}</span> : null}
             </figcaption>
           </figure>
@@ -456,7 +459,7 @@ export default async function HallScreenPage() {
             {items.map((item) => (
               <li key={item.id} className={`day-card flex min-h-0 flex-col justify-center overflow-hidden px-[4vh] py-[2vh] ${item.isPinned ? "ring-2 ring-day-gold/50" : ""}`}>
                 <p className="flex items-center gap-[1.2vh] text-[1.9vh] font-semibold text-day-faint">
-                  {item.tone === "URGENT" ? <span className="rounded-full bg-day-live/10 px-[1.2vh] py-[0.3vh] text-day-live">Urgent</span> : null}
+                  {item.tone === "URGENT" ? <span className="rounded-[2px] bg-day-live/10 px-[1.2vh] py-[0.3vh] text-day-live">Urgent</span> : null}
                   {postedAgo(item.createdAt, site.now)}
                 </p>
                 {item.title ? <p className="day-display mt-[1vh] truncate text-[4.4vh] leading-tight text-day-ink">{item.title}</p> : null}
@@ -529,7 +532,7 @@ function MatchPanel({ match, nameOf, big }: { match: BracketMatch; nameOf: (id: 
     { id: match.teamBId, seed: match.seedB, score: match.scoreB },
   ];
   return (
-    <div className={`day-card flex min-h-0 flex-col justify-center overflow-hidden px-[4vh] py-[2.5vh] ${live ? "ring-4 ring-day-live/40" : ""}`}>
+    <div className={`day-card flex min-h-0 flex-col justify-center overflow-hidden px-[4vh] py-[2.5vh] ${live ? "border-day-live" : ""}`}>
       <p className={`flex items-center gap-[1vh] text-[2.2vh] font-semibold ${live ? "text-day-live" : "text-day-muted"}`}>
         {live ? <span className="day-live-dot" aria-hidden="true" /> : null}
         {live ? "On the maze now" : `Match ${match.slot + 1}`}

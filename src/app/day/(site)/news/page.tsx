@@ -18,22 +18,21 @@ export default async function DayNewsPage() {
   const site = await loadDaySite();
   return (
     <div className="space-y-12">
-      <PageHead kicker="From the desk" title="News" lead="Anything the organisers need you to know, as it happens. This page keeps itself up to date." />
+      <PageHead kicker="From the organisers' desk" title="News" lead="Anything the organisers need you to know, as it happens. This page keeps itself up to date." />
       {site.announcements.length ? (
-        <ol className="relative mx-auto max-w-3xl space-y-4 border-l-2 border-day-line/10 pl-6 sm:pl-10">
+        <ol className="relative mx-auto max-w-3xl pl-7 sm:pl-10">
+          <span aria-hidden="true" className="absolute bottom-3 left-[5px] top-3 w-[2px] bg-day-line/[0.15]" />
           {site.announcements.map((item, index) => (
-            <li key={item.id} className="relative" data-reveal style={{ ["--i" as string]: index % 6 }}>
+            <li key={item.id} className="relative pb-5" data-reveal style={{ ["--i" as string]: index % 6 }}>
               <span
                 aria-hidden="true"
-                className={`absolute -left-[33px] top-6 h-4 w-4 rounded-full border-4 border-day-bg sm:-left-[49px] ${
-                  item.isPinned ? "bg-day-gold" : item.tone === "URGENT" ? "bg-day-live" : "bg-day-plum"
-                }`}
+                className={`absolute -left-7 top-6 h-3 w-3 sm:-left-10 ${item.isPinned ? "bg-day-gold" : item.tone === "URGENT" ? "bg-day-live" : "bg-day-ink"}`}
               />
-              <article className={`day-card p-6 ${item.isPinned ? "ring-1 ring-day-gold/50" : ""}`}>
-                <p className="flex flex-wrap items-center gap-2 text-xs font-semibold text-day-faint">
-                  {item.isPinned ? <span className="rounded-full bg-day-gold/15 px-2 py-0.5 text-day-gold">Pinned</span> : null}
-                  {TONE[item.tone] ? <span className={`rounded-full px-2 py-0.5 ${TONE[item.tone]!.className}`}>{TONE[item.tone]!.label}</span> : null}
-                  <span className="day-num">{clockTime(item.createdAt)}</span>
+              <article className={`day-card p-5 sm:p-6 ${item.isPinned ? "day-posts border-day-gold/60" : ""}`}>
+                <p className="flex flex-wrap items-center gap-2 text-[0.8125rem] font-semibold text-day-muted">
+                  {item.isPinned ? <span className="day-chip bg-day-gold/15 text-day-gold">Pinned</span> : null}
+                  {TONE[item.tone] ? <span className={`day-chip ${TONE[item.tone]!.className}`}>{TONE[item.tone]!.label}</span> : null}
+                  <span className="day-num text-day-ink">{clockTime(item.createdAt)}</span>
                   <span>· {postedAgo(item.createdAt, site.now)}</span>
                 </p>
                 {item.title ? <h2 className="day-display mt-3 text-2xl text-day-ink">{item.title}</h2> : null}
