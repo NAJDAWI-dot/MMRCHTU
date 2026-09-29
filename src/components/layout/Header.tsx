@@ -50,6 +50,7 @@ export function Header() {
       */}
       <div
         aria-hidden="true"
+        data-infect-wall=""
         className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-ras-purple/25 via-ras-crimson/70 to-ras-purple/25 dark:from-mood-violet/40 dark:via-mood-rose/80 dark:to-mood-violet/40"
       />
     </header>

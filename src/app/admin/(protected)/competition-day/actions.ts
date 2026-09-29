@@ -33,6 +33,7 @@ export async function updateCompetitionDay(formData: FormData) {
     venue: String(formData.get("venue") ?? "").trim(),
     details: String(formData.get("details") ?? "").trim(),
     eventDate: parseEventDate(formData.get("eventDate")),
+    infection: formData.get("infection") === "on",
   };
 
   await prisma.competitionDayConfig.upsert({

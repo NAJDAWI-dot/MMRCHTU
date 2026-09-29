@@ -1,0 +1,301 @@
+/*
+  The infection: the five days before competition day, when the main site
+  turns into the day site a stage a day. src/lib/infection.ts has the why and
+  the when; <html data-infect="1..6"> is the stage.
+
+  The colours move through the variables infectionCss() writes into the page
+  head. Everything else is here: the maze spreading behind the pages
+  (InfectionLayer), then the type, the corners, the cards and the header,
+  each joining at its stage. Nothing here applies on a clean site.
+
+    1  the maze appears round the gold centre
+    2  headings take the day site's face
+    3  headings widen, corners halve, the countdown's digits turn
+    4  body text follows, corners nearly square, cards gain posts, the mouse runs
+    5  the whole board, square cells, headings at full width, the header's wall
+    6  the day look, whole: under a day to go
+*/
+
+/* ------------------------------------------------------------ the stages */
+
+html[data-infect="3"] {
+  --inf-round: 0.5;
+}
+
+html[data-infect="4"] {
+  --inf-round: 0.2;
+}
+
+html[data-infect="5"],
+html[data-infect="6"] {
+  --inf-round: 0;
+}
+
+html[data-infect="2"] {
+  --inf-wdth: 100;
+}
+
+html[data-infect="3"] {
+  --inf-wdth: 106;
+}
+
+html[data-infect="4"] {
+  --inf-wdth: 112;
+}
+
+html[data-infect="5"],
+html[data-infect="6"] {
+  --inf-wdth: 118;
+}
+
+/* From stage 2: the headings are Archivo. --font-display is what the
+   font-display class reads, and bare headings are pointed at it. */
+html:is([data-infect="2"], [data-infect="3"], [data-infect="4"], [data-infect="5"], [data-infect="6"]) {
+  --font-display: var(--font-infect), system-ui, sans-serif;
+}
+
+:where(html[data-infect]) :where(h1, h2, h3) {
+  font-family: var(--font-display);
+}
+
+:where(html[data-infect]) :where(h1, h2, h3, .font-display) {
+  font-stretch: calc(var(--inf-wdth, 100) * 1%);
+  font-variation-settings: "wdth" var(--inf-wdth, 100);
+}
+
+/* From stage 4: everything is. Set on body, where the font loader sets it. */
+html:is([data-infect="4"], [data-infect="5"], [data-infect="6"]) body {
+  --font-sans: var(--font-infect), system-ui, sans-serif;
+}
+
+/* From stage 3: the countdown counts in the day site's narrow numerals, and
+   its sweep turns from purple and rose to crimson and gold. */
+html:is([data-infect="3"], [data-infect="4"], [data-infect="5"], [data-infect="6"]) .countdown-digit {
+  font-family: var(--font-infect), system-ui, sans-serif;
+  font-stretch: 80%;
+  font-variation-settings: "wdth" 80;
+  color: rgb(163 23 58);
+  background-image: linear-gradient(115deg, rgb(var(--rgb-ras-crimson)) 0%, rgb(var(--rgb-mood-rose)) 55%, rgb(133 86 0) 100%);
+}
+
+html.dark:is([data-infect="3"], [data-infect="4"], [data-infect="5"], [data-infect="6"]) .countdown-digit {
+  color: rgb(255 138 162);
+  background-image: linear-gradient(115deg, rgb(255 138 162) 0%, rgb(255 94 142) 55%, rgb(244 181 58) 100%);
+}
+
+/* From stage 4: a bordered box on a page is a cell, with a post on each
+   corner. Drawn with a border image, so no box moves or changes its layout:
+   five-pixel corners are the posts, the edges the wall between them, set out
+   by two pixels so the wall lands on the border it replaces. */
+html:is([data-infect="4"], [data-infect="5"], [data-infect="6"])
+  main
+  :is(
+    :is(div, section, article, aside, figure, li, a, form):is([class~="border"], [class~="border-2"])[class*="rounded"]:not([class~="rounded-full"]),
+    .card3d
+  ) {
+  border-image-source: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15'%3E%3Cpath d='M0 0h5v5H0zM10 0h5v5h-5zM0 10h5v5H0zM10 10h5v5h-5z' fill='%23200d27'/%3E%3Cpath d='M5 2h5v1H5zM5 12h5v1H5zM2 5h1v5H2zM12 5h1v5h-1z' fill='%23200d27' fill-opacity='.2'/%3E%3C/svg%3E");
+  border-image-slice: 5;
+  border-image-width: 5px;
+  border-image-outset: 2px;
+  border-image-repeat: stretch;
+}
+
+html.dark:is([data-infect="4"], [data-infect="5"], [data-infect="6"])
+  main
+  :is(
+    :is(div, section, article, aside, figure, li, a, form):is([class~="border"], [class~="border-2"])[class*="rounded"]:not([class~="rounded-full"]),
+    .card3d
+  ) {
+  border-image-source: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15'%3E%3Cpath d='M0 0h5v5H0zM10 0h5v5h-5zM0 10h5v5H0zM10 10h5v5h-5z' fill='%23f4eef5' fill-opacity='.6'/%3E%3Cpath d='M5 2h5v1H5zM5 12h5v1H5zM2 5h1v5H2zM12 5h1v5h-1z' fill='%23f4eef5' fill-opacity='.18'/%3E%3C/svg%3E");
+}
+
+/* The homepage's tilting cards keep their own radius in CSS; it follows the
+   same scale. */
+html[data-infect] .card3d {
+  border-radius: calc(14px * var(--inf-round, 1));
+}
+
+/* The open day band at the top of the homepage: its light gradient is drawn
+   in brand colours and turns with them; the dark one is its own purple, so it
+   is darkened towards the day site's floor by hand, and from stage 5 both are
+   the day site's plain surface. */
+html.dark[data-infect="4"] .open-day-band {
+  background-image: radial-gradient(circle at 18% 18%, #3e1648 0%, #26102e 58%, #170b1d 100%);
+}
+
+html:is([data-infect="5"], [data-infect="6"]) .open-day-band {
+  background-image: none;
+  background-color: rgb(255 255 255);
+}
+
+html.dark:is([data-infect="5"], [data-infect="6"]) .open-day-band {
+  background-image: none;
+  background-color: rgb(29 17 36);
+}
+
+/* From stage 5: the rule under the header is the day site's crimson wall. */
+html:is([data-infect="5"], [data-infect="6"]) [data-infect-wall] {
+  background-image: none;
+  background-color: rgb(var(--rgb-ras-crimson));
+}
+
+html.dark:is([data-infect="5"], [data-infect="6"]) [data-infect-wall] {
+  background-color: rgb(var(--color-accent-rgb));
+}
+
+/* ------------------------------------------------------------ the board */
+
+.infect-layer {
+  --inf-floor: 244 241 245;
+  --inf-line: 32 13 39;
+  --inf-crimson: 163 23 58;
+  --inf-gold: 133 86 0;
+  --inf-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.dark .infect-layer {
+  --inf-floor: 19 10 24;
+  --inf-line: 244 238 245;
+  --inf-crimson: 255 138 162;
+  --inf-gold: 244 181 58;
+}
+
+.infect-layer svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* The day site's floor, over the artwork, wherever the maze has reached. */
+.infect-floor {
+  fill: rgb(var(--inf-floor));
+}
+
+.infect-flood {
+  fill: rgb(var(--inf-line) / 0.1);
+  font-family: var(--font-infect), system-ui, sans-serif;
+  font-weight: 650;
+  font-stretch: 80%;
+  font-variation-settings: "wdth" 80;
+}
+
+.infect-goal {
+  fill: rgb(var(--inf-gold) / 0.7);
+}
+
+.infect-maze-walls {
+  stroke: rgb(var(--inf-line) / 0.1);
+}
+
+.infect-maze-sides {
+  stroke: rgb(var(--inf-crimson) / 0.16);
+}
+
+.infect-maze-posts {
+  fill: rgb(var(--inf-line) / 0.17);
+}
+
+.infect-maze-post-sides {
+  fill: rgb(var(--inf-crimson) / 0.16);
+}
+
+.infect-route {
+  stroke: rgb(var(--inf-crimson) / 0.3);
+  stroke-dasharray: 1 1;
+}
+
+.infect-sensors {
+  stroke: rgb(var(--inf-crimson) / 0.5);
+  stroke-dasharray: 1.2 1.6;
+}
+
+/* Bold out in the margins, a ghost behind the text. The mouse fades less. */
+.infect-lines {
+  -webkit-mask-image: radial-gradient(ellipse 58% 54% at 50% 46%, rgb(0 0 0 / 0.16), black 94%);
+  mask-image: radial-gradient(ellipse 58% 54% at 50% 46%, rgb(0 0 0 / 0.16), black 94%);
+}
+
+.infect-runner {
+  opacity: 0.75;
+  -webkit-mask-image: radial-gradient(ellipse 50% 46% at 50% 46%, rgb(0 0 0 / 0.35), black 90%);
+  mask-image: radial-gradient(ellipse 50% 46% at 50% 46%, rgb(0 0 0 / 0.35), black 90%);
+}
+
+.dark .infect-flood {
+  fill: rgb(var(--inf-line) / 0.085);
+}
+
+.dark .infect-maze-walls {
+  stroke: rgb(var(--inf-line) / 0.09);
+}
+
+.dark .infect-maze-sides {
+  stroke: rgb(var(--inf-crimson) / 0.2);
+}
+
+.dark .infect-runner {
+  opacity: 0.7;
+}
+
+/* The front: the last rings the maze reached, where it is still spreading. */
+.infect-edge {
+  fill: rgb(var(--inf-crimson) / 0.07);
+  animation: infect-edge 3.6s ease-in-out infinite;
+}
+
+@keyframes infect-edge {
+  50% {
+    fill: rgb(var(--inf-crimson) / 0.13);
+  }
+}
+
+/* Today's new cells, taken one ring at a time outward from where the maze had
+   got to, each lighting up crimson as it goes. The delay is the ring's. */
+.infect-take {
+  animation: infect-take 700ms var(--inf-ease) var(--infect-delay, 0ms) both;
+}
+
+@keyframes infect-take {
+  from {
+    opacity: 0;
+  }
+}
+
+.infect-flash {
+  fill: rgb(var(--inf-crimson));
+  opacity: 0;
+  animation: infect-flash 1500ms ease-out var(--infect-delay, 0ms) both;
+}
+
+@keyframes infect-flash {
+  0% {
+    opacity: 0;
+  }
+  22% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .infect-edge,
+  .infect-take,
+  .infect-flash {
+    animation: none;
+  }
+}
+
+@media print {
+  .infect-layer {
+    display: none;
+  }
+}

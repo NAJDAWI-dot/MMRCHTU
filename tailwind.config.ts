@@ -15,13 +15,37 @@ export default {
   */
   darkMode: ["variant", "&:is(.dark *):not(.book-light *)"],
   theme: {
+    /*
+      Tailwind's own radii, each scaled by --inf-round. Unset, that is 1 and
+      every corner is what it always was; in the week before competition day
+      it falls a stage at a time, and the site's corners square off into the
+      day site's cells (src/styles/infection.css). Circles stay circles.
+    */
+    borderRadius: {
+      none: "0px",
+      sm: "calc(0.125rem * var(--inf-round, 1))",
+      DEFAULT: "calc(0.25rem * var(--inf-round, 1))",
+      md: "calc(0.375rem * var(--inf-round, 1))",
+      lg: "calc(0.5rem * var(--inf-round, 1))",
+      xl: "calc(0.75rem * var(--inf-round, 1))",
+      "2xl": "calc(1rem * var(--inf-round, 1))",
+      "3xl": "calc(1.5rem * var(--inf-round, 1))",
+      full: "9999px",
+    },
     extend: {
       colors: {
+        /*
+          The brand colours are read through variables (src/styles/tokens.css)
+          so the week before competition day can move them towards the day
+          site's palette (src/lib/infection.ts). Their values are exactly the
+          ones below the rest of the year.
+        */
+        white: "rgb(var(--rgb-white) / <alpha-value>)",
         ras: {
           // IEEE RAS official palette (RAS Logos.pdf brand guidelines)
-          crimson: "#862633", // Pantone 202C
-          purple: "#5F2167", // Pantone 2623
-          gray: "#57565B", // PMS Cool Gray 11C
+          crimson: "rgb(var(--rgb-ras-crimson) / <alpha-value>)", // #862633, Pantone 202C
+          purple: "rgb(var(--rgb-ras-purple) / <alpha-value>)", // #5F2167, Pantone 2623
+          gray: "rgb(var(--rgb-ras-gray) / <alpha-value>)", // #57565B, PMS Cool Gray 11C
         },
         /*
           Brand accent for TEXT, and only text.
@@ -40,12 +64,12 @@ export default {
         accent: "rgb(var(--color-accent-rgb) / <alpha-value>)",
         mood: {
           // secondary moodboard palette, decorative use only (see a11y notes)
-          plum: "#611169",
-          garnet: "#97012D",
-          rose: "#A11640",
-          orchid: "#732E7D",
-          violet: "#82468C",
-          amethyst: "#74347D",
+          plum: "rgb(var(--rgb-mood-plum) / <alpha-value>)", // #611169
+          garnet: "rgb(var(--rgb-mood-garnet) / <alpha-value>)", // #97012D
+          rose: "rgb(var(--rgb-mood-rose) / <alpha-value>)", // #A11640
+          orchid: "rgb(var(--rgb-mood-orchid) / <alpha-value>)", // #732E7D
+          violet: "rgb(var(--rgb-mood-violet) / <alpha-value>)", // #82468C
+          amethyst: "rgb(var(--rgb-mood-amethyst) / <alpha-value>)", // #74347D
         },
         /*
           The competition day site. Every value is a theme variable set in

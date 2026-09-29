@@ -1,5 +1,6 @@
 @import "../styles/tokens.css";
 @import "../styles/rulebook.css";
+@import "../styles/infection.css";
 
 @tailwind base;
 @tailwind components;

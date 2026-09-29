@@ -443,6 +443,11 @@ model CompetitionDayConfig {
   // countdown simply does not appear until a date is set.
   eventDate DateTime?
 
+  // The infection: for the five days before eventDate the main site turns,
+  // a stage a day, into the day site (src/lib/infection.ts). On by default;
+  // turned off here, the site stays exactly as it is.
+  infection Boolean @default(true)
+
   // Day mode: while on, the homepage becomes the competition day site and the
   // pages in DAY_MODE_HIDDEN_PAGES (src/lib/day-mode.ts) go dark. Off by
   // default, so adding the column changes nothing until an admin flips it.

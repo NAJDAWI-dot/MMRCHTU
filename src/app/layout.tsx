@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { Bevan, Cairo, Inter, JetBrains_Mono } from "next/font/google";
+import { Archivo, Bevan, Cairo, Inter, JetBrains_Mono } from "next/font/google";
 import { AmbientMice } from "@/components/brand/AmbientMice";
 import { MazeDescent } from "@/components/layout/MazeDescent";
 import { ThemeProvider } from "@/components/brand/ThemeProvider";
@@ -12,6 +12,9 @@ import { PageTransition } from "@/components/layout/PageTransition";
 import { RouteLoader } from "@/components/layout/RouteLoader";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
+import { InfectionLayer } from "@/components/infection/InfectionLayer";
+import { infectionCss, infectionPrePaintScript } from "@/lib/infection";
+import { getCompetitionDayConfig } from "@/lib/site-config";
 import { splashPrePaintScript } from "@/lib/splash";
 import { siteOrigin } from "@/lib/site-url";
 import { organizationJsonLd, webSiteJsonLd } from "@/lib/structured-data";
@@ -28,6 +31,25 @@ const cairo = Cairo({ subsets: ["arabic"], variable: "--font-arabic", display: "
 // logo uses it, so it is loaded at the one weight Bevan ships and left out of
 // the body stack entirely.
 const bevan = Bevan({ subsets: ["latin"], weight: "400", variable: "--font-brand", display: "swap" });
+// The day site's face, which the main site takes on in the week before
+// competition day (src/lib/infection.ts). Not preloaded: most of the year
+// nothing on the main site uses it, and the browser fetches it only once a
+// stage asks for it.
+const archivo = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-infect", display: "swap", preload: false });
+
+/**
+ * When the competition starts and whether the site may be taken over before
+ * it, for the infection. A page that cannot reach the database still renders,
+ * just clean.
+ */
+async function infectionSettings(): Promise<{ eventMs: number | null; enabled: boolean }> {
+  try {
+    const config = await getCompetitionDayConfig();
+    return { eventMs: config.eventDate ? config.eventDate.getTime() : null, enabled: config.infection };
+  } catch {
+    return { eventMs: null, enabled: false };
+  }
+}
 
 const DESCRIPTION =
   "MMRC 26 is the IEEE RAS HTU Student Chapter's Micro Mouse Robot Competition. Find the rules, schedule and registration, and play the Pac Mouse game.";
@@ -87,19 +109,24 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const infection = await infectionSettings();
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* Must run before first paint so the page cannot flash behind the
             splash — see src/lib/splash.ts. */}
         <script dangerouslySetInnerHTML={{ __html: splashPrePaintScript() }} />
+        {/* The week before competition day: which stage the site is at, set
+            before first paint so a page never shows clean and then turns. */}
+        <script dangerouslySetInnerHTML={{ __html: infectionPrePaintScript(infection.eventMs, infection.enabled) }} />
+        <style dangerouslySetInnerHTML={{ __html: infectionCss() }} />
         {/* Sitewide identity. The competition itself is described on the
             Competition Day page, where the date and venue actually live. */}
         <JsonLd data={organizationJsonLd()} />
         <JsonLd data={webSiteJsonLd()} />
       </head>
-      <body className={`${inter.variable} ${jetbrainsMono.variable} ${cairo.variable} ${bevan.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${jetbrainsMono.variable} ${cairo.variable} ${bevan.variable} ${archivo.variable} font-sans antialiased`}>
         {/*
           The sitewide background image, behind every page.
 
@@ -111,6 +138,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         */}
         <div className="site-background" aria-hidden="true" />
         <ThemeProvider>
+          {/* Over the artwork and behind everything else: the day site's maze, spreading. */}
+          <InfectionLayer eventMs={infection.eventMs} enabled={infection.enabled} />
           <ServiceWorkerRegistrar />
           <ChromeGate>
             <SplashScreen />
