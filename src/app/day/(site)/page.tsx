@@ -9,7 +9,7 @@ import { FollowPicker } from "@/components/day-site/Follow";
 import { Road } from "@/components/day-site/Road";
 import { PlaceBlock, RunTicks, gapToLeader } from "@/components/day-site/Tower";
 import { Empty, HeldBack, MatchCard, MoreLink, Post, SectionTitle } from "@/components/day-site/ui";
-import { KNOCKOUT_ROUNDS, QUALIFIERS, matchesInRound, phaseInfo } from "@/lib/bracket";
+import { matchesInRound, phaseInfo } from "@/lib/bracket";
 import { loadPublicCompetition } from "@/lib/public-competition";
 import { shouldShowCountdown } from "@/lib/countdown";
 import { clockTime, postedAgo } from "@/lib/day-mode";
@@ -107,7 +107,12 @@ export default async function DayLivePage() {
   // Teams still in it at the start of each phase, for the road to the final.
   const road = [
     { phase: 1, label: "Qualifying", teams: state.competitors.length, blurb: phaseInfo(1).blurb },
-    ...KNOCKOUT_ROUNDS.map((round) => ({ phase: round, label: phaseInfo(round).name, teams: matchesInRound(round) * 2, blurb: phaseInfo(round).blurb })),
+    ...state.rounds.map((round) => ({
+      phase: round,
+      label: phaseInfo(round).name,
+      teams: matchesInRound(round) * 2,
+      blurb: round === state.firstRound && state.bracketSize === 16 ? "Head to head: 1st plays 16th, 2nd plays 15th, and so on." : phaseInfo(round).blurb,
+    })),
   ];
 
   const [bigPhoto, ...smallPhotos] = gallery.photos.slice(0, 5);
@@ -256,6 +261,7 @@ export default async function DayLivePage() {
             calledAt={queue.calledAt ? clockTime(queue.calledAt) : ""}
             onDeckEta={queue.queue.onDeck ? queue.etaOf(queue.queue.onDeck.id) : ""}
             inHoleEta={queue.queue.inHole ? queue.etaOf(queue.queue.inHole.id) : ""}
+            justCalled={!!queue.queue.now && !!queue.calledAt && Date.now() - queue.calledAt.getTime() < 90_000}
           />
         ) : site.focus ? (
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
@@ -359,7 +365,7 @@ export default async function DayLivePage() {
               <p className="day-num mt-1 text-day-ink">4 runs, best 25.0 s: 4 ÷ 25.0 × 1000 = 160.0</p>
               <p className="day-num text-day-ink">1 run of 18.0 s: 1 ÷ 18.0 × 1000 = 55.6</p>
             </div>
-            <p className="mt-5 text-sm font-medium text-day-muted">The top {QUALIFIERS} go through to the knockout.</p>
+            <p className="mt-5 text-sm font-medium text-day-muted">The top {state.bracketSize} go through to the knockout.</p>
           </div>
         </div>
       </section>

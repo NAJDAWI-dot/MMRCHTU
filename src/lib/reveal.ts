@@ -1,4 +1,4 @@
-import { FINAL_ROUND, FIRST_KNOCKOUT_ROUND, journeyOf, phaseInfo, type ResolvedMatch, type Standing } from "@/lib/bracket";
+import { FINAL_ROUND, FIRST_KNOCKOUT_ROUND, firstRoundOf, journeyOf, phaseInfo, type ResolvedMatch, type Standing } from "@/lib/bracket";
 import type { BracketMatch, CompetitionState } from "@/lib/competition";
 
 /**
@@ -50,11 +50,12 @@ export const anythingHidden = (reveal: Reveal) => reveal.hiddenResults.length > 
 
 /**
  * The first knockout round whose pairings are held back: the round after the
- * first phase whose "who went through" is hidden. Past the final: none.
+ * first phase whose "who went through" is hidden. Past the final: none. A
+ * bracket that starts at the round of 16 is fed straight from qualifying.
  */
-export function firstHiddenRound(reveal: Reveal): number {
-  for (let round = FIRST_KNOCKOUT_ROUND; round <= FINAL_ROUND; round++) {
-    if (!advanceShown(reveal, round - 1)) return round;
+export function firstHiddenRound(reveal: Reveal, firstRound: number = FIRST_KNOCKOUT_ROUND): number {
+  for (let round = firstRound; round <= FINAL_ROUND; round++) {
+    if (!advanceShown(reveal, round === firstRound ? 1 : round - 1)) return round;
   }
   return FINAL_ROUND + 1;
 }
@@ -80,7 +81,7 @@ export function redactTable(table: Standing[], reveal: Reveal): Standing[] {
 
 /** The bracket as the public may see it. */
 export function redactBracket<T extends ResolvedMatch>(matches: T[], reveal: Reveal): T[] {
-  const hiddenFrom = firstHiddenRound(reveal);
+  const hiddenFrom = firstHiddenRound(reveal, firstRoundOf(matches));
   return matches.map((match) => {
     if (match.round >= hiddenFrom) {
       // Who is even in it would say who won before.

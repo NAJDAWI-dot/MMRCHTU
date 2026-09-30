@@ -45,6 +45,7 @@ const COMPETITION_DAY_FALLBACK: CompetitionDayConfig = {
   qualifyingStatus: "NOT_SET",
   qualifyingDirection: "HIGHER",
   qualifyingNote: "",
+  bracketSize: 32,
   matchDirection: "HIGHER",
   runOrderStart: "",
   runSlotMinutes: 10,

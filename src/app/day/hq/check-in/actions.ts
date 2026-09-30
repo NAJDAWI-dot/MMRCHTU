@@ -73,8 +73,7 @@ export async function saveTeamDay(_previous: DeskState, formData: FormData): Pro
     deskNote: String(formData.get("deskNote") ?? "").trim().slice(0, 300),
     inspection: parseInspection(formData.get("inspection")),
     inspectionNote: String(formData.get("inspectionNote") ?? "").trim().slice(0, 200),
-    robotName: String(formData.get("robotName") ?? "").trim().slice(0, 60),
-    pit: String(formData.get("pit") ?? "").trim().slice(0, 20),
+    teamCode: String(formData.get("teamCode") ?? "").trim().toUpperCase().slice(0, 12),
     withdrawn: formData.get("withdrawn") === "on",
   };
 
@@ -84,5 +83,14 @@ export async function saveTeamDay(_previous: DeskState, formData: FormData): Pro
     create: { registrationId, ...data },
   });
   refreshDaySite();
+  // Saved either way, since the desk may be half way through swapping two
+  // teams' codes; but said out loud, so a typo does not go unnoticed.
+  const twin = data.teamCode
+    ? await prisma.teamDayStatus.findFirst({
+        where: { teamCode: data.teamCode, registrationId: { not: registrationId } },
+        select: { registration: { select: { teamName: true } } },
+      })
+    : null;
+  if (twin) return { ok: false, message: `${team.teamName} saved, but ${twin.registration.teamName} already has the code ${data.teamCode}.` };
   return { ok: true, message: `${team.teamName} saved.` };
 }

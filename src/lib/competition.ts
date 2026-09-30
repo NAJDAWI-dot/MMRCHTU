@@ -3,12 +3,17 @@ import { prisma } from "@/lib/prisma";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import type { Reveal } from "@/lib/reveal";
 import {
+  firstRoundFor,
+  firstRoundOf,
   journeyOf,
+  parseBracketSize,
   parseInspection,
   parseQualifyOverride,
   parseQualifyingStatus,
   resolveBracket,
+  roundsFor,
   standings,
+  type BracketSize,
   type Direction,
   type InspectionState,
   type Journey,
@@ -25,8 +30,8 @@ import {
  * the results, never read back as stored, so what the public sees can never
  * disagree with what the scoring desk sees.
  *
- * Competitors are confirmed registrations. Withdrawn teams and teams that
- * failed inspection stay on the lists but cannot qualify.
+ * Competitors are confirmed registrations. Withdrawn teams and teams whose
+ * robot is not available stay on the lists but cannot qualify.
  */
 
 export interface Competitor {
@@ -38,9 +43,9 @@ export interface Competitor {
   checkedInAt: Date | null;
   inspection: InspectionState;
   inspectionNote: string;
-  robotName: string;
-  pit: string;
   withdrawn: boolean;
+  /** The organisers' own code for the team, or "". */
+  teamCode: string;
   /** TeamMember ids the desk has marked as here. */
   presentIds: string[];
   badges: boolean;
@@ -70,8 +75,14 @@ export interface CompetitionState {
   competitors: Competitor[];
   table: Standing[];
   bracket: BracketMatch[];
-  /** Whether the round of 32 has been drawn. */
+  /** Whether the bracket has been drawn. */
   drawn: boolean;
+  /** How many go through to the knockout: 32, or 16. */
+  bracketSize: BracketSize;
+  /** The knockout rounds in play: from the round of 32, or from the round of 16. */
+  rounds: number[];
+  /** The first of them, where the seeds meet and a missing team is a bye. */
+  firstRound: number;
   byId: Map<string, Competitor>;
   /** What is held back from the public, on the public version of this state. */
   reveal?: Reveal;
@@ -100,10 +111,14 @@ export const loadCompetition = cache(async (): Promise<CompetitionState> => {
       .map((team) => team.id),
   );
 
+  // Drawn: the size it was drawn at. Before that, the size qualifying is heading for.
+  const bracketSize = matches.length ? (firstRoundOf(matches) === firstRoundFor(16) ? 16 : 32) : parseBracketSize(config.bracketSize);
+  const firstRound = firstRoundFor(bracketSize);
+
   const table = standings(
     teams.map((team) => ({ id: team.id, name: team.teamName.trim() })),
     runs,
-    { ineligible, overrides: new Map(teams.map((team) => [team.id, parseQualifyOverride(team.dayStatus?.qualifyOverride)])) },
+    { cutoff: bracketSize, ineligible, overrides: new Map(teams.map((team) => [team.id, parseQualifyOverride(team.dayStatus?.qualifyOverride)])) },
   );
   const bracket = resolveBracket(matches, matchDirection).matches.map((match) => {
     const stored = matches.find((row) => row.round === match.round && row.slot === match.slot);
@@ -133,14 +148,13 @@ export const loadCompetition = cache(async (): Promise<CompetitionState> => {
         checkedInAt: team.dayStatus?.checkedInAt ?? null,
         inspection: parseInspection(team.dayStatus?.inspection),
         inspectionNote: team.dayStatus?.inspectionNote ?? "",
-        robotName: team.dayStatus?.robotName ?? "",
-        pit: team.dayStatus?.pit ?? "",
         withdrawn: team.dayStatus?.withdrawn ?? false,
         presentIds: (team.dayStatus?.presentIds ?? "").split(",").filter(Boolean),
         badges: team.dayStatus?.badges ?? false,
         deskNote: team.dayStatus?.deskNote ?? "",
         runOrder: team.dayStatus?.runOrder ?? null,
         slotTime: team.dayStatus?.slotTime ?? "",
+        teamCode: team.dayStatus?.teamCode ?? "",
         eligible: !ineligible.has(team.id),
         standing,
         journey: journeyOf(team.id, standing, bracket, drawn),
@@ -157,6 +171,9 @@ export const loadCompetition = cache(async (): Promise<CompetitionState> => {
     table,
     bracket,
     drawn,
+    bracketSize,
+    rounds: roundsFor(bracketSize),
+    firstRound,
     byId: new Map(competitors.map((competitor) => [competitor.id, competitor])),
   };
 });

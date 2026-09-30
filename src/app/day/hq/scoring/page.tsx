@@ -3,7 +3,7 @@ import Link from "next/link";
 import { DayIcon } from "@/components/day-site/icons";
 import { requireSection, rolesOf } from "@/lib/admin-access";
 import { TEST_DATA_BY } from "@/lib/test-data";
-import { QUALIFIERS, QUALIFYING_STATUS_LABELS } from "@/lib/bracket";
+import { BRACKET_SIZES, QUALIFYING_STATUS_LABELS } from "@/lib/bracket";
 import { loadCompetition } from "@/lib/competition";
 import { clockTime } from "@/lib/day-mode";
 import { competitionDayKey, qualifyingSlot } from "@/lib/match-results";
@@ -23,6 +23,7 @@ import {
   removeTestSheets,
   reopenQualifying,
   saveScoringSettings,
+  setBracketSize,
   standDown,
 } from "./actions";
 import { QualifyingDesk, type DeskTeam } from "./QualifyingDesk";
@@ -63,7 +64,7 @@ export default async function QualifyingDeskPage() {
       id: team.id,
       name: team.name,
       eligible: team.eligible,
-      reason: team.withdrawn ? "withdrawn" : team.inspection === "FAILED" ? "failed inspection" : "",
+      reason: team.withdrawn ? "withdrawn" : team.inspection === "FAILED" ? "robot not available" : "",
       checkedIn: team.checkedIn,
       runOrder: team.runOrder,
       slot: slotOf(team),
@@ -132,6 +133,12 @@ export default async function QualifyingDeskPage() {
               </Submit>
             </DeskForm>
             {drawn ? (
+              <a href="/day/draw" target="_blank" className="day-btn day-btn-ink">
+                <DayIcon name="live" className="h-4 w-4" />
+                Show the draw
+              </a>
+            ) : null}
+            {drawn ? (
               <DeskForm action={clearRunOrder} className="flex items-end">
                 <Submit pending="…" variant="ghost">
                   Clear
@@ -173,7 +180,10 @@ export default async function QualifyingDeskPage() {
                   {index === 0 && tile.entry ? <span className="day-live-dot" aria-hidden="true" /> : null}
                   {tile.label}
                 </p>
-                <p className="day-display mt-2 truncate text-xl text-day-ink">{tile.entry?.name ?? "–"}</p>
+                <p className="day-display mt-2 flex min-w-0 items-center gap-2 text-xl text-day-ink">
+                  {tile.entry?.code ? <span className="day-num shrink-0 bg-day-ink px-1.5 text-sm font-extrabold text-day-on-ink">{tile.entry.code}</span> : null}
+                  <span className="truncate">{tile.entry?.name ?? "–"}</span>
+                </p>
                 <p className="day-num mt-1 text-xs text-day-faint">
                   {tile.entry?.runOrder ? `#${tile.entry.runOrder}` : ""}
                   {tile.note ? ` · ${tile.note}` : ""}
@@ -229,48 +239,92 @@ export default async function QualifyingDeskPage() {
         </section>
       ) : null}
 
-      <QualifyingDesk teams={teams} locked={locked} />
+      <QualifyingDesk teams={teams} locked={locked} cut={state.bracketSize} />
 
       {/* ------------------------------------------- close and draw */}
-      <section className="day-card flex flex-wrap items-end justify-between gap-6 p-5 sm:p-6">
-        <div className="max-w-xl">
-          <p className="day-kicker">{locked ? "The bracket is drawn" : "Close qualifying"}</p>
-          <p className="day-display mt-2 text-2xl text-day-ink">{locked ? "Results go in on the Bracket desk" : "Draw the top 32 into the bracket"}</p>
-          <p className="mt-1 text-sm text-day-muted">
-            {locked
-              ? "Reopening qualifying clears the bracket."
-              : `1st plays 32nd, 2nd plays 31st, and so on. ${qualifiedCount} team${qualifiedCount === 1 ? " is" : "s are"} in the top ${QUALIFIERS} right now.`}
-          </p>
-        </div>
-        {locked ? (
-          <div className="flex flex-wrap items-start gap-3">
-            <Link href="/day/hq/scoring/bracket" className="day-btn day-btn-ink">
-              Open the bracket
-              <DayIcon name="arrow" className="h-4 w-4" />
-            </Link>
-            <ArmedForm
-              action={reopenQualifying}
-              label="Reopen qualifying"
-              destructive
-              warning="This takes the bracket down. Any knockout results are lost."
-              confirm="Reopen"
-            >
-              <label className="flex items-center gap-2 text-sm text-day-ink">
-                <input type="checkbox" name="force" value="yes" /> Throw away the results
-              </label>
-            </ArmedForm>
+      <section className="day-card space-y-6 p-5 sm:p-6" aria-labelledby="close-title">
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div className="max-w-xl">
+            <p className="day-kicker">{locked ? "The bracket is drawn" : "Close qualifying"}</p>
+            <h2 id="close-title" className="day-display mt-2 text-2xl text-day-ink">
+              {locked ? `The top ${state.bracketSize} are in. Results go in on the Bracket desk` : "Draw the knockout"}
+            </h2>
+            <p className="mt-1 text-sm text-day-muted">
+              {locked
+                ? "Reopening qualifying clears the bracket."
+                : `Either way, 1st plays last, 2nd plays second to last, and so on up the bracket. ${qualifiedCount} team${qualifiedCount === 1 ? " is" : "s are"} in the top ${state.bracketSize} right now.`}
+            </p>
           </div>
-        ) : (
-          <ArmedForm
-            action={drawBracket}
-            label="Close qualifying and draw"
-            warning={`The top ${Math.min(QUALIFIERS, qualifiedCount)} are seeded into the round of 32 and match sheets lock.`}
-            confirm="Draw the bracket"
-          >
-            <label className="flex items-center gap-2 text-sm text-day-ink">
-              <input type="checkbox" name="force" value="yes" /> Throw away the results, if the bracket had any
-            </label>
-          </ArmedForm>
+          {locked ? (
+            <div className="flex flex-wrap items-start gap-3">
+              <Link href="/day/hq/scoring/bracket" className="day-btn day-btn-ink">
+                Open the bracket
+                <DayIcon name="arrow" className="h-4 w-4" />
+              </Link>
+              <ArmedForm
+                action={reopenQualifying}
+                label="Reopen qualifying"
+                destructive
+                warning="This takes the bracket down. Any knockout results are lost."
+                confirm="Reopen"
+              >
+                <label className="flex items-center gap-2 text-sm text-day-ink">
+                  <input type="checkbox" name="force" value="yes" /> Throw away the results
+                </label>
+              </ArmedForm>
+            </div>
+          ) : (
+            <DeskForm action={setBracketSize} className="space-y-1">
+              <span className="day-label">The standings draw the line at</span>
+              <div className="flex overflow-hidden rounded-[4px] ring-1 ring-day-line/[0.12]">
+                {BRACKET_SIZES.map((size) => (
+                  <button
+                    key={size}
+                    type="submit"
+                    name="size"
+                    value={size}
+                    aria-pressed={state.bracketSize === size}
+                    className={`day-num px-4 py-2 text-sm font-bold transition-colors ${
+                      state.bracketSize === size ? "bg-day-ink text-day-on-ink" : "text-day-muted hover:bg-day-ink/[0.06]"
+                    }`}
+                  >
+                    Top {size}
+                  </button>
+                ))}
+              </div>
+            </DeskForm>
+          )}
+        </div>
+
+        {locked ? null : (
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 md:grid-cols-2">
+            {BRACKET_SIZES.map((size) => {
+              const seeded = Math.min(size, qualifiedCount);
+              return (
+                <li key={size} className={`day-sunk flex flex-col gap-4 p-5 ${state.bracketSize === size ? "ring-2 ring-day-crimson/40" : ""}`}>
+                  <div>
+                    <p className="day-display text-3xl text-day-ink">Top {size}</p>
+                    <p className="mt-1 text-sm text-day-muted">
+                      {size === 32
+                        ? "Into the round of 32: 1st v 32nd, 2nd v 31st. Then the round of 16, the quarter-finals, the semi-finals and the final."
+                        : "Straight into the round of 16: 1st v 16th, 2nd v 15th. No round of 32. Then the quarter-finals, the semi-finals and the final."}
+                    </p>
+                  </div>
+                  <ArmedForm
+                    action={drawBracket}
+                    label={`Close qualifying and draw the top ${size}`}
+                    warning={`The top ${seeded} are seeded into the ${size === 32 ? "round of 32" : "round of 16"}${seeded < size ? `, with byes for the top ${size - seeded}` : ""}, and match sheets lock.`}
+                    confirm={`Draw the top ${size}`}
+                  >
+                    <input type="hidden" name="size" value={size} />
+                    <label className="flex items-center gap-2 text-sm text-day-ink">
+                      <input type="checkbox" name="force" value="yes" /> Throw away the results, if the bracket had any
+                    </label>
+                  </ArmedForm>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </section>
 

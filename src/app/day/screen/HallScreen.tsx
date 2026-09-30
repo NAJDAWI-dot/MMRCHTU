@@ -6,6 +6,7 @@ import { DayIcon } from "@/components/day-site/icons";
 import { MMRC_PLATE } from "@/lib/brand";
 import { DAY_TIME_ZONE } from "@/lib/day-mode";
 import type { RevealShow } from "@/lib/reveal-show";
+import { CallTakeover, type ScreenCall } from "./CallTakeover";
 import { RevealTakeover, playedBefore } from "./RevealTakeover";
 
 export interface ScreenPanel {
@@ -60,6 +61,7 @@ export function HallScreen({
   alert,
   followUrl,
   reveal = null,
+  call = null,
 }: {
   panels: ScreenPanel[];
   phaseLine: string;
@@ -67,6 +69,8 @@ export function HallScreen({
   followUrl: string;
   /** Results just revealed from HQ: played full screen, once per screen. */
   reveal?: RevealShow | null;
+  /** The team on the maze and when it was called: a new call takes the screen for a few seconds. */
+  call?: ScreenCall | null;
 }) {
   // Read here rather than on the server: once the day site is public the page
   // is served from the cache, which never sees the query string.
@@ -163,7 +167,7 @@ export function HallScreen({
       <div className="day-root h-dvh overflow-hidden" style={{ position: "fixed", inset: 0, zIndex: 60 }}>
         <div className="day-checker pointer-events-none absolute inset-x-0 top-0 h-[1.2vh] opacity-[0.12]" aria-hidden="true" />
         <div className={`grid h-full grid-rows-[auto_minmax(0,1fr)_auto] ${idle ? "cursor-none" : ""}`}>
-          <DayAutoRefresh />
+          <DayAutoRefresh everyMs={10_000} />
 
           {/* ---------------------------------------------------------- header */}
           <header className="flex items-center justify-between gap-[3vh] px-[4vh] pb-[1.5vh] pt-[3vh]">
@@ -248,6 +252,8 @@ export function HallScreen({
             </div>
           </footer>
         </div>
+        {/* Under a reveal, if both come at once: results are the bigger news. */}
+        <CallTakeover call={call} />
         {playing ? (
           <RevealTakeover
             key={playing.id}

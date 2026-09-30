@@ -7,12 +7,14 @@ import { MatchForm, type MatchRow } from "./MatchForm";
 /**
  * The rounds as tabs, opening on the one being played: the round of 32 is
  * sixteen matches, and nobody on the desk wants to scroll past it during the
- * final.
+ * final. Only the rounds the bracket was drawn with.
  */
 export function BracketRounds({ rows }: { rows: MatchRow[] }) {
   const playable = (row: MatchRow) => !row.void && !!row.teamAId && !!row.teamBId && !row.walkover;
-  const current =
-    KNOCKOUT_ROUNDS.find((round) => rows.some((row) => row.round === round && playable(row) && !row.winnerId)) ?? KNOCKOUT_ROUNDS[KNOCKOUT_ROUNDS.length - 1]!;
+  // The rounds this bracket plays: a draw of sixteen has no round of 32.
+  const rounds = KNOCKOUT_ROUNDS.filter((item) => rows.some((row) => row.round === item));
+  const tabs = rounds.length ? rounds : [...KNOCKOUT_ROUNDS];
+  const current = tabs.find((item) => rows.some((row) => row.round === item && playable(row) && !row.winnerId)) ?? tabs[tabs.length - 1]!;
   const [round, setRound] = useState<number>(current);
   const matches = rows.filter((row) => row.round === round && !row.void);
 
@@ -20,7 +22,7 @@ export function BracketRounds({ rows }: { rows: MatchRow[] }) {
     <div className="space-y-6">
       <div className="day-no-scrollbar -mx-1 overflow-x-auto px-1">
         <div role="tablist" aria-label="Rounds" className="day-segment flex-nowrap">
-          {KNOCKOUT_ROUNDS.map((item) => {
+          {tabs.map((item) => {
             const inRound = rows.filter((row) => row.round === item && playable(row));
             const decided = inRound.filter((row) => row.winnerId).length;
             return (

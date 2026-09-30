@@ -32,6 +32,7 @@ export const loadQueue = cache(async (now: Date = new Date()): Promise<QueueView
     runOrder: team.runOrder,
     eligible: team.eligible,
     ran: !!team.standing?.recorded,
+    code: team.teamCode,
   }));
   const queue = buildQueue(entries, config.queueTeamId);
   const slotMinutes = config.runSlotMinutes || 10;

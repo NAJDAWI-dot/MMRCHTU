@@ -49,7 +49,7 @@ export default async function DayTeamsPage() {
             best: team.standing?.official ? formatTime(team.standing.official) : "–",
             seed: team.journey.seed,
             checkedIn: team.checkedIn,
-            robotName: team.robotName,
+            teamCode: team.teamCode,
             members: byTeam.get(team.id)?.length ?? team.memberCount,
             university: universityOf(byTeam.get(team.id) ?? []),
           }))}

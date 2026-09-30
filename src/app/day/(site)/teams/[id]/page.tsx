@@ -5,7 +5,7 @@ import { Crest } from "@/components/day-site/Crest";
 import { DayIcon, type DayIconName } from "@/components/day-site/icons";
 import { FollowButton } from "@/components/day-site/Follow";
 import { JourneyBadge, MatchCard, Readout, SectionTitle, SheetView } from "@/components/day-site/ui";
-import { INSPECTION_LABELS, QUALIFIERS, ordinal, phaseInfo } from "@/lib/bracket";
+import { INSPECTION_LABELS, ordinal, phaseInfo } from "@/lib/bracket";
 import { publicMembers } from "@/lib/competition";
 import { loadPublicCompetition } from "@/lib/public-competition";
 import { clockTime } from "@/lib/day-mode";
@@ -56,18 +56,18 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
   type Tone = "good" | "gold" | "live" | "ink";
   const verdict: { tone: Tone; icon: DayIconName; title: string; body: string } = state.drawn
     ? team.journey.seed !== null
-      ? { tone: "good", icon: "check", title: "Qualified", body: `Seeded ${ordinal(team.journey.seed)} into the round of 32.` }
-      : { tone: "ink", icon: "flag", title: "Did not qualify", body: `Only the top ${QUALIFIERS} from qualifying went through.` }
+      ? { tone: "good", icon: "check", title: "Qualified", body: `Seeded ${ordinal(team.journey.seed)} into the ${phaseInfo(state.firstRound).name.toLowerCase()}.` }
+      : { tone: "ink", icon: "flag", title: "Did not qualify", body: `Only the top ${state.bracketSize} from qualifying went through.` }
     : !team.eligible
-      ? { tone: "live", icon: "close", title: "Not eligible to qualify", body: team.withdrawn ? "This team has withdrawn." : "This team did not pass the robot inspection." }
+      ? { tone: "live", icon: "close", title: "Not eligible to qualify", body: team.withdrawn ? "This team has withdrawn." : "This team's robot is not available." }
       : standing?.recorded && standing.rank === null
         ? standing.qualified
           ? { tone: "good", icon: "check", title: "Going through", body: "Into the knockout. The scores are announced soon." }
           : { tone: "ink", icon: "lock", title: "Has run", body: "The results are announced soon. This page updates the moment they are." }
         : standing?.rank
         ? standing.qualified
-          ? { tone: "gold", icon: "trophy", title: "On course to qualify", body: `${ordinal(standing.rank)} right now, inside the top ${QUALIFIERS}. Nothing is final until qualifying closes.` }
-          : { tone: "live", icon: "timer", title: `Outside the top ${QUALIFIERS} for now`, body: `${ordinal(standing.rank)} right now.` }
+          ? { tone: "gold", icon: "trophy", title: "On course to qualify", body: `${ordinal(standing.rank)} right now, inside the top ${state.bracketSize}. Nothing is final until qualifying closes.` }
+          : { tone: "live", icon: "timer", title: `Outside the top ${state.bracketSize} for now`, body: `${ordinal(standing.rank)} right now.` }
         : { tone: "ink", icon: "timer", title: "Yet to run", body: "The table updates the moment this team's eight minutes are recorded." };
 
   const toneText: Record<Tone, string> = {
@@ -83,7 +83,7 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
       ? { text: `Checked in${team.checkedInAt ? ` at ${clockTime(team.checkedInAt)}` : ""}`, tone: "text-day-good bg-day-good/10" }
       : { text: "Not checked in yet", tone: "text-day-muted bg-day-ink/[0.06]" },
     { text: INSPECTION_LABELS[team.inspection], tone: team.inspection === "PASSED" ? "text-day-good bg-day-good/10" : team.inspection === "FAILED" ? "text-day-live bg-day-live/10" : "text-day-muted bg-day-ink/[0.06]" },
-    team.pit ? { text: `Pit ${team.pit}`, tone: "text-day-ink bg-day-ink/[0.06]" } : null,
+    team.teamCode ? { text: team.teamCode, tone: "text-day-on-ink bg-day-ink" } : null,
     team.runOrder ? { text: `Runs ${ordinal(team.runOrder)} in qualifying`, tone: "text-day-plum bg-day-plum/10" } : null,
     team.withdrawn ? { text: "Withdrawn", tone: "text-day-live bg-day-live/10" } : null,
   ].filter((chip): chip is { text: string; tone: string } => chip !== null);
@@ -105,7 +105,7 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
         <div className="min-w-0 text-center md:text-left">
           <p className="day-line-in flex items-center justify-center gap-2.5 text-[0.95rem] font-semibold text-day-crimson md:justify-start" style={{ ["--i" as string]: 1 }}>
             <span className="h-2 w-2 bg-day-crimson" aria-hidden="true" />
-            {team.robotName ? `Robot ${team.robotName}` : "Team"}
+            {team.teamCode ? `Team ${team.teamCode}` : "Team"}
           </p>
           <h1 className="day-display mt-3 break-words text-[clamp(2.6rem,7vw,5rem)] text-day-ink">
             <span className="day-rise">

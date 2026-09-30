@@ -42,7 +42,7 @@ export interface DeskTeam {
  * reached the centre, the cell it got to if not), save. The score, the official time and the working appear as
  * the times go in, and the table beside it re-ranks the moment it is saved.
  */
-export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: boolean }) {
+export function QualifyingDesk({ teams, locked, cut }: { teams: DeskTeam[]; locked: boolean; cut: number }) {
   // Next up: the first team in the running order without a sheet.
   const nextUp = useMemo(
     () => [...teams].filter((team) => team.eligible && !team.sheet).sort((a, b) => (a.runOrder ?? 9999) - (b.runOrder ?? 9999))[0]?.id ?? "",
@@ -185,7 +185,7 @@ export function QualifyingDesk({ teams, locked }: { teams: DeskTeam[]; locked: b
                       : item.override === "OUT"
                         ? " · kept out by the judges' decision"
                         : item.rank
-                          ? ` · ${item.qualified ? "in the top 32" : "outside the top 32"}`
+                          ? ` · ${item.qualified ? `in the top ${cut}` : `outside the top ${cut}`}`
                           : ""}
                   </p>
                 </div>

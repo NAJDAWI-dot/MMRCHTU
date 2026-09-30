@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireSection } from "@/lib/admin-access";
-import { KNOCKOUT_ROUNDS, phaseInfo } from "@/lib/bracket";
+import { phaseInfo } from "@/lib/bracket";
 import { loadCompetition } from "@/lib/competition";
 import { clockTime } from "@/lib/day-mode";
 import { loadQueue } from "@/lib/day-queue";
@@ -45,7 +45,7 @@ export default async function JudgePage() {
     });
 
   // The knockout: the round being played, live matches first, then the ones still to play.
-  const currentRound = KNOCKOUT_ROUNDS.find((round) => state.bracket.some((m) => m.round === round && m.teamAId && m.teamBId && !m.winnerId && !m.walkover && !m.void));
+  const currentRound = state.rounds.find((round) => state.bracket.some((m) => m.round === round && m.teamAId && m.teamBId && !m.winnerId && !m.walkover && !m.void));
   const matches = state.bracket
     .filter((m) => m.teamAId && m.teamBId && !m.walkover && !m.void && (m.round === currentRound || m.status === "LIVE"))
     .sort((a, b) => Number(b.status === "LIVE") - Number(a.status === "LIVE") || Number(!!a.winnerId) - Number(!!b.winnerId) || a.round - b.round || a.slot - b.slot)
