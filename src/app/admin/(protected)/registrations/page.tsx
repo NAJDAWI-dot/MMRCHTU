@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { updateRegistrationStatus } from "./actions";
 import { PaymentBadge } from "@/components/payment/PaymentBadge";
 import { DeleteRegistration } from "@/components/admin/DeleteRegistration";
+import { EditTeam } from "@/components/admin/EditTeam";
 import { RegistrationExport } from "@/components/admin/RegistrationExport";
 import { formatFils, isPaymentStatus } from "@/lib/payment";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
@@ -137,8 +138,15 @@ export default async function AdminRegistrationsPage({
             <ul className="mt-3 space-y-1 text-sm text-ras-gray dark:text-white/80">
               {reg.members.map((m) => (
                 <li key={m.id}>
-                  {m.order === 1 ? "Team Leader" : `Member ${m.order}`}: {m.firstName} {m.lastName} · {m.university},{" "}
-                  {m.major} · {m.ieeeStatus} ({m.ieeeMembershipId}) · {m.email} / {m.whatsapp}
+                  {m.order === 1 ? "Team Leader" : `Member ${m.order}`}: {m.firstName} {m.lastName} ·{" "}
+                  {/* Members added by an organiser may have only a name and an email. */}
+                  {[
+                    [m.university, m.major].filter(Boolean).join(", "),
+                    `${m.ieeeStatus} (${m.ieeeMembershipId})`,
+                    [m.email, m.whatsapp].filter(Boolean).join(" / "),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </li>
               ))}
             </ul>
@@ -181,7 +189,27 @@ export default async function AdminRegistrationsPage({
               </a>
             </div>
 
-            <div className="mt-3 flex justify-end">
+            <div className="mt-3 flex flex-wrap items-start justify-end gap-3">
+              <EditTeam
+                team={{
+                  id: reg.id,
+                  teamName: reg.teamName,
+                  submitterEmail: reg.submitterEmail,
+                  technicalExperience: reg.technicalExperience,
+                  motivation: reg.motivation,
+                  members: reg.members.map((m) => ({
+                    id: m.id,
+                    firstName: m.firstName,
+                    lastName: m.lastName,
+                    email: m.email,
+                    whatsapp: m.whatsapp,
+                    university: m.university,
+                    major: m.major,
+                    ieeeStatus: m.ieeeStatus,
+                    ieeeMembershipId: m.ieeeMembershipId,
+                  })),
+                }}
+              />
               <DeleteRegistration id={reg.id} teamName={reg.teamName} />
             </div>
           </Card>
