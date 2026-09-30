@@ -6,7 +6,7 @@ import { DayIcon } from "@/components/day-site/icons";
 import { PlaceBlock, RunTicks, gapToLeader } from "@/components/day-site/Tower";
 import { TowerMotion } from "@/components/day-site/TowerMotion";
 import { Empty, HeldBack, PageHead, Readout, SheetView } from "@/components/day-site/ui";
-import { QUALIFIERS, QUALIFYING_STATUS_LABELS, type Standing } from "@/lib/bracket";
+import { QUALIFYING_STATUS_LABELS, ordinal, type Standing } from "@/lib/bracket";
 import { loadPublicCompetition } from "@/lib/public-competition";
 import { formatPoints, formatReached, formatTime } from "@/lib/score-sheet";
 import { requireDayViewer } from "@/lib/day-access";
@@ -23,7 +23,7 @@ function sheetLine(row: Standing): string {
 }
 
 /** One line of the timing tower; opens to show every run. */
-function Row({ row, locked, leader }: { row: Standing; locked: boolean; leader: number | null }) {
+function Row({ row, locked, leader, size }: { row: Standing; locked: boolean; leader: number | null; size: number }) {
   const gap = gapToLeader(row.best, leader);
   return (
     <details
@@ -42,7 +42,7 @@ function Row({ row, locked, leader }: { row: Standing; locked: boolean; leader: 
             <span className="block truncate font-semibold text-day-ink">{row.name}</span>
             <span className="day-num mt-0.5 block truncate text-[0.8125rem] text-day-muted sm:hidden">{sheetLine(row)}</span>
             {row.qualified ? (
-              <span className="mt-0.5 hidden text-xs font-semibold text-day-good sm:block">{locked ? "Through to the knockout" : `In the top ${QUALIFIERS}`}</span>
+              <span className="mt-0.5 hidden text-xs font-semibold text-day-good sm:block">{locked ? "Through to the knockout" : `In the top ${size}`}</span>
             ) : !row.eligible ? (
               <span className="mt-0.5 hidden text-xs font-semibold text-day-faint sm:block">Not eligible</span>
             ) : !row.recorded ? (
@@ -82,13 +82,14 @@ function Row({ row, locked, leader }: { row: Standing; locked: boolean; leader: 
   );
 }
 
-/** Phase 1: the qualifying table as a timing tower, and the wall the top 32 have to clear. */
+/** Phase 1: the qualifying table as a timing tower, and the wall the top 32 (or 16) have to clear. */
 export default async function DayStandingsPage() {
   await requireDayViewer();
   const state = await loadPublicCompetition();
   const ranked = state.table.filter((row) => row.rank !== null);
   const unranked = state.table.filter((row) => row.rank === null);
-  const cut = ranked[Math.min(QUALIFIERS, ranked.length) - 1];
+  const places = state.bracketSize;
+  const cut = ranked[Math.min(places, ranked.length) - 1];
   const locked = state.qualifyingStatus === "LOCKED";
   const leader = ranked[0]?.best ?? null;
 
@@ -99,7 +100,7 @@ export default async function DayStandingsPage() {
         title="Qualifying"
         lead={
           state.qualifyingNote ||
-          `Eight minutes each on the maze. Score = successful runs ÷ official time × 1000, the official time being the fastest run. The top ${QUALIFIERS} go through.`
+          `Eight minutes each on the maze. Score = successful runs ÷ official time × 1000, the official time being the fastest run. The top ${places} go through.`
         }
       />
 
@@ -110,11 +111,11 @@ export default async function DayStandingsPage() {
         items={[
           { label: "Have run", value: state.table.filter((row) => row.recorded).length, hint: `of ${state.table.length} teams` },
           { label: "Top score", value: formatPoints(ranked[0]?.best), hint: ranked[0]?.name, tone: "gold" },
-          { label: "Places in the knockout", value: QUALIFIERS, hint: "seeded 1 to 32", tone: "crimson" },
+          { label: "Places in the knockout", value: places, hint: `seeded 1 to ${places}`, tone: "crimson" },
           {
-            label: locked ? "Last score through" : "Score to beat for 32nd",
-            value: ranked.length >= QUALIFIERS && cut ? formatPoints(cut.best) : "Open",
-            hint: ranked.length < QUALIFIERS ? `${QUALIFIERS - ranked.length} place${QUALIFIERS - ranked.length === 1 ? "" : "s"} still unclaimed` : cut?.name,
+            label: locked ? "Last score through" : `Score to beat for ${ordinal(places)}`,
+            value: ranked.length >= places && cut ? formatPoints(cut.best) : "Open",
+            hint: ranked.length < places ? `${places - ranked.length} place${places - ranked.length === 1 ? "" : "s"} still unclaimed` : cut?.name,
             tone: "good",
           },
         ]}
@@ -135,18 +136,18 @@ export default async function DayStandingsPage() {
             <TowerMotion>
               {ranked.map((row) => (
                 <Fragment key={row.teamId}>
-                  <Row row={row} locked={locked} leader={leader} />
-                  {row.rank === QUALIFIERS && ranked.length > QUALIFIERS ? (
+                  <Row row={row} locked={locked} leader={leader} size={places} />
+                  {row.rank === places && ranked.length > places ? (
                     <div className="relative flex items-center gap-3 bg-day-live/[0.05] px-3 py-2.5 sm:px-5" role="separator" aria-label="Qualification line">
                       <span className="day-wall flex-1 bg-day-live before:bg-day-live after:bg-day-live" aria-hidden="true" />
-                      <span className="shrink-0 text-[0.8125rem] font-bold text-day-live">Top {QUALIFIERS} go through</span>
+                      <span className="shrink-0 text-[0.8125rem] font-bold text-day-live">Top {places} go through</span>
                       <span className="day-wall flex-1 bg-day-live before:bg-day-live after:bg-day-live" aria-hidden="true" />
                     </div>
                   ) : null}
                 </Fragment>
               ))}
               {unranked.map((row) => (
-                <Row key={row.teamId} row={row} locked={locked} leader={leader} />
+                <Row key={row.teamId} row={row} locked={locked} leader={leader} size={places} />
               ))}
             </TowerMotion>
           </div>

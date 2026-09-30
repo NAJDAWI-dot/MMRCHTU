@@ -38,6 +38,39 @@ export const FINAL_ROUND = 6;
 export const KNOCKOUT_ROUNDS = [2, 3, 4, 5, 6] as const;
 export type KnockoutRound = (typeof KNOCKOUT_ROUNDS)[number];
 
+/**
+ * How many teams qualifying sends to the knockout. 32 starts it at the round
+ * of 32; 16 skips that round and starts at the round of 16, seeded the same
+ * way (1st v 16th, 2nd v 15th). The rounds keep their numbers either way, so
+ * phase 3 is always the round of 16.
+ */
+export const BRACKET_SIZES = [32, 16] as const;
+export type BracketSize = (typeof BRACKET_SIZES)[number];
+
+export function parseBracketSize(value: unknown): BracketSize {
+  return Number(value) === 16 ? 16 : 32;
+}
+
+/** The round a knockout of this size starts at: 2 for 32 teams, 3 for 16. */
+export function firstRoundFor(size: number): number {
+  return FINAL_ROUND + 1 - Math.round(Math.log2(size));
+}
+
+/** The knockout rounds a bracket of this size plays. */
+export function roundsFor(size: number): number[] {
+  const first = firstRoundFor(size);
+  return KNOCKOUT_ROUNDS.filter((round) => round >= first);
+}
+
+/**
+ * The round a stored bracket starts at: its earliest round, since a bracket
+ * drawn from the top 16 has no round of 32 rows at all.
+ */
+export function firstRoundOf(input: readonly { round: number }[]): number {
+  if (input.length === 0) return FIRST_KNOCKOUT_ROUND;
+  return Math.max(FIRST_KNOCKOUT_ROUND, Math.min(...input.map((match) => match.round)));
+}
+
 export interface PhaseInfo {
   phase: number;
   name: string;
@@ -283,10 +316,11 @@ export interface SeededMatch {
 }
 
 /**
- * The round of 32, from team ids in seed order (index 0 is seed 1).
+ * The first knockout round, from team ids in seed order (index 0 is seed 1):
+ * the round of 32, or with a size of 16 the round of 16.
  *
- * With fewer than 32 qualifiers the missing seeds are byes, and because the
- * missing ones are always the lowest, the byes fall to the top seeds.
+ * With fewer qualifiers than places the missing seeds are byes, and because
+ * the missing ones are always the lowest, the byes fall to the top seeds.
  */
 export function seedFirstRound(bySeed: string[], size: number = QUALIFIERS): SeededMatch[] {
   const order = bracketOrder(size);
@@ -295,7 +329,7 @@ export function seedFirstRound(bySeed: string[], size: number = QUALIFIERS): See
     const seedA = order[slot * 2]!;
     const seedB = order[slot * 2 + 1]!;
     matches.push({
-      round: FIRST_KNOCKOUT_ROUND,
+      round: firstRoundFor(size),
       slot,
       seedA,
       seedB,
@@ -383,15 +417,17 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
   const conflicts: ResolvedMatch[] = [];
 
   const outcome = new Map<string, Side>();
+  const firstRound = firstRoundOf(input);
 
   for (const round of KNOCKOUT_ROUNDS) {
+    if (round < firstRound) continue;
     for (let slot = 0; slot < matchesInRound(round); slot++) {
       const key = `${round}:${slot}`;
       const stored = byKey.get(key);
 
       let sideA: Side;
       let sideB: Side;
-      if (round === FIRST_KNOCKOUT_ROUND) {
+      if (round === firstRound) {
         sideA = { team: stored?.teamAId ?? null, seed: stored?.seedA ?? null, bye: !stored?.teamAId };
         sideB = { team: stored?.teamBId ?? null, seed: stored?.seedB ?? null, bye: !stored?.teamBId };
       } else {
@@ -567,7 +603,7 @@ export function journeyOf(
   const mine = matches
     .filter((match) => match.teamAId === teamId || match.teamBId === teamId)
     .sort((a, b) => a.round - b.round);
-  const first = mine.find((match) => match.round === FIRST_KNOCKOUT_ROUND);
+  const first = mine[0] && mine[0].round === firstRoundOf(matches) ? mine[0] : undefined;
   const seed = first ? (first.teamAId === teamId ? first.seedA : first.seedB) : null;
 
   if (mine.length > 0) {
@@ -609,10 +645,11 @@ export function ordinal(n: number): string {
 export const INSPECTION_STATES = ["PENDING", "PASSED", "FAILED"] as const;
 export type InspectionState = (typeof INSPECTION_STATES)[number];
 
+/** Whether the robot is available to run. The stored names predate this wording. */
 export const INSPECTION_LABELS: Record<InspectionState, string> = {
-  PENDING: "Not inspected",
-  PASSED: "Passed inspection",
-  FAILED: "Failed inspection",
+  PENDING: "Robot not confirmed",
+  PASSED: "Robot available",
+  FAILED: "Robot not available",
 };
 
 export function parseInspection(value: unknown): InspectionState {

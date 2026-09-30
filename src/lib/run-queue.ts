@@ -20,6 +20,8 @@ export interface QueueEntry {
   eligible: boolean;
   /** Whether the team has a match sheet, so has run. */
   ran: boolean;
+  /** The organisers' code for the team, when it has one. */
+  code?: string;
 }
 
 export interface RunQueue {

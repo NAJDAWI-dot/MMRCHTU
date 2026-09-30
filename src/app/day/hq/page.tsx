@@ -9,6 +9,9 @@ import { prisma } from "@/lib/prisma";
 import { ROLE_LABELS, canOpen } from "@/lib/roles";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import { DESKS } from "./desks";
+import { ArmedForm } from "./DeskKit";
+import { resetDay } from "./reset-actions";
+import { RESET_WORD } from "./state";
 import { openDaySite } from "@/lib/day-links";
 
 export const metadata: Metadata = { title: "Overview" };
@@ -42,7 +45,7 @@ export default async function DayHqPage() {
 
   const stats = [
     { label: "Checked in", value: arrived, of: total, href: "/day/hq/check-in", tone: "bg-day-good" },
-    { label: "Passed inspection", value: passed, of: total, href: "/day/hq/check-in", tone: "bg-day-plum" },
+    { label: "Robots available", value: passed, of: total, href: "/day/hq/check-in", tone: "bg-day-plum" },
     { label: "Have run", value: ran, of: total, href: "/day/hq/scoring", tone: "bg-day-crimson" },
     { label: "Matches decided", value: decided, of: playable.length, href: "/day/hq/scoring/bracket", tone: "bg-day-gold" },
   ].filter((stat) => canOpen(roles, stat.href));
@@ -136,6 +139,39 @@ export default async function DayHqPage() {
           </Link>
         ) : null}
       </section>
+
+      {roles.includes("MASTER") ? (
+        <section className="day-card space-y-4 border border-dashed border-day-live/30 p-5 sm:p-6" aria-labelledby="reset-title">
+          <div className="max-w-2xl">
+            <p className="day-kicker">Master only</p>
+            <h2 id="reset-title" className="day-display mt-2 text-2xl text-day-ink">
+              Reset the day
+            </h2>
+            <p className="mt-1 text-sm text-day-muted">
+              After a rehearsal or test data, take the day back to the start. Check-ins, badges, robot availability, notes, withdrawals, the running
+              order and its times, every match sheet, the bracket, the call queue and anything held back on the Reveal desk all go. The teams and their
+              codes, the schedule, announcements, photos, sponsors, volunteers, guides and settings stay.
+            </p>
+          </div>
+          <ArmedForm
+            action={resetDay}
+            label="Reset the day"
+            destructive
+            warning={
+              <>
+                This cannot be undone. {total} teams go back to not here yet, and every result so far is removed. Type <strong>{RESET_WORD}</strong> to
+                confirm.
+              </>
+            }
+            confirm="Reset everything"
+          >
+            <label className="block">
+              <span className="sr-only">Type {RESET_WORD} to confirm</span>
+              <input name="confirm" autoComplete="off" spellCheck={false} className="day-input day-num w-48 uppercase" placeholder={RESET_WORD} />
+            </label>
+          </ArmedForm>
+        </section>
+      ) : null}
 
       {roles.length === 0 ? (
         <p className="day-card p-6 text-day-muted">

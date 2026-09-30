@@ -8,3 +8,6 @@ export interface DeskState {
 }
 
 export const EMPTY_DESK_STATE: DeskState = { ok: false, message: null };
+
+/** What has to be typed to reset the day (reset-actions.ts): enough that nobody does it by accident. */
+export const RESET_WORD = "RESET";

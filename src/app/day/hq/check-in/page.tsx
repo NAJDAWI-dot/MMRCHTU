@@ -54,8 +54,7 @@ export default async function CheckInPage() {
       deskNote: team.deskNote,
       inspection: team.inspection,
       inspectionNote: team.inspectionNote,
-      robotName: team.robotName,
-      pit: team.pit,
+      teamCode: team.teamCode,
       withdrawn: team.withdrawn,
       payment: {
         label: PAYMENT_STATUS_LABELS[status] ?? "Not paid",
@@ -69,19 +68,19 @@ export default async function CheckInPage() {
   const here = teams.filter((team) => team.checkedIn).length;
   const people = teams.reduce((sum, team) => sum + team.presentIds.length, 0);
   const allPeople = teams.reduce((sum, team) => sum + team.members.length, 0);
-  const inspected = teams.filter((team) => team.inspection === "PASSED").length;
+  const available = teams.filter((team) => team.inspection === "PASSED").length;
   const badges = teams.filter((team) => team.badges).length;
 
   const tiles = [
     { label: "Teams here", value: here, of: teams.length, tone: "bg-day-good" },
     { label: "People here", value: people, of: allPeople, tone: "bg-day-plum" },
     { label: "Badges out", value: badges, of: here, tone: "bg-day-gold" },
-    { label: "Inspected", value: inspected, of: here, tone: "bg-day-crimson" },
+    { label: "Robots available", value: available, of: here, tone: "bg-day-crimson" },
   ];
 
   return (
     <div className="space-y-8">
-      <DeskHead icon="badge" title="Check-in" lead="Search, tap Check in, done. Open a team for its members, contacts, fee, badges, pit and inspection." />
+      <DeskHead icon="badge" title="Check-in" lead="Search, tap Check in, done. Open a team for its members, contacts, fee, badges, team code and whether its robot is available." />
 
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {tiles.map((tile) => (

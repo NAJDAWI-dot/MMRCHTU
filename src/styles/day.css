@@ -755,6 +755,12 @@ html.lenis body {
   min-height: 48rem;
 }
 
+/* A knockout of sixteen: no round of 32 on either side. */
+.day-bracket-16 {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.15fr) repeat(3, minmax(0, 1fr));
+  min-height: 36rem;
+}
+
 .day-bracket-col {
   display: flex;
   flex-direction: column;
@@ -1113,5 +1119,378 @@ html.lenis body {
   .day-splash-flag {
     animation-delay: 900ms;
     animation-duration: 300ms;
+  }
+}
+
+/* ------------------------------------------------------------ the draw board
+   The qualifying order on a projector (/day/draw). Every team fits one
+   screen: the columns follow the number of teams, the rows fill the height,
+   and the type is sized off a row. It reads down each column, like a
+   timetable. Deals in once, in order, when it opens. */
+
+.day-draw-grid {
+  --cell: calc((100dvh - 15rem) / var(--rows));
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
+  grid-auto-flow: column;
+  gap: 0.7vh 1.4vw;
+}
+
+.day-draw-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.9vw;
+  min-height: 0;
+  padding: 0 1vw;
+  overflow: hidden;
+  background: rgb(var(--day-surface));
+  box-shadow: inset 0 0 0 1px rgb(var(--day-line) / 0.09);
+  font-size: clamp(0.85rem, calc(var(--cell) * 0.34), 2.3rem);
+  animation: day-draw-deal 560ms var(--day-ease) both;
+  animation-delay: calc(var(--i) * 26ms);
+}
+
+.day-draw-order {
+  min-width: 2ch;
+  font-size: 1.2em;
+  font-weight: 800;
+  line-height: 1;
+  color: rgb(var(--day-crimson));
+}
+
+/* The code and where the team is, small, over the name. */
+.day-draw-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  margin-bottom: 0.15em;
+  font-size: 0.5em;
+  line-height: 1;
+}
+
+.day-draw-code {
+  flex-shrink: 0;
+  padding: 0.14em 0.4em;
+  font-size: 1.1em;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  background: rgb(var(--day-ink));
+  color: rgb(var(--day-on-ink));
+}
+
+.day-draw-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* The name gets the width, and two lines before it gives up. */
+.day-draw-name {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 0.74em;
+  line-height: 1.04;
+  overflow-wrap: anywhere;
+  color: rgb(var(--day-ink));
+}
+
+.day-draw-time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-left: auto;
+  font-size: 1.12em;
+  font-weight: 700;
+  line-height: 1;
+  color: rgb(var(--day-ink));
+}
+
+.day-draw-shift {
+  margin-top: 0.18em;
+  font-size: 0.5em;
+  font-weight: 800;
+  color: rgb(var(--day-gold));
+}
+
+/* On the maze: the one dark cell on the board, with the live edge. */
+.day-draw-cell.day-draw-now {
+  background: rgb(22 10 28);
+  box-shadow:
+    inset 0 0 0 2px rgb(var(--day-live)),
+    0 0 0 4px rgb(var(--day-live) / 0.14);
+}
+
+.day-draw-soon {
+  box-shadow:
+    inset 4px 0 0 rgb(var(--day-crimson)),
+    inset 0 0 0 1px rgb(var(--day-line) / 0.09);
+}
+
+.day-draw-ran {
+  opacity: 0.5;
+}
+
+.day-draw-out {
+  opacity: 0.4;
+}
+
+.day-draw-out .day-draw-name > :last-child {
+  text-decoration: line-through;
+}
+
+@keyframes day-draw-deal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.7rem, 0);
+  }
+}
+
+/* On a phone the board is a list to scroll, not a screen to fit. */
+@media (max-width: 767px) {
+  .day-draw-grid {
+    --cell: 3.6rem;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-flow: row;
+    gap: 0.4rem;
+  }
+
+  .day-draw-cell {
+    min-height: 3.6rem;
+    padding: 0 0.75rem;
+    gap: 0.75rem;
+    font-size: 1.1rem;
+  }
+
+  .day-draw-crest {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .day-draw-cell {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------ the call
+   A team called to the maze, on the hall screen (CallTakeover): the screen
+   opens from the middle like a door, the walls rise, the crest lands, the
+   name comes up and the route draws under "to the maze"; a crimson line
+   along the bottom counts the call out. */
+
+.day-call {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 0;
+  background: rgb(14 6 18);
+  animation:
+    day-call-in 700ms var(--day-ease) both,
+    day-call-out 500ms ease-in calc(var(--hold) - 500ms) forwards;
+}
+
+@keyframes day-call-in {
+  from {
+    clip-path: inset(49% 0 49% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes day-call-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.day-call-walls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.day-call-walls > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--i) * 12.5%);
+  width: 2px;
+  background: rgb(var(--day-line) / 0.07);
+  transform-origin: 50% 100%;
+  animation: day-call-wall 900ms var(--day-ease) both;
+  animation-delay: calc(200ms + var(--i) * 55ms);
+}
+
+.day-call-walls > span:nth-child(5) {
+  background: rgb(var(--day-crimson) / 0.35);
+}
+
+@keyframes day-call-wall {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+.day-call-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 6vw;
+  text-align: center;
+}
+
+.day-call-kicker {
+  display: flex;
+  align-items: center;
+  gap: 1.2vh;
+  font-size: 3.2vh;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(var(--day-live));
+  animation: day-call-up 600ms var(--day-ease) 250ms both;
+}
+
+.day-call-crest {
+  margin-top: 4vh;
+  animation: day-call-pop 850ms cubic-bezier(0.2, 1.4, 0.3, 1) 350ms both;
+}
+
+.day-call-code {
+  margin-top: 3vh;
+  padding: 0.08em 0.45em;
+  font-size: 5.5vh;
+  font-weight: 800;
+  background: rgb(var(--day-ink));
+  color: rgb(var(--day-on-ink));
+  animation: day-call-up 600ms var(--day-ease) 550ms both;
+}
+
+.day-call-name {
+  max-width: 88vw;
+  margin-top: 2vh;
+  font-size: clamp(3rem, 13vh, 10rem);
+  line-height: 0.95;
+  overflow-wrap: anywhere;
+  color: rgb(var(--day-ink));
+}
+
+.day-call-name > span {
+  display: inline-block;
+  animation: day-call-up 700ms var(--day-ease) 650ms both;
+}
+
+.day-call-to {
+  display: flex;
+  align-items: center;
+  gap: 2vw;
+  margin-top: 3vh;
+  font-size: 4vh;
+  font-weight: 700;
+  color: rgb(var(--day-crimson));
+  animation: day-call-up 600ms var(--day-ease) 900ms both;
+}
+
+.day-call-route {
+  width: 16vw;
+  height: 0.7vh;
+  background: rgb(var(--day-crimson));
+  transform-origin: 0 50%;
+  animation: day-call-draw 900ms var(--day-ease) 1000ms both;
+}
+
+.day-call-next {
+  margin-top: 6vh;
+  font-size: 3vh;
+  color: rgb(var(--day-muted));
+  animation: day-call-up 600ms var(--day-ease) 1300ms both;
+}
+
+.day-call-next > span {
+  margin-right: 0.5em;
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgb(var(--day-gold));
+}
+
+.day-call-timer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 0.8vh;
+  background: rgb(var(--day-crimson));
+  transform-origin: 0 50%;
+  animation: day-call-timer var(--hold) linear both;
+}
+
+@keyframes day-call-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 3vh, 0);
+  }
+}
+
+@keyframes day-call-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-8deg);
+  }
+}
+
+@keyframes day-call-draw {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes day-call-timer {
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* A team just called, on the live page: the card lights once from the left
+   and says so for the first minute and a half. */
+.day-called::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgb(var(--day-live) / 0.35), transparent);
+  transform: translateX(-100%);
+  animation: day-called-sweep 1400ms var(--day-ease) 300ms both;
+}
+
+@keyframes day-called-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .day-call,
+  .day-call *,
+  .day-called::after {
+    animation: none !important;
+  }
+
+  .day-called::after {
+    display: none;
   }
 }

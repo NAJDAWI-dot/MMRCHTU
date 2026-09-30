@@ -99,7 +99,7 @@ export default async function RevealDeskPage() {
       </section>
 
       <ol className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
-        {REVEAL_PHASES.map((phase) => (
+        {REVEAL_PHASES.filter((phase) => phase === 1 || state.rounds.includes(phase)).map((phase) => (
           <li key={phase} className="day-card space-y-4 p-5">
             <div className="flex items-start justify-between gap-3">
               <div>

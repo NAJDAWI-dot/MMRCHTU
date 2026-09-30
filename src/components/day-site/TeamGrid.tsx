@@ -19,7 +19,8 @@ export interface TeamCardData {
   best: string;
   seed: number | null;
   checkedIn: boolean;
-  robotName: string;
+  /** The organisers' code for the team, or "". */
+  teamCode: string;
   members: number;
   university: string;
 }
@@ -70,7 +71,7 @@ function TeamCard({ team }: { team: TeamCardData }) {
             {team.name}
           </span>
           <span className="mt-1 block truncate text-[0.8125rem] text-day-muted">
-            {[team.robotName ? `Robot ${team.robotName}` : null, team.university || null, `${team.members} member${team.members === 1 ? "" : "s"}`]
+            {[team.teamCode || null, team.university || null, `${team.members} member${team.members === 1 ? "" : "s"}`]
               .filter(Boolean)
               .join(" · ")}
           </span>
@@ -112,7 +113,7 @@ export function TeamGrid({ teams }: { teams: TeamCardData[] }) {
     const list = teams.filter(
       (team) =>
         matches(team, filter) &&
-        (!q || team.name.toLowerCase().includes(q) || team.robotName.toLowerCase().includes(q) || team.university.toLowerCase().includes(q)),
+        (!q || team.name.toLowerCase().includes(q) || team.teamCode.toLowerCase().includes(q) || team.university.toLowerCase().includes(q)),
     );
     if (sort === "rank") {
       list.sort((a, b) => (a.seed ?? a.rank ?? 999) - (b.seed ?? b.rank ?? 999) || a.name.localeCompare(b.name));

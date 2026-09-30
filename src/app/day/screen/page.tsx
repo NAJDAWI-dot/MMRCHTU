@@ -3,7 +3,7 @@ import { Crest } from "@/components/day-site/Crest";
 import { DayMouse } from "@/components/day-site/DayMice";
 import { SponsorLogo } from "@/components/day-site/SponsorLogo";
 import { DayIcon } from "@/components/day-site/icons";
-import { QUALIFIERS, matchesInRound, phaseInfo } from "@/lib/bracket";
+import { matchesInRound, phaseInfo } from "@/lib/bracket";
 import { type BracketMatch } from "@/lib/competition";
 import { loadPublicCompetition } from "@/lib/public-competition";
 import { requireDayViewer } from "@/lib/day-access";
@@ -16,6 +16,7 @@ import { prisma } from "@/lib/prisma";
 import { finalPlacings, roundLeaderboard, type RoundResult } from "@/lib/screen-boards";
 import { groupByTier } from "@/lib/sponsors";
 import { formatPoints, formatReached, formatTime } from "@/lib/score-sheet";
+import type { ScreenCall } from "./CallTakeover";
 import { HallScreen, type ScreenPanel } from "./HallScreen";
 import { recentReveal } from "@/lib/reveal";
 import { revealShow } from "@/lib/reveal-show";
@@ -118,8 +119,11 @@ export default async function HallScreenPage() {
               {now ? "On the maze" : "First up"}
             </p>
             <div className="mt-[4vh] flex items-center gap-[4vh]">
-              <Crest name={lead.name} size={150} />
-              <p className="day-display min-w-0 break-words text-[11vh] leading-[0.95] text-day-ink">{lead.name}</p>
+              <Crest name={lead.name} size={150} ring={!!now} />
+              <div className="min-w-0">
+                {lead.code ? <p className="day-num inline-block bg-day-ink px-[1vh] text-[4vh] font-extrabold text-day-on-ink">{lead.code}</p> : null}
+                <p className="day-display break-words text-[11vh] leading-[0.95] text-day-ink">{lead.name}</p>
+              </div>
             </div>
             <p className="day-num mt-[4vh] text-[3vh] text-day-muted">
               Runs #{lead.runOrder}
@@ -144,7 +148,10 @@ export default async function HallScreenPage() {
                     <>
                       <div className="mt-[2vh] flex items-center gap-[2.5vh]">
                         <Crest name={entry.name} size={72} />
-                        <p className="day-display line-clamp-2 min-w-0 break-words text-[5.4vh] leading-[1.02] text-day-ink">{entry.name}</p>
+                        <p className="day-display line-clamp-2 min-w-0 break-words text-[5.4vh] leading-[1.02] text-day-ink">
+                          {entry.code ? <span className="day-num mr-[1vh] bg-day-ink px-[0.8vh] align-middle text-[3vh] font-extrabold text-day-on-ink">{entry.code}</span> : null}
+                          {entry.name}
+                        </p>
                       </div>
                       <p className="day-num mt-[2vh] text-[2.4vh] text-day-muted">
                         #{entry.runOrder}
@@ -264,7 +271,7 @@ export default async function HallScreenPage() {
   } else if (ranked.length) {
     const leader = ranked[0]?.best ?? null;
     board = {
-      kicker: `Phase 1 · Qualifying · the top ${QUALIFIERS} go through`,
+      kicker: `Phase 1 · Qualifying · the top ${state.bracketSize} go through`,
       title: "Leaderboard",
       rows: ranked.slice(0, 10).map((row) => ({
         key: row.teamId,
@@ -505,6 +512,20 @@ export default async function HallScreenPage() {
 
   const alert = shell.alerts[0] ?? null;
 
+  const called = queue.active ? queue.queue.now : null;
+  const call: ScreenCall | null =
+    called && queue.calledAt
+      ? {
+          key: `${called.id}@${queue.calledAt.toISOString()}`,
+          name: called.name,
+          code: called.code ?? "",
+          runOrder: called.runOrder,
+          calledAt: queue.calledAt.toISOString(),
+          next: queue.queue.onDeck ? { name: queue.queue.onDeck.name, code: queue.queue.onDeck.code ?? "" } : null,
+          then: queue.queue.inHole ? { name: queue.queue.inHole.name, code: queue.queue.inHole.code ?? "" } : null,
+        }
+      : null;
+
   return (
     <HallScreen
       panels={panels}
@@ -512,6 +533,7 @@ export default async function HallScreenPage() {
       alert={alert ? { title: alert.title, body: alert.body, tone: alert.tone } : null}
       followUrl={shell.isPublic ? "mmrchtu.tech" : "mmrchtu.tech/day"}
       reveal={revealShow(state, recentReveal(config.lastReveal, Date.now()))}
+      call={call}
     />
   );
 }

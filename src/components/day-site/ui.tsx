@@ -319,7 +319,7 @@ export function MatchCard({
                       {name}
                     </Link>
                   ) : (
-                    <span className="block truncate text-[15px] italic text-day-faint">{match.round === 2 ? "Bye" : "To be decided"}</span>
+                    <span className="block truncate text-[15px] italic text-day-faint">{match.seedA !== null || match.seedB !== null ? "Bye" : "To be decided"}</span>
                   )}
                   {side.seed ? <span className="sr-only">Seed {side.seed}</span> : null}
                 </div>

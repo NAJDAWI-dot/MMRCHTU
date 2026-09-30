@@ -11,7 +11,8 @@ import { parseClock, zonedInstant } from "@/lib/day-slots";
 import { competitionDayKey, logJson, planMatchResult, qualifyingSlot, type StoredMatch } from "@/lib/match-results";
 import {
   FINAL_ROUND,
-  QUALIFIERS,
+  firstRoundFor,
+  parseBracketSize,
   changedMatches,
   matchesInRound,
   parseQualifyOverride,
@@ -26,6 +27,7 @@ import { clockTime } from "@/lib/day-mode";
 import { cleanLog, formatPoints, scoreSheet, sheetFromFields, workingOf } from "@/lib/score-sheet";
 import { SHEET_PROBLEMS as PROBLEMS, readScoreFile, readTimingFile } from "@/lib/score-transfer";
 import { TEST_DATA_BY, TEST_DATA_NOTE, randomSheet } from "@/lib/test-data";
+import { MAX_SHIFT, planShift } from "@/lib/time-shift";
 import type { DeskState } from "../state";
 
 const SECTION = "/day/hq/scoring";
@@ -62,7 +64,7 @@ export async function saveSheet(_previous: DeskState, formData: FormData): Promi
   const teamId = String(formData.get("teamId") ?? "");
   const team = state.byId.get(teamId);
   if (!team) return { ok: false, message: "Pick a team from the list." };
-  if (!team.eligible) return { ok: false, message: `${team.name} cannot qualify: ${team.withdrawn ? "withdrawn" : "failed inspection"}.` };
+  if (!team.eligible) return { ok: false, message: `${team.name} cannot qualify: ${team.withdrawn ? "withdrawn" : "robot not available"}.` };
 
   const parsed = sheetFromFields(formData.getAll("time"), formData.getAll("result"), formData.getAll("cell"));
   if (!parsed.ok) return { ok: false, message: PROBLEMS[parsed.problem] };
@@ -189,6 +191,7 @@ async function queueState() {
     runOrder: team.runOrder,
     eligible: team.eligible,
     ran: !!team.standing?.recorded,
+    code: team.teamCode,
   }));
   return { state, entries, current: config.queueTeamId, history: config.queueHistory };
 }
@@ -222,7 +225,7 @@ export async function callChosen(_previous: DeskState, formData: FormData): Prom
   if (state.qualifyingStatus === "LOCKED") return { ok: false, message: "Qualifying is closed, so there is nobody left to call." };
   const chosen = entries.find((entry) => entry.id === String(formData.get("teamId") ?? ""));
   if (!chosen || chosen.runOrder === null) return { ok: false, message: "Pick a team from the running order." };
-  if (!chosen.eligible) return { ok: false, message: `${chosen.name} cannot run: withdrawn or failed inspection.` };
+  if (!chosen.eligible) return { ok: false, message: `${chosen.name} cannot run: withdrawn or robot not available.` };
   return callTeam(chosen.id, chosen.name, current, history);
 }
 
@@ -267,13 +270,32 @@ const hasResult = (match: MatchInput) =>
     cleanLog(match.runLogB).length > 0);
 
 /**
- * Closes qualifying and draws the round of 32 from the table as it stands.
+ * How many go through, before the draw: the standings, the hall screen and
+ * the team pages draw their line at this. The draw itself sets it again.
+ */
+export async function setBracketSize(_previous: DeskState, formData: FormData): Promise<DeskState> {
+  await requireSection(SECTION);
+  const state = await loadCompetition();
+  if (state.drawn) return { ok: false, message: "The bracket is drawn. Reopen qualifying to change how many go through." };
+  const size = parseBracketSize(formData.get("size"));
+  await upsertConfig({ bracketSize: size });
+  refreshDaySite();
+  return { ok: true, message: `The top ${size} go through. The standings draw the line there now.` };
+}
+
+/**
+ * Closes qualifying and draws the knockout from the table as it stands: the
+ * top 32 into the round of 32, or the top 16 straight into the round of 16,
+ * 1st against the last place either way.
  *
  * Refuses to draw over a bracket that already has results in it unless told
  * to, because a redraw throws every one of them away.
  */
 export async function drawBracket(_previous: DeskState, formData: FormData): Promise<DeskState> {
   await requireSection(SECTION);
+  const size = parseBracketSize(formData.get("size"));
+  // The line is drawn at the size asked for, so the table is read at it too.
+  await upsertConfig({ bracketSize: size });
   const state = await loadCompetition();
 
   const qualified = state.table.filter((row) => row.qualified).map((row) => row.teamId);
@@ -289,9 +311,9 @@ export async function drawBracket(_previous: DeskState, formData: FormData): Pro
     };
   }
 
-  const first = seedFirstRound(qualified.slice(0, QUALIFIERS));
+  const first = seedFirstRound(qualified.slice(0, size), size);
   const empty: MatchInput[] = [];
-  for (let round = 3; round <= FINAL_ROUND; round++) {
+  for (let round = firstRoundFor(size) + 1; round <= FINAL_ROUND; round++) {
     for (let slot = 0; slot < matchesInRound(round); slot++) {
       empty.push({ id: "", round, slot, teamAId: null, teamBId: null, seedA: null, seedB: null, scoreA: null, scoreB: null, winnerId: null });
     }
@@ -301,7 +323,7 @@ export async function drawBracket(_previous: DeskState, formData: FormData): Pro
   refreshDaySite();
   return {
     ok: true,
-    message: `Drawn. ${qualified.length >= QUALIFIERS ? "32 teams" : `${qualified.length} teams, with byes for the top seeds,`} are in the round of 32.`,
+    message: `Drawn. ${qualified.length >= size ? `${size} teams` : `${qualified.length} teams, with byes for the top seeds,`} are in the ${phaseInfo(firstRoundFor(size)).name.toLowerCase()}.`,
   };
 }
 
@@ -449,7 +471,7 @@ export async function importScores(_previous: DeskState, formData: FormData): Pr
   }
   for (const sheet of parsed.qualifying) {
     const team = state.byId.get(sheet.team.id)!;
-    if (!team.eligible) errors.push(`Line ${sheet.line}: ${team.name} cannot qualify: ${team.withdrawn ? "withdrawn" : "failed inspection"}.`);
+    if (!team.eligible) errors.push(`Line ${sheet.line}: ${team.name} cannot qualify: ${team.withdrawn ? "withdrawn" : "robot not available"}.`);
   }
 
   // Knockout sides, grouped into matches and played through in bracket order.
@@ -690,4 +712,64 @@ export async function removeTestSheets(_previous: DeskState, _formData: FormData
   if (!left && state.qualifyingStatus === "OPEN") await upsertConfig({ qualifyingStatus: "NOT_SET" });
   refreshDaySite();
   return { ok: true, message: `Removed ${count} test sheet${count === 1 ? "" : "s"}. Real sheets are untouched.` };
+}
+
+// ------------------------------------------------------ moving the times
+
+/** Every team in the running order with the time it runs now, as the draw board shows it. */
+async function currentSlots() {
+  const [state, config] = await Promise.all([loadCompetition(), getCompetitionDayConfig()]);
+  const day = competitionDayKey(config.eventDate);
+  const teams = state.competitors
+    .filter((team) => team.runOrder !== null)
+    .map((team) => {
+      const at = qualifyingSlot(team, config, day);
+      return { id: team.id, name: team.name, runOrder: team.runOrder, slot: at ? clockTime(at) : "" };
+    });
+  return { state, teams };
+}
+
+/** Moves every team from a place in the order onwards by some minutes: a break, a late start, a repair. */
+export async function shiftTimes(_previous: DeskState, formData: FormData): Promise<DeskState> {
+  await requireSection(SECTION);
+  const { state, teams } = await currentSlots();
+  if (state.qualifyingStatus === "LOCKED") return { ok: false, message: "Qualifying is closed, so there are no slots left to move." };
+  if (!teams.length) return { ok: false, message: "Draw the running order first." };
+  const from = Math.round(Number(formData.get("from")));
+  const minutes = Math.round(Number(formData.get("minutes")));
+  if (!Number.isFinite(from) || from < 1 || from > teams.length) return { ok: false, message: `Start from a place between 1 and ${teams.length}.` };
+  if (!Number.isFinite(minutes) || minutes === 0 || Math.abs(minutes) > MAX_SHIFT) {
+    return { ok: false, message: `Move by up to ${MAX_SHIFT} minutes either way, like 15 or -10.` };
+  }
+  const moves = planShift(teams, from, minutes);
+  if (!moves.length) return { ok: false, message: "Nobody from that place on has a time to move." };
+  await prisma.$transaction(moves.map((move) => prisma.teamDayStatus.update({ where: { registrationId: move.id }, data: { slotTime: move.slotTime } })));
+  refreshDaySite();
+  const first = teams.find((team) => team.runOrder === from);
+  return {
+    ok: true,
+    message: `${moves.length} team${moves.length === 1 ? "" : "s"} from #${from}${first ? ` (${first.name})` : ""} moved ${minutes > 0 ? "later" : "earlier"} by ${Math.abs(minutes)} minute${Math.abs(minutes) === 1 ? "" : "s"}.`,
+  };
+}
+
+/** One team's slot, set by hand. */
+export async function setTeamTime(_previous: DeskState, formData: FormData): Promise<DeskState> {
+  await requireSection(SECTION);
+  const { state, teams } = await currentSlots();
+  if (state.qualifyingStatus === "LOCKED") return { ok: false, message: "Qualifying is closed, so there are no slots left to move." };
+  const team = teams.find((item) => item.id === String(formData.get("teamId") ?? ""));
+  if (!team) return { ok: false, message: "Pick a team from the running order." };
+  const time = parseClock(formData.get("time"));
+  if (!time) return { ok: false, message: "Give the new time like 10:40." };
+  await prisma.teamDayStatus.update({ where: { registrationId: team.id }, data: { slotTime: time } });
+  refreshDaySite();
+  return { ok: true, message: `${team.name} now runs at ${time}.` };
+}
+
+/** Every slot back to where the draw put it. */
+export async function resetTimes(_previous: DeskState, _formData: FormData): Promise<DeskState> {
+  await requireSection(SECTION);
+  const { count } = await prisma.teamDayStatus.updateMany({ where: { slotTime: { not: "" } }, data: { slotTime: "" } });
+  refreshDaySite();
+  return { ok: true, message: count ? `${count} time${count === 1 ? "" : "s"} back to the drawn schedule.` : "Every time was already the drawn one." };
 }

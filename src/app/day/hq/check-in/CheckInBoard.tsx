@@ -27,8 +27,7 @@ export interface CheckInTeam {
   deskNote: string;
   inspection: "PENDING" | "PASSED" | "FAILED";
   inspectionNote: string;
-  robotName: string;
-  pit: string;
+  teamCode: string;
   withdrawn: boolean;
   payment: { label: string; paid: boolean; due: string };
   runOrder: number | null;
@@ -38,8 +37,8 @@ const FILTERS = [
   { key: "all", label: "All" },
   { key: "waiting", label: "Not here yet" },
   { key: "here", label: "Checked in" },
-  { key: "inspect", label: "To inspect" },
-  { key: "failed", label: "Failed" },
+  { key: "inspect", label: "Robot not confirmed" },
+  { key: "failed", label: "Not available" },
   { key: "unpaid", label: "Unpaid" },
   { key: "withdrawn", label: "Withdrawn" },
 ] as const;
@@ -68,8 +67,7 @@ function matches(team: CheckInTeam, filter: FilterKey): boolean {
 function haystack(team: CheckInTeam): string {
   return [
     team.name,
-    team.robotName,
-    team.pit,
+    team.teamCode,
     ...team.members.flatMap((member) => [member.name, member.email, member.phone, member.phone.replace(/\D/g, "")]),
   ]
     .join(" ")
@@ -78,8 +76,8 @@ function haystack(team: CheckInTeam): string {
 
 const INSPECTION = [
   { value: "PENDING", label: "Not yet" },
-  { value: "PASSED", label: "Passed" },
-  { value: "FAILED", label: "Failed" },
+  { value: "PASSED", label: "Available" },
+  { value: "FAILED", label: "Not available" },
 ] as const;
 
 function ArriveButton({ team }: { team: CheckInTeam }) {
@@ -109,7 +107,10 @@ function TeamRow({ team, open, onToggle }: { team: CheckInTeam; open: boolean; o
         <button type="button" onClick={onToggle} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-4 text-left">
           <Crest name={team.name} size={30} />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-lg font-bold text-day-ink">{team.name}</span>
+            <span className="flex min-w-0 items-baseline gap-2">
+              {team.teamCode ? <span className="day-num shrink-0 bg-day-ink px-1.5 py-0.5 text-xs font-bold text-day-on-ink">{team.teamCode}</span> : null}
+              <span className="truncate text-lg font-bold text-day-ink">{team.name}</span>
+            </span>
             <span className="mt-1 flex flex-wrap gap-1.5 text-[11px] font-semibold">
               {team.checkedIn ? (
                 <span className="rounded-[2px] bg-day-good/10 px-2 py-0.5 text-day-good">Here {team.checkedInAt}</span>
@@ -126,10 +127,9 @@ function TeamRow({ team, open, onToggle }: { team: CheckInTeam; open: boolean; o
                   team.inspection === "PASSED" ? "bg-day-good/10 text-day-good" : team.inspection === "FAILED" ? "bg-day-live/10 text-day-live" : "bg-day-ink/[0.06] text-day-muted"
                 }`}
               >
-                {team.inspection === "PASSED" ? "Inspected" : team.inspection === "FAILED" ? "Failed inspection" : "To inspect"}
+                {team.inspection === "PASSED" ? "Robot available" : team.inspection === "FAILED" ? "Robot not available" : "Robot not confirmed"}
               </span>
               <span className={`rounded-[2px] px-2 py-0.5 ${team.payment.paid ? "bg-day-good/10 text-day-good" : "bg-day-gold/15 text-day-gold"}`}>{team.payment.label}</span>
-              {team.pit ? <span className="rounded-[2px] bg-day-plum/10 px-2 py-0.5 text-day-plum">Pit {team.pit}</span> : null}
               {team.badges ? <span className="rounded-[2px] bg-day-plum/10 px-2 py-0.5 text-day-plum">Badges out</span> : null}
               {team.runOrder ? <span className="day-num rounded-[2px] bg-day-ink/[0.06] px-2 py-0.5 text-day-muted">Runs #{team.runOrder}</span> : null}
             </span>
@@ -194,22 +194,22 @@ function TeamRow({ team, open, onToggle }: { team: CheckInTeam; open: boolean; o
                 hint={team.checkedIn ? `At ${team.checkedInAt}${team.checkedInBy ? ` by ${team.checkedInBy}` : ""}` : "Turn on when the team arrives"}
               />
               <Toggle name="badges" defaultChecked={team.badges} label="Badges and kit handed out" />
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="day-label" htmlFor={`robot-${team.id}`}>
-                    Robot name
-                  </label>
-                  <input id={`robot-${team.id}`} name="robotName" defaultValue={team.robotName} className="day-input" />
-                </div>
-                <div>
-                  <label className="day-label" htmlFor={`pit-${team.id}`}>
-                    Pit table
-                  </label>
-                  <input id={`pit-${team.id}`} name="pit" defaultValue={team.pit} className="day-input" placeholder="e.g. B4" />
-                </div>
+              <div>
+                <label className="day-label" htmlFor={`code-${team.id}`}>
+                  Team code
+                </label>
+                <input
+                  id={`code-${team.id}`}
+                  name="teamCode"
+                  defaultValue={team.teamCode}
+                  maxLength={12}
+                  autoCapitalize="characters"
+                  className="day-input day-num w-40 uppercase"
+                  placeholder="e.g. T07"
+                />
               </div>
               <div>
-                <span className="day-label">Robot inspection</span>
+                <span className="day-label">Robot available</span>
                 <div className="day-segment">
                   {INSPECTION.map((option) => (
                     <label key={option.value}>
@@ -221,9 +221,9 @@ function TeamRow({ team, open, onToggle }: { team: CheckInTeam; open: boolean; o
               </div>
               <div>
                 <label className="day-label" htmlFor={`inote-${team.id}`}>
-                  Inspection note
+                  Robot note
                 </label>
-                <input id={`inote-${team.id}`} name="inspectionNote" defaultValue={team.inspectionNote} className="day-input" placeholder="e.g. 26 cm wide, asked to trim the bumper" />
+                <input id={`inote-${team.id}`} name="inspectionNote" defaultValue={team.inspectionNote} className="day-input" placeholder="e.g. waiting on a spare battery" />
               </div>
               <div>
                 <label className="day-label" htmlFor={`note-${team.id}`}>
@@ -290,7 +290,7 @@ export function CheckInBoard({ teams }: { teams: CheckInTeam[] }) {
             onKeyDown={(event) => {
               if (event.key === "Enter" && shown.length === 1) setOpenId(shown[0]!.id);
             }}
-            placeholder="Team, member, email, phone, robot or pit.  Press / to search"
+            placeholder="Team, code, member, email or phone.  Press / to search"
             className="day-input h-14 rounded-[4px] pl-12 text-lg"
             autoComplete="off"
           />

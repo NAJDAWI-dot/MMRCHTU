@@ -14,10 +14,13 @@ const EVERY_MS = 30_000;
  * It reads the same cached copy every other visitor gets, so a hall of phones
  * refreshing costs the database nothing extra.
  *
+ * The hall screen asks for more often than a phone does, so a team called to
+ * the maze is on the wall within seconds.
+ *
  * Paused while the tab is hidden, and caught up the moment it comes back, so a
  * phone in a pocket does not refresh all afternoon for nobody.
  */
-export function DayAutoRefresh() {
+export function DayAutoRefresh({ everyMs = EVERY_MS }: { everyMs?: number } = {}) {
   const router = useRouter();
 
   useEffect(() => {
@@ -25,7 +28,7 @@ export function DayAutoRefresh() {
 
     const start = () => {
       if (timer) return;
-      timer = setInterval(() => router.refresh(), EVERY_MS);
+      timer = setInterval(() => router.refresh(), everyMs);
     };
     const stop = () => {
       if (timer) clearInterval(timer);
@@ -46,7 +49,7 @@ export function DayAutoRefresh() {
       stop();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [router]);
+  }, [router, everyMs]);
 
   return null;
 }

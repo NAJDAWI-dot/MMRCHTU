@@ -466,6 +466,10 @@ model CompetitionDayConfig {
   qualifyingDirection String @default("HIGHER")
   qualifyingNote      String @default("")
 
+  // How many teams qualifying sends to the knockout, 32 or 16: the draw
+  // starts at the round of 32 or the round of 16. Set when the bracket is drawn.
+  bracketSize Int @default(32)
+
   // Head-to-head results use the same direction unless told otherwise.
   matchDirection String @default("HIGHER")
 
@@ -510,13 +514,17 @@ model TeamDayStatus {
   checkedInAt DateTime?
   checkedInBy String    @default("")
 
-  // PENDING | PASSED | FAILED. See INSPECTION_STATES in src/lib/bracket.ts.
+  // Whether the robot is available to run: PENDING (not yet), PASSED
+  // (available) or FAILED (not available). The stored names predate the
+  // wording; see INSPECTION_STATES in src/lib/bracket.ts.
   inspection     String @default("PENDING")
   inspectionNote String @default("")
 
-  robotName String  @default("")
-  pit       String  @default("")
   withdrawn Boolean @default(false)
+
+  // The organisers' own code for the team ("T07"), set at the desk and shown
+  // wherever the team is called or listed on the day.
+  teamCode String @default("")
 
   // The registration desk's own record: which members turned up (ids of
   // TeamMember rows, comma-separated), whether badges went out, and a note

@@ -3,9 +3,9 @@ import type { DayIconName } from "@/components/day-site/icons";
 /** Every HQ desk, in the order the tabs show them. Each opens by its own role. */
 export const DESKS: readonly { href: string; label: string; blurb: string; icon: DayIconName }[] = [
   { href: "/day/hq", label: "Overview", blurb: "Everything at a glance.", icon: "live" },
-  { href: "/day/hq/check-in", label: "Check-in", blurb: "Arrivals, members, badges, inspection and pits.", icon: "badge" },
+  { href: "/day/hq/check-in", label: "Check-in", blurb: "Arrivals, members, badges, team codes and robots.", icon: "badge" },
   { href: "/day/hq/scoring", label: "Qualifying", blurb: "Enter each team's run times; the score works itself out.", icon: "timer" },
-  { href: "/day/hq/scoring/bracket", label: "Bracket", blurb: "Draw the top 32 and enter every match.", icon: "bracket" },
+  { href: "/day/hq/scoring/bracket", label: "Bracket", blurb: "Draw the knockout and enter every match.", icon: "bracket" },
   { href: "/day/judge", label: "Judge", blurb: "The tablet at the maze: big buttons, the clock, and saves that wait out a lost connection.", icon: "flag" },
   { href: "/day/hq/scoring/reveal", label: "Reveal", blurb: "Choose which results the day site and the hall screen show, and when.", icon: "eye" },
   { href: "/day/hq/announcements", label: "Announcements", blurb: "News, and alerts that pop up on every screen.", icon: "megaphone" },

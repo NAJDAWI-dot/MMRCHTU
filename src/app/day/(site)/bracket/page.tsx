@@ -5,7 +5,7 @@ import { Crest } from "@/components/day-site/Crest";
 import { DayIcon } from "@/components/day-site/icons";
 import { Empty, HeldBack, MatchCard, MoreLink, PageHead, SectionTitle } from "@/components/day-site/ui";
 import { advanceShown } from "@/lib/reveal";
-import { KNOCKOUT_ROUNDS, phaseInfo } from "@/lib/bracket";
+import { phaseInfo } from "@/lib/bracket";
 import { type BracketMatch } from "@/lib/competition";
 import { loadPublicCompetition } from "@/lib/public-competition";
 import { formatPoints } from "@/lib/score-sheet";
@@ -51,7 +51,7 @@ function Cell({ match, nameOf }: { match: BracketMatch | undefined; nameOf: Name
                 {name}
               </Link>
             ) : (
-              <span className="min-w-0 flex-1 truncate italic text-day-faint">{match.round === 2 ? "Bye" : "TBD"}</span>
+              <span className="min-w-0 flex-1 truncate italic text-day-faint">{match.seedA !== null || match.seedB !== null ? "Bye" : "TBD"}</span>
             )}
             {live && index === 0 ? <span className="day-live-dot" aria-label="Live" /> : null}
             <span className={`day-num text-[14px] ${won ? "font-bold text-day-ink" : "text-day-muted"}`}>
@@ -107,6 +107,11 @@ export default async function DayBracketPage() {
   };
 
   const final = at(6, 0);
+  const size = state.bracketSize;
+  const sixteen = size === 16;
+  // The tree's columns, outside in: from the first round the bracket plays.
+  const outer = state.rounds.filter((round) => round < 6);
+  const headers = sixteen ? ["Round of 16", "Quarters", "Semis"] : ["Round of 32", "Round of 16", "Quarters", "Semis"];
   const champion = final?.winnerId ? state.byId.get(final.winnerId) : undefined;
   const liveCount = state.bracket.filter((m) => m.status === "LIVE").length;
 
@@ -116,10 +121,10 @@ export default async function DayBracketPage() {
       <PageHead
         kicker={liveCount ? `${liveCount} match${liveCount === 1 ? "" : "es"} on the maze now` : "Phases 2 to 6"}
         title="The bracket"
-        lead="The top 32 from qualifying, seeded 1 against 32, 2 against 31 and so on. Two mice run side by side on identical mazes, and the higher score goes through."
+        lead={`The top ${size} from qualifying, seeded 1 against ${size}, 2 against ${size - 1} and so on. Two mice run side by side on identical mazes, and the higher score goes through.`}
       />
 
-      <HeldBack reveal={state.reveal} phases={[2, 3, 4, 5, 6]} />
+      <HeldBack reveal={state.reveal} phases={state.rounds} />
 
       {!state.drawn && state.reveal && !advanceShown(state.reveal, 1) && state.qualifyingStatus === "LOCKED" ? (
         <Empty icon="lock" title="The draw is announced soon">
@@ -129,26 +134,28 @@ export default async function DayBracketPage() {
         <Empty icon="bracket" title="The draw has not happened yet">
           The bracket is drawn from the qualifying table once qualifying closes.
           <span className="mt-4 block">
-            <MoreLink href="/day/standings">See who is in the top 32 right now</MoreLink>
+            <MoreLink href="/day/standings">{`See who is in the top ${size} right now`}</MoreLink>
           </span>
         </Empty>
       ) : (
         <>
           {/* The tree, from large screens up. */}
           <CenteredScroll className="day-bleed day-scroll-x hidden overflow-x-auto pb-4 lg:block">
-            <div className="mx-auto min-w-[1640px] max-w-[1720px]" data-lenis-prevent-wheel>
-              <div className="day-bracket mb-5 border-b-2 border-day-line/85 pb-3 text-center text-[0.8125rem] font-semibold text-day-muted" style={{ minHeight: 0 }}>
-                {["Round of 32", "Round of 16", "Quarters", "Semis", "Final", "Semis", "Quarters", "Round of 16", "Round of 32"].map((label, index) => (
+            <div className={`mx-auto ${sixteen ? "min-w-[1280px] max-w-[1400px]" : "min-w-[1640px] max-w-[1720px]"}`} data-lenis-prevent-wheel>
+              <div
+                className={`day-bracket ${sixteen ? "day-bracket-16" : ""} mb-5 border-b-2 border-day-line/85 pb-3 text-center text-[0.8125rem] font-semibold text-day-muted`}
+                style={{ minHeight: 0 }}
+              >
+                {[...headers, "Final", ...[...headers].reverse()].map((label, index) => (
                   <span key={index} className={label === "Final" ? "font-bold text-day-crimson" : ""}>
                     {label}
                   </span>
                 ))}
               </div>
-              <div className="day-bracket">
-                <Column matches={half(2, "left")} side="left" nameOf={nameOf} />
-                <Column matches={half(3, "left")} side="left" nameOf={nameOf} />
-                <Column matches={half(4, "left")} side="left" nameOf={nameOf} />
-                <Column matches={half(5, "left")} side="left" nameOf={nameOf} />
+              <div className={`day-bracket ${sixteen ? "day-bracket-16" : ""}`}>
+                {outer.map((round) => (
+                  <Column key={`l${round}`} matches={half(round, "left")} side="left" nameOf={nameOf} />
+                ))}
 
                 <div className="flex flex-col items-center justify-center gap-6">
                   <DayIcon name="trophy" className="h-10 w-10 text-day-gold" />
@@ -166,10 +173,9 @@ export default async function DayBracketPage() {
                   )}
                 </div>
 
-                <Column matches={half(5, "right")} side="right" nameOf={nameOf} />
-                <Column matches={half(4, "right")} side="right" nameOf={nameOf} />
-                <Column matches={half(3, "right")} side="right" nameOf={nameOf} />
-                <Column matches={half(2, "right")} side="right" nameOf={nameOf} />
+                {[...outer].reverse().map((round) => (
+                  <Column key={`r${round}`} matches={half(round, "right")} side="right" nameOf={nameOf} />
+                ))}
               </div>
             </div>
           </CenteredScroll>
@@ -187,7 +193,7 @@ export default async function DayBracketPage() {
             ) : null}
             {/* In playing order. A round nobody has reached yet is one line,
                 not a column of empty boxes to scroll past. */}
-            {KNOCKOUT_ROUNDS.map((round) => {
+            {state.rounds.map((round) => {
               const matches = state.bracket.filter((m) => m.round === round && !m.void);
               const reached = matches.some((m) => m.teamAId || m.teamBId);
               return (
@@ -203,7 +209,7 @@ export default async function DayBracketPage() {
                     </div>
                   ) : (
                     <p className="text-sm text-day-muted">
-                      {matches.length} match{matches.length === 1 ? "" : "es"}, once the {phaseInfo(round - 1).name} is played.
+                      {matches.length} match{matches.length === 1 ? "" : "es"}, once the {round === state.firstRound ? "qualifying" : phaseInfo(round - 1).name} is played.
                     </p>
                   )}
                 </section>
