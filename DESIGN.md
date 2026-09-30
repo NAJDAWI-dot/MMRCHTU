@@ -179,6 +179,9 @@ Flat. Surfaces sit on the page with a hairline edge and never cast a shadow at r
 - **The dancer:** stands on the footer's chequered finish line, and celebrates the champions (live page, hall screen, reveal).
 - Always decoration: hidden from screen readers, never in the way of a click, never over content; still, not gone, under reduced motion.
 
+### The infection (the main site, the week before)
+For the five days before the exact start set in Admin, Competition Day, the main site turns into this one, a stage a day, following the number on the countdown (src/lib/infection.ts, src/styles/infection.css, InfectionLayer). The board spreads from the gold centre along its own corridors in flood-fill order and eats the site's artwork cell by cell; the cells taken since a visitor last looked light up crimson as they go. The brand colours move a fifth of the way to this palette each day, in both themes, and every step clears AA (infection.test.ts). Headings take Archivo on day two and widen, corners halve on day three, body text follows and bordered boxes gain posts on day four, and on day five the board is whole and the header carries the crimson wall. Under a day to go the look is whole, until an admin switches the homepage to the day site. Admin and the day site itself are never infected; the rulebook's pages stay paper. `?infection=1` to `6` previews a stage, `?infection=live` goes back; a tick box beside the start date turns it off.
+
 ### Navigation
 - A flat bar. The current page is marked by a crimson wall under it that slides between items. On phones a solid tab bar docks to the bottom edge.
 

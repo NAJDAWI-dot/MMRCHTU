@@ -154,6 +154,23 @@ export default async function AdminCompetitionDayPage() {
                 the competition day page, or clear it to hide the countdown. Uses your timezone.
               </p>
             </div>
+            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-ras-gray/20 p-3 text-sm">
+              <input
+                type="checkbox"
+                name="infection"
+                defaultChecked={config.infection}
+                className="mt-0.5 accent-ras-purple"
+              />
+              <span>
+                <span className="font-semibold text-ras-purple dark:text-white">The countdown takes over the site</span>
+                <span className="mt-0.5 block text-xs text-ras-gray dark:text-white/60">
+                  For the five days before the exact start, the main site turns into the day site a little more each day:
+                  the maze spreads behind the pages, and the colours, type and shapes follow. Untick to keep the site as it
+                  is. Add <code>?infection=1</code> to <code>?infection=6</code> to any page to preview a stage, and{" "}
+                  <code>?infection=live</code> to go back.
+                </span>
+              </span>
+            </label>
             <div>
               <label className={labelClass} htmlFor="details">
                 Details

@@ -36,6 +36,7 @@ const COMPETITION_DAY_FALLBACK: CompetitionDayConfig = {
   venue: "",
   details: "",
   eventDate: null,
+  infection: true,
   dayMode: false,
   // Only the admins who are named see the day site until someone decides
   // otherwise, and nobody is named yet.

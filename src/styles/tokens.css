@@ -15,6 +15,23 @@
   --color-mood-violet: #82468c;
   --color-mood-amethyst: #74347d;
 
+  /*
+    The same brand colours as bare channels, which is what Tailwind's ras-*,
+    mood-* and white classes read (tailwind.config.ts), so an alpha still works.
+    The hex values above stay for code that wants a plain colour string. In the
+    week before competition day src/lib/infection.ts moves these, a stage a day.
+  */
+  --rgb-white: 255 255 255;
+  --rgb-ras-crimson: 134 38 51;
+  --rgb-ras-purple: 95 33 103;
+  --rgb-ras-gray: 87 86 91;
+  --rgb-mood-plum: 97 17 105;
+  --rgb-mood-garnet: 151 1 45;
+  --rgb-mood-rose: 161 22 64;
+  --rgb-mood-orchid: 115 46 125;
+  --rgb-mood-violet: 130 70 140;
+  --rgb-mood-amethyst: 116 52 125;
+
   --color-bg: #ffffff;
   --color-fg: #1a1a1a;
   --color-surface: #f7f5f8;
