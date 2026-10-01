@@ -291,7 +291,7 @@ html.lenis body {
 
 .day-rise > span {
   display: inline-block;
-  animation: day-rise 900ms var(--day-ease) both;
+  animation: day-fade-up 900ms var(--day-ease) both;
   animation-delay: calc(var(--i, 0) * 90ms + 60ms);
 }
 
@@ -1492,5 +1492,121 @@ html.lenis body {
 
   .day-called::after {
     display: none;
+  }
+}
+
+/* ------------------------------------------------------------ testing day screen */
+
+/* The board the practice runs go round: square, as big as the slide allows. */
+.testing-board {
+  width: min(64vh, 40vw);
+  aspect-ratio: 1;
+}
+
+.testing-maze-flood {
+  fill: rgb(var(--day-line) / 0.22);
+  font-family: var(--font-day), system-ui, sans-serif;
+  font-weight: 650;
+  font-variation-settings: "wdth" 80;
+}
+
+.testing-maze-flood .testing-maze-goal {
+  fill: rgb(var(--day-gold));
+}
+
+.testing-maze-walls {
+  stroke: rgb(var(--day-line) / 0.75);
+}
+
+.testing-maze-sides {
+  stroke: rgb(var(--day-crimson) / 0.7);
+}
+
+.testing-maze-posts {
+  fill: rgb(var(--day-line) / 0.9);
+}
+
+.testing-maze-post-sides {
+  fill: rgb(var(--day-crimson) / 0.75);
+}
+
+.testing-maze-route {
+  stroke: rgb(var(--day-crimson));
+  stroke-dasharray: 1 1;
+}
+
+.testing-maze-sensors {
+  stroke: rgb(var(--day-crimson));
+  stroke-dasharray: 1.2 1.6;
+}
+
+.testing-stopwatch {
+  position: absolute;
+  right: 0;
+  bottom: -5.5vh;
+  font-size: 3vh;
+  font-weight: 700;
+  color: rgb(var(--day-ink));
+}
+
+.testing-rise > * {
+  animation: day-fade-up 900ms var(--day-ease) both;
+}
+
+.testing-rise > *:nth-child(2) {
+  animation-delay: 90ms;
+}
+
+.testing-rise > *:nth-child(3) {
+  animation-delay: 180ms;
+}
+
+.testing-rise > *:nth-child(4) {
+  animation-delay: 270ms;
+}
+
+/* Photos cross-fade, and the one on screen drifts in slowly. */
+.testing-photo {
+  opacity: 0;
+  transition: opacity 1200ms var(--day-ease);
+}
+
+.testing-photo[data-on] {
+  opacity: 1;
+}
+
+.testing-photo[data-on] .testing-photo-img {
+  animation: testing-drift 7s linear both;
+}
+
+@keyframes testing-drift {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+
+.testing-thumb {
+  opacity: 0.45;
+  outline: 0.35vh solid transparent;
+  outline-offset: 0.3vh;
+  transition: opacity 400ms, outline-color 400ms;
+}
+
+.testing-thumb-on {
+  opacity: 1;
+  outline-color: rgb(var(--day-crimson));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .testing-rise > *,
+  .testing-photo[data-on] .testing-photo-img {
+    animation: none;
+  }
+
+  .testing-photo {
+    transition: none;
   }
 }

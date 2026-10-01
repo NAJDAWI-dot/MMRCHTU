@@ -28,13 +28,17 @@ export default async function PhotosDeskPage() {
       <DeskHead
         icon="camera"
         title="Photos"
-        lead="Shoot in the hall and add them here. They go on the day site's Photos page and the hall screen straight away."
+        lead="Shoot in the hall and add them here. They go on the day site's Photos page, the hall screen and the testing day screen straight away."
       >
         {album ? (
           <div className="flex flex-wrap gap-2">
             <a href={openDaySite("/day/photos")} className="day-btn day-btn-soft day-btn-sm">
               <DayIcon name="live" className="h-4 w-4" />
               Photos page
+            </a>
+            <a href={openDaySite("/day/testing?slide=photos")} target="_blank" className="day-btn day-btn-soft day-btn-sm">
+              <DayIcon name="expand" className="h-4 w-4" />
+              Testing day screen
             </a>
             {canOpen(rolesOf(admin), "/admin/gallery") ? (
               <Link href={`/admin/gallery/${album.id}`} className="day-btn day-btn-soft day-btn-sm">
