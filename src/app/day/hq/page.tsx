@@ -90,6 +90,10 @@ export default async function DayHqPage() {
               <DayIcon name="expand" className="h-4 w-4" />
               Hall screen
             </a>
+            <a href={openDaySite("/day/testing")} target="_blank" className="day-btn day-btn-soft" title="For the projector on testing day: a title slide and the photos as they come in">
+              <DayIcon name="camera" className="h-4 w-4" />
+              Testing day screen
+            </a>
           </div>
         </div>
 

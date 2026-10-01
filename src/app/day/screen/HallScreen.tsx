@@ -24,7 +24,7 @@ export interface ScreenAlert {
 /** Seconds on each panel; "now" holds a little longer, it is what people look up for. */
 const DWELL = { now: 16, other: 11 };
 
-function Clock() {
+export function Clock() {
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
     setNow(new Date());
