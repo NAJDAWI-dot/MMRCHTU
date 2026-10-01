@@ -31,6 +31,8 @@ export const RULES = {
    * walls is less than the 18cm cell pitch by roughly one wall.
    */
   wallThicknessMm: 12,
+  /** How tall a wall stands, in centimetres (rulebook version 2, rule 5.a). */
+  wallHeightCm: 5,
   /**
    * Side of a lattice post, in centimetres — the square where four walls meet.
    *

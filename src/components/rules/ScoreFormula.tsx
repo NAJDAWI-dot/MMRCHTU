@@ -24,6 +24,8 @@ import { Figure, type FigureVariant, Stat } from "@/components/rules/Figure";
 const REFERENCES = [
   { name: "Team A", runs: 4, seconds: 25 },
   { name: "Team B", runs: 1, seconds: 18 },
+  // One run in, and the autonomous return home, which counts as a second run (rulebook version 2).
+  { name: "Team C", runs: 2, seconds: 18 },
 ] as const;
 
 const MAX_RUNS = 12;
@@ -83,8 +85,9 @@ export function ScoreFormula({ variant }: { variant?: FigureVariant }) {
       caption={
         <>
           Your score goes up when you finish more runs and when you finish faster, so the fastest
-          mouse doesn&rsquo;t always win. Team A and Team B below are the rulebook&rsquo;s example:
-          four runs at 25 seconds beats one run at 18.
+          mouse doesn&rsquo;t always win. Teams A, B and C below are the rulebook&rsquo;s examples:
+          four runs at 25 seconds beats one run at 18, and Team C doubles its runs by driving home on
+          its own.
         </>
       }
     >
