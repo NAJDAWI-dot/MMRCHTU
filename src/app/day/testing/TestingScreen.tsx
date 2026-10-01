@@ -79,7 +79,14 @@ function usePracticeRuns(routeRef: RefObject<SVGPathElement>, mouseRef: RefObjec
   }, [routeRef, mouseRef, timerRef, runRef]);
 }
 
-function MainSlide({ today, venue, countdown }: { today: string; venue: string; countdown: { value: string; label: string } | null }) {
+export interface Venue {
+  /** The room or building, said large: "Building 23C". */
+  place: string;
+  /** Where that is, said small. */
+  area: string;
+}
+
+function MainSlide({ today, venue, countdown }: { today: string; venue: Venue; countdown: { value: string; label: string } | null }) {
   const { maze, route, flood, posts } = useBoard();
   const routeRef = useRef<SVGPathElement>(null);
   const mouseRef = useRef<SVGGElement>(null);
@@ -88,9 +95,9 @@ function MainSlide({ today, venue, countdown }: { today: string; venue: string; 
   usePracticeRuns(routeRef, mouseRef, timerRef, runRef);
 
   const facts = [
-    { label: "Today", value: today, note: "" },
-    ...(venue ? [{ label: "Where", value: venue, note: "" }] : []),
-    ...(countdown ? [{ label: "Competition day", value: countdown.value, note: countdown.label }] : []),
+    { label: "Today", value: today, note: "", span: "1fr" },
+    { label: "Where", value: venue.place, note: venue.area, span: "1.35fr" },
+    ...(countdown ? [{ label: "Competition day", value: countdown.value, note: countdown.label, span: "1fr" }] : []),
   ];
 
   return (
@@ -106,7 +113,7 @@ function MainSlide({ today, venue, countdown }: { today: string; venue: string; 
           Robots on the official maze. Practice runs, sensor checks and tuning before competition day.
         </p>
         {/* One row, however many facts: a second row would run into the footer. */}
-        <dl className="mt-[5vh] grid gap-[2vh]" style={{ gridTemplateColumns: `repeat(${facts.length}, minmax(0, 1fr))` }}>
+        <dl className="mt-[5vh] grid gap-[2vh]" style={{ gridTemplateColumns: facts.map((fact) => `minmax(0, ${fact.span})`).join(" ") }}>
           {facts.map((fact) => (
             <div key={fact.label} className="day-card day-posts min-w-0 px-[2.6vh] py-[2.2vh]">
               <dt className="text-[1.7vh] font-semibold text-day-faint">{fact.label}</dt>
@@ -163,11 +170,9 @@ function PhotoSlide({ photos, count }: { photos: TestingPhoto[]; count: number }
       <div className="relative min-h-0 overflow-hidden rounded-[0.6vh] bg-black">
         {shown.map((photo, index) => (
           <figure key={photo.id} className="testing-photo absolute inset-0" data-on={index === active ? "true" : undefined}>
-            {/* The same photo, blurred, fills the frame, so a portrait shot from a phone is not cropped to a strip. */}
+            {/* Every photo fills the wide frame, portrait ones too, cropped a little above the middle where faces and robots tend to be. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photo.url} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-50 blur-2xl" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photo.url} alt={photo.caption || "A photo from the testing day"} className="testing-photo-img relative h-full w-full object-contain" />
+            <img src={photo.url} alt={photo.caption || "A photo from the testing day"} className="testing-photo-img h-full w-full object-cover object-[50%_40%]" />
           </figure>
         ))}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-[4vh] pb-[3vh] pt-[12vh] text-white">
@@ -209,7 +214,7 @@ export function TestingScreen({
   count,
 }: {
   today: string;
-  venue: string;
+  venue: Venue;
   countdown: { value: string; label: string } | null;
   photos: TestingPhoto[];
   count: number;

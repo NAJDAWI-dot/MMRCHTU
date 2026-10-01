@@ -8,6 +8,12 @@ import { TestingScreen } from "./TestingScreen";
 export const revalidate = 30;
 export const metadata: Metadata = { title: "Testing day screen", robots: { index: false } };
 
+/**
+ * Where testing day happens. Its own place, not the competition day venue in
+ * the settings: the two days are not held in the same room.
+ */
+const VENUE = { place: "Building 23C", area: "Orange Village · Al-Hussein Technical University" };
+
 /** How many photos the photo slide goes through, newest first. */
 const SHOWN = 12;
 
@@ -39,7 +45,7 @@ export default async function TestingScreenPage() {
   return (
     <TestingScreen
       today={new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: DAY_TIME_ZONE }).format(now)}
-      venue={config.venue.trim()}
+      venue={VENUE}
       countdown={countdown(config.eventDate, now)}
       count={gallery.count}
       photos={gallery.photos.map((photo) => ({
