@@ -22,7 +22,7 @@ export function RulebookBookBanner() {
       <div className="book-banner-text">
         <p className="book-banner-eyebrow">
           <span className="book-banner-new">New</span>
-          Official Rulebook &amp; Contest Manual &middot; Version 1
+          Official Rulebook &amp; Contest Manual &middot; Version 2
         </p>
         <h2 id="book-banner-title" className="book-banner-title">
           Flip through the 3D Rulebook

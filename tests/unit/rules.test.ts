@@ -334,6 +334,7 @@ describe("the checklist against the rulebook", () => {
     expect(rulebook).toContain(`${RULES.mazeGrid}×${RULES.mazeGrid}`);
     expect(rulebook).toContain(`${RULES.cellSizeCm}cm cells`);
     expect(rulebook).toContain(`${RULES.wallThicknessMm}mm-thick walls`);
+    expect(rulebook).toContain(`stand ${RULES.wallHeightCm}cm high`);
     expect(rulebook).toContain(`${RULES.latticePostCm}cm lattice post`);
     expect(rulebook).toContain(`${RULES.maxFootprintCm}cm × ${RULES.maxFootprintCm}cm`);
     expect(rulebook).toContain(`${RULES.matchMinutes} minutes`);
