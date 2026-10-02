@@ -38,6 +38,16 @@ export function randomSheet(random: Random = Math.random): RunEntry[] {
       if (used + time > MATCH_SECONDS) break;
       used += time;
       log.push({ ok: true, time, cell: null });
+      // Some mice drive themselves back to the start; most of those make it.
+      if (random() < skill * 0.5) {
+        const back = Math.round(pace * between(random, 0.8, 1.2) * 100) / 100;
+        if (random() < 0.75 && used + back <= MATCH_SECONDS) {
+          used += back;
+          log.push({ ok: true, time: back, cell: null, ret: true });
+        } else {
+          log.push({ ok: false, time: null, cell: null, ret: true });
+        }
+      }
     } else {
       // A better mouse gets further before it goes wrong.
       const cell = Math.max(1, Math.min(MAZE_CELLS - 1, Math.round(between(random, 5, 60) + skill * 40)));

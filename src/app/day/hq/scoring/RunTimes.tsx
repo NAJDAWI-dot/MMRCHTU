@@ -5,6 +5,7 @@ import { DayIcon } from "@/components/day-site/icons";
 import {
   MATCH_SECONDS,
   MAZE_CELLS,
+  checkLog,
   formatPoints,
   formatTime,
   outcomeText,
@@ -15,14 +16,16 @@ import {
   type RunEntry,
 } from "@/lib/score-sheet";
 
-type Row = { ok: boolean; time: string; cell: string };
+/** One row: a run, or with `ret` a return from the centre back to the start. */
+type Row = { ok: boolean; time: string; cell: string; ret: boolean };
 
-const EMPTY: Row = { ok: true, time: "", cell: "" };
+const EMPTY: Row = { ok: true, time: "", cell: "", ret: false };
 
 const rowOf = (run: RunEntry): Row => ({
   ok: run.ok,
   time: run.time === null ? "" : String(run.time),
   cell: run.cell === null ? "" : String(run.cell),
+  ret: !!run.ret,
 });
 
 /**
@@ -36,11 +39,15 @@ const rowOf = (run: RunEntry): Row => ({
  * empty on a failed run), one `${resultName}` ("yes" or "no") and one
  * `${cellName}` (empty on a successful run), so the server can line them up; a
  * successful row with no time is ignored there, so a spare row costs nothing.
+ * Every row also posts a `${kindName}`, "run" or "return": a return is the
+ * mouse driving itself back to the start straight after a successful run,
+ * timed like a run, and with nothing to write down when it does not make it.
  */
 export function RunTimes({
   name,
   resultName,
   cellName,
+  kindName,
   initialLog,
   compact = false,
   label,
@@ -48,12 +55,14 @@ export function RunTimes({
   name: string;
   resultName: string;
   cellName: string;
+  kindName: string;
   initialLog: RunEntry[];
   compact?: boolean;
   label?: string;
 }) {
   const [rows, setRows] = useState<Row[]>(() => (initialLog.length ? initialLog.map(rowOf) : [EMPTY]));
   const [started, setStarted] = useState<number | null>(null);
+  const [timingReturn, setTimingReturn] = useState(false);
   const [now, setNow] = useState(0);
   const listRef = useRef<HTMLOListElement>(null);
 
@@ -65,17 +74,22 @@ export function RunTimes({
 
   const parsed = rows.map((row) => ({
     time: row.ok && row.time.trim() ? parseRunTime(row.time) : null,
-    cell: !row.ok && row.cell.trim() ? parseCell(row.cell) : null,
+    cell: !row.ok && !row.ret && row.cell.trim() ? parseCell(row.cell) : null,
   }));
   const badTime = rows.map((row, i) => row.ok && !!row.time.trim() && parsed[i]!.time === null);
-  const badCell = rows.map((row, i) => !row.ok && !!row.cell.trim() && parsed[i]!.cell === null);
+  const badCell = rows.map((row, i) => !row.ok && !row.ret && !!row.cell.trim() && parsed[i]!.cell === null);
   // The runs as the server will read them: successful rows with a time, and every failed row.
   const log = rows.flatMap((row, i): RunEntry[] => {
     const { time, cell } = parsed[i]!;
+    if (row.ret) return row.ok ? (time !== null ? [{ ok: true, time, cell: null, ret: true }] : []) : [{ ok: false, time: null, cell: null, ret: true }];
     if (row.ok) return time !== null ? [{ ok: true, time, cell: null }] : [];
     return [{ ok: false, time: null, cell }];
   });
   const sheet = scoreSheet({ times: [], remaining: null, log });
+  const misplacedReturn = checkLog(log) === "bad-return";
+  // A return can be timed straight after a run that reached the centre.
+  const lastRun = log[log.length - 1];
+  const canTimeReturn = !!lastRun && lastRun.ok && !lastRun.ret;
   const total = log.reduce((sum, run) => sum + (run.time ?? 0), 0);
   const officialIndex = sheet.official === null ? -1 : rows.findIndex((row, i) => row.ok && parsed[i]!.time === sheet.official);
 
@@ -92,18 +106,19 @@ export function RunTimes({
   const update = (index: number, change: Partial<Row>) =>
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...change } : row)));
 
-  const startWatch = () => {
+  const startWatch = (ret = false) => {
     const t = performance.now();
+    setTimingReturn(ret);
     setStarted(t);
     setNow(t);
   };
-  // A failed run is written down by its cell, not its time.
+  // A failed run is written down by its cell, not its time; a failed return by nothing at all.
   const stopWatch = (ok: boolean) => {
     if (started === null) return;
     const seconds = Math.round((performance.now() - started) / 10) / 100;
     setStarted(null);
-    if (!ok) addRow({ ok: false, time: "", cell: "" });
-    else if (seconds > 0) addRow({ ok: true, time: String(seconds), cell: "" });
+    if (!ok) addRow({ ok: false, time: "", cell: "", ret: timingReturn });
+    else if (seconds > 0) addRow({ ok: true, time: String(seconds), cell: "", ret: timingReturn });
   };
 
   return (
@@ -112,17 +127,30 @@ export function RunTimes({
       <ol ref={listRef} className="space-y-2">
         {rows.map((row, index) => {
           const best = index === officialIndex;
-          const run = `Run ${index + 1}`;
+          const number = rows.slice(0, index + 1).filter((item) => !item.ret).length;
+          const run = row.ret ? `Return after run ${number}` : `Run ${number}`;
           return (
             <li key={index} className="flex items-center gap-2">
-              <span className="day-num w-7 shrink-0 text-right text-xs font-bold text-day-faint">R{index + 1}</span>
+              <button
+                type="button"
+                aria-pressed={row.ret}
+                aria-label={`${run}: ${row.ret ? "a return. Make it a run" : "a run. Make it a return"}`}
+                title={row.ret ? "A return, centre back to start. Click to make it a run" : "A run. Click to make it a return, centre back to start"}
+                onClick={() => update(index, { ret: !row.ret })}
+                className={`day-num grid h-11 w-9 shrink-0 place-items-center rounded-[4px] text-xs font-bold transition-colors ${
+                  row.ret ? "bg-day-gold text-day-on-ink" : "text-day-faint ring-1 ring-day-line/[0.12] hover:bg-day-gold/10 hover:text-day-gold"
+                }`}
+              >
+                {row.ret ? "↩" : `R${number}`}
+              </button>
               <input type="hidden" name={resultName} value={row.ok ? "yes" : "no"} />
+              <input type="hidden" name={kindName} value={row.ret ? "return" : "run"} />
               <div className="flex shrink-0 overflow-hidden rounded-[4px] ring-1 ring-day-line/[0.12]" role="group" aria-label={`${run} result`}>
                 <button
                   type="button"
                   aria-pressed={row.ok}
-                  aria-label={`${run} reached the centre`}
-                  title="Reached the centre"
+                  aria-label={row.ret ? `${run} made it back to the start` : `${run} reached the centre`}
+                  title={row.ret ? "Back at the start" : "Reached the centre"}
                   onClick={() => update(index, { ok: true })}
                   className={`grid h-11 w-10 place-items-center transition-colors ${row.ok ? "bg-day-good text-day-on-ink" : "text-day-faint hover:bg-day-good/10"}`}
                 >
@@ -132,7 +160,7 @@ export function RunTimes({
                   type="button"
                   aria-pressed={!row.ok}
                   aria-label={`${run} failed`}
-                  title="Failed: did not reach the centre"
+                  title={row.ret ? "Failed: did not make it back" : "Failed: did not reach the centre"}
                   onClick={() => {
                     update(index, { ok: false });
                     window.setTimeout(() => listRef.current?.querySelectorAll<HTMLInputElement>("li")[index]?.querySelector<HTMLInputElement>("input[data-field=cell]")?.focus(), 0);
@@ -174,6 +202,12 @@ export function RunTimes({
                   ) : best ? (
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-[2px] bg-day-gold/15 px-2 py-0.5 text-[10px] font-bold text-day-gold">Official</span>
                   ) : null}
+                </div>
+              ) : row.ret ? (
+                <div className="min-w-0 flex-1">
+                  <input type="hidden" name={name} value="" />
+                  <input type="hidden" name={cellName} value="" />
+                  <p className="flex h-11 items-center rounded-[4px] bg-day-live/[0.05] px-3 text-sm font-semibold text-day-live ring-1 ring-day-live/30">Did not make it back</p>
                 </div>
               ) : (
                 <div className="relative min-w-0 flex-1">
@@ -222,15 +256,23 @@ export function RunTimes({
           Add a run
         </button>
         {started === null ? (
-          <button type="button" onClick={startWatch} className="day-btn day-btn-soft day-btn-sm">
-            <DayIcon name="timer" className="h-4 w-4" />
-            Time a run
-          </button>
+          <>
+            <button type="button" onClick={() => startWatch(false)} className="day-btn day-btn-soft day-btn-sm">
+              <DayIcon name="timer" className="h-4 w-4" />
+              Time a run
+            </button>
+            {canTimeReturn ? (
+              <button type="button" onClick={() => startWatch(true)} className="day-btn day-btn-sm bg-day-gold/15 font-semibold text-day-gold hover:bg-day-gold/25">
+                <span aria-hidden="true">↩</span>
+                Time a return
+              </button>
+            ) : null}
+          </>
         ) : (
           <>
             <button type="button" onClick={() => stopWatch(true)} className="day-btn day-btn-ink day-btn-sm" aria-live="polite">
               <DayIcon name="check" className="h-4 w-4" />
-              Reached · {((now - started) / 1000).toFixed(2)} s
+              {timingReturn ? "Back at the start" : "Reached"} · {((now - started) / 1000).toFixed(2)} s
             </button>
             <button type="button" onClick={() => stopWatch(false)} className="day-btn day-btn-danger day-btn-sm">
               <DayIcon name="close" className="h-4 w-4" />
@@ -248,6 +290,7 @@ export function RunTimes({
               {sheet.runs}
               {sheet.failed ? <span className="opacity-60"> / {sheet.runs + sheet.failed}</span> : null}
             </p>
+            {sheet.returns ? <p className="day-num mt-0.5 whitespace-nowrap text-xs font-semibold opacity-80">+ {sheet.returns} ↩ × 1.5</p> : null}
           </div>
           <div>
             <p className="text-[11px] font-semibold opacity-60">Official time</p>
@@ -262,6 +305,7 @@ export function RunTimes({
           {sheet.runs + sheet.failed ? `${outcomeText(sheet)}. ` : ""}
           {workingOf(sheet)}
           {total > MATCH_SECONDS ? " These add up to more than 8 minutes." : ""}
+          {misplacedReturn ? " A return has to come straight after a run that reached the centre." : ""}
         </p>
       </div>
     </div>

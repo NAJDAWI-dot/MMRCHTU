@@ -346,12 +346,13 @@ export default async function DayLivePage() {
           <SectionTitle kicker="How a place is earned">The formula</SectionTitle>
           <div className="day-card day-posts p-6 sm:p-8" data-reveal>
             <p className="day-display text-[1.6rem] leading-[1.15] text-day-ink sm:text-[1.9rem]">
-              <span className="text-day-crimson">Score</span> = successful runs ÷ official time × 1000
+              <span className="text-day-crimson">Score</span> = (successful runs + 1.5 × successful returns) ÷ official time × 1000
             </p>
             <ul className="mt-6 space-y-3 text-day-muted">
               {[
                 "Every run that reaches the centre in the eight minutes counts.",
-                "The official time is the fastest of those runs.",
+                "A return, the mouse driving itself back to the start straight after a run, counts one and a half.",
+                "The official time is the fastest run or return.",
                 "Ties go to the faster official time.",
               ].map((line) => (
                 <li key={line} className="flex gap-3">
@@ -364,6 +365,7 @@ export default async function DayLivePage() {
               <p className="text-[0.8125rem] font-semibold text-day-muted">For example</p>
               <p className="day-num mt-1 text-day-ink">4 runs, best 25.0 s: 4 ÷ 25.0 × 1000 = 160.0</p>
               <p className="day-num text-day-ink">1 run of 18.0 s: 1 ÷ 18.0 × 1000 = 55.6</p>
+              <p className="day-num text-day-ink">1 run of 20.0 s, 1 return of 18.0 s: 2.5 ÷ 18.0 × 1000 = 138.9</p>
             </div>
             <p className="mt-5 text-sm font-medium text-day-muted">The top {state.bracketSize} go through to the knockout.</p>
           </div>

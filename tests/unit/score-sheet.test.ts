@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  checkLog,
   cleanLog,
   compareResults,
   formatPoints,
@@ -7,6 +8,7 @@ import {
   outcomeOf,
   outcomeText,
   parseCell,
+  parseResultKind,
   parseRunResult,
   parseRunTime,
   scoreSheet,
@@ -173,5 +175,53 @@ describe("successful and failed runs", () => {
 
   it("reads a failed run saved as cells short of the centre as the cell it reached", () => {
     expect(cleanLog([{ ok: false, time: 40, short: 3 }])).toEqual([fail(97)]);
+  });
+});
+
+describe("returns (rulebook version 3)", () => {
+  const back = (time: number): RunEntry => ({ ok: true, time, cell: null, ret: true });
+  const notBack: RunEntry = { ok: false, time: null, cell: null, ret: true };
+
+  it("scores the rulebook's Team C: one run, one return, the return as the official time", () => {
+    const sheet = scoreSheet({ times: [], remaining: null, log: [ok(20), back(18)] });
+    expect(sheet.runs).toBe(1);
+    expect(sheet.returns).toBe(1);
+    expect(sheet.official).toBe(18);
+    expect(formatPoints(sheet.score)).toBe("138.9");
+    expect(workingOf(sheet)).toBe("(1 run + 1.5 × 1 return) ÷ 18.0 s × 1000 = 138.9");
+    expect(outcomeText(sheet)).toBe("1 run, successful, 1 return");
+  });
+
+  it("does not count a failed return, or one that does not follow a successful run", () => {
+    const sheet = scoreSheet({ times: [], remaining: null, log: [ok(30), notBack, fail(40), back(12)] });
+    expect(sheet.returns).toBe(0);
+    expect(sheet.failedReturns).toBe(1);
+    expect(sheet.failed).toBe(1);
+    expect(sheet.official).toBe(30);
+    expect(checkLog([ok(30), notBack])).toBeNull();
+    expect(checkLog([fail(40), back(12)])).toBe("bad-return");
+    expect(checkLog([back(12)])).toBe("bad-return");
+  });
+
+  it("keeps a sheet with no returns scored exactly as before", () => {
+    const sheet = scoreSheet({ times: [], remaining: null, log: [ok(25), ok(30), ok(28), ok(26)] });
+    expect(formatPoints(sheet.score)).toBe("160.0");
+    expect(workingOf(sheet)).toBe("4 runs ÷ 25.0 s × 1000 = 160.0");
+  });
+
+  it("reads returns from form fields and from a stored log", () => {
+    const parsed = sheetFromFields(["20", "18", "31", ""], ["yes", "yes", "yes", "no"], ["", "", "", ""], ["run", "return", "run", "return"]);
+    expect(parsed.ok && parsed.sheet.log).toEqual([ok(20), back(18), ok(31), notBack]);
+    // A failed return straight after a return is out of place too.
+    expect(sheetFromFields(["20", "18", ""], ["yes", "yes", "no"], [], ["run", "return", "return"])).toEqual({ ok: false, problem: "bad-return" });
+    expect(sheetFromFields(["18"], ["yes"], [""], ["return"])).toEqual({ ok: false, problem: "bad-return" });
+    expect(cleanLog([{ ok: true, time: 18, ret: true }, { ok: false, ret: true, cell: 5 }])).toEqual([back(18), notBack]);
+  });
+
+  it("reads a return written in a score file", () => {
+    expect(parseResultKind("Return")).toEqual({ ok: true, ret: true });
+    expect(parseResultKind("return fail")).toEqual({ ok: false, ret: true });
+    expect(parseResultKind("Success")).toEqual({ ok: true, ret: false });
+    expect(parseResultKind("maybe")).toBeNull();
   });
 });

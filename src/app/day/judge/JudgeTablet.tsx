@@ -54,12 +54,13 @@ const write = (key: string, value: unknown) => {
 
 const sameLog = (a: RunEntry[], b: RunEntry[]) => JSON.stringify(a) === JSON.stringify(b);
 
-/** The fields the scoring actions read, for one side's runs. */
-function logFields(log: RunEntry[], time: string, result: string, cell: string): [string, string][] {
+/** The fields the scoring actions read, for one side's runs and returns. */
+function logFields(log: RunEntry[], time: string, result: string, cell: string, kind: string): [string, string][] {
   return log.flatMap((run): [string, string][] => [
     [time, run.ok && run.time !== null ? String(run.time) : ""],
     [result, run.ok ? "yes" : "no"],
     [cell, !run.ok && run.cell !== null ? String(run.cell) : ""],
+    [kind, run.ret ? "return" : "run"],
   ]);
 }
 
@@ -223,8 +224,10 @@ function SideRecorder({
   compact: boolean;
 }) {
   const [started, setStarted] = useState<number | null>(null);
+  // What the stopwatch is timing: a run to the centre, or a return back to the start.
+  const [mode, setMode] = useState<"run" | "return">("run");
   const [now, setNow] = useState(0);
-  const [pad, setPad] = useState<null | { kind: "cell" | "time" }>(null);
+  const [pad, setPad] = useState<null | { kind: "cell" | "time"; ret?: boolean }>(null);
   const [armed, setArmed] = useState<number | null>(null);
   useEffect(() => {
     if (started === null) return;
@@ -235,9 +238,14 @@ function SideRecorder({
   const sheet = scoreSheet({ times: [], remaining: null, log });
   const officialIndex = sheet.official === null ? -1 : log.findIndex((run) => run.ok && run.time === sheet.official);
   const elapsed = started === null ? 0 : (now - started) / 1000;
+  // A return can only follow a run that reached the centre (rulebook version 3).
+  const last = log[log.length - 1];
+  const canReturn = !!last && last.ok && !last.ret;
+  const runNumber = log.filter((run) => !run.ret).length + 1;
 
-  const start = () => {
+  const start = (kind: "run" | "return" = "run") => {
     const t = performance.now();
+    setMode(kind);
     setStarted(t);
     setNow(t);
     onStartRun();
@@ -246,11 +254,13 @@ function SideRecorder({
     if (started === null) return setPad({ kind: "time" });
     const seconds = Math.round((performance.now() - started) / 10) / 100;
     setStarted(null);
-    if (seconds > 0) setLog([...log, { ok: true, time: seconds, cell: null }]);
+    if (seconds > 0) setLog([...log, mode === "return" ? { ok: true, time: seconds, cell: null, ret: true } : { ok: true, time: seconds, cell: null }]);
   };
   const failed = () => {
     setStarted(null);
-    setPad({ kind: "cell" });
+    // A return that did not make it back has no cell to write down.
+    if (mode === "return") setLog([...log, { ok: false, time: null, cell: null, ret: true }]);
+    else setPad({ kind: "cell" });
   };
 
   return (
@@ -266,19 +276,46 @@ function SideRecorder({
       {/* The big buttons. */}
       {started === null ? (
         <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
-          <button type="button" onClick={start} className="day-btn day-btn-ink h-20 text-xl">
+          {canReturn ? (
+            // Straight after a run reached the centre: the mouse may drive itself back.
+            <button type="button" onClick={() => start("return")} className="day-btn h-20 bg-day-gold text-xl font-bold text-day-on-ink hover:bg-day-gold/90">
+              <span aria-hidden="true" className="text-2xl leading-none">↩</span>
+              Start return
+            </button>
+          ) : null}
+          <button type="button" onClick={() => start("run")} className={`day-btn day-btn-ink text-xl ${canReturn ? "h-16" : "h-20"}`}>
             <DayIcon name="timer" className="h-6 w-6" />
-            Start run {log.length + 1}
+            Start run {runNumber}
           </button>
-          <div className="grid grid-cols-2 gap-3">
-            <button type="button" onClick={reached} className="day-btn h-14 bg-day-good/15 text-base font-semibold text-day-good hover:bg-day-good/25">
+          <div className={`grid gap-3 ${canReturn ? "grid-cols-3" : "grid-cols-2"}`}>
+            <button
+              type="button"
+              onClick={() => {
+                setMode("run");
+                setPad({ kind: "time" });
+              }}
+              className="day-btn h-14 bg-day-good/15 text-base font-semibold text-day-good hover:bg-day-good/25"
+            >
               <DayIcon name="check" className="h-5 w-5" />
               Reached, type time
             </button>
-            <button type="button" onClick={failed} className="day-btn h-14 bg-day-live/10 text-base font-semibold text-day-live hover:bg-day-live/20">
+            <button
+              type="button"
+              onClick={() => {
+                setMode("run");
+                setPad({ kind: "cell" });
+              }}
+              className="day-btn h-14 bg-day-live/10 text-base font-semibold text-day-live hover:bg-day-live/20"
+            >
               <DayIcon name="close" className="h-5 w-5" />
               Failed
             </button>
+            {canReturn ? (
+              <button type="button" onClick={() => setPad({ kind: "time", ret: true })} className="day-btn h-14 bg-day-gold/15 text-base font-semibold text-day-gold hover:bg-day-gold/25">
+                <span aria-hidden="true">↩</span>
+                Return, type time
+              </button>
+            ) : null}
           </div>
         </div>
       ) : (
@@ -287,18 +324,19 @@ function SideRecorder({
             {elapsed.toFixed(2)}
             <span className="ml-1 text-2xl text-day-muted">s</span>
           </p>
+          {mode === "return" ? <p className="day-kicker text-center text-day-gold">↩ Return to the start</p> : null}
           <div className="grid grid-cols-2 gap-3">
             <button type="button" onClick={reached} className="day-btn h-24 bg-day-good text-xl font-bold text-day-on-ink hover:bg-day-good/90">
               <DayIcon name="check" className="h-7 w-7" />
-              Reached the centre
+              {mode === "return" ? "Back at the start" : "Reached the centre"}
             </button>
             <button type="button" onClick={failed} className="day-btn h-24 bg-day-live text-xl font-bold text-day-on-ink hover:bg-day-live/90">
               <DayIcon name="close" className="h-7 w-7" />
-              Failed
+              {mode === "return" ? "Return failed" : "Failed"}
             </button>
           </div>
           <button type="button" onClick={() => setStarted(null)} className="day-btn day-btn-soft day-btn-sm mx-auto flex">
-            Cancel this run
+            {mode === "return" ? "Cancel this return" : "Cancel this run"}
           </button>
         </div>
       )}
@@ -309,6 +347,7 @@ function SideRecorder({
         <ol className="flex flex-wrap gap-2" aria-label="Runs">
           {log.map((run, index) => {
             const best = index === officialIndex;
+            const number = log.slice(0, index + 1).filter((entry) => !entry.ret).length;
             return (
               <li key={index}>
                 <button
@@ -329,10 +368,14 @@ function SideRecorder({
                           : "bg-day-good/10 text-day-good ring-day-good/25"
                         : "bg-day-live/10 text-day-live ring-day-live/25"
                   }`}
-                  aria-label={`Run ${index + 1}: ${run.ok ? `reached the centre in ${formatTime(run.time)}` : `failed${run.cell !== null ? ` at cell ${run.cell}` : ""}`}${armed === index ? ". Tap again to remove it" : ""}`}
+                  aria-label={`${
+                    run.ret
+                      ? `Return after run ${number}: ${run.ok ? `back at the start in ${formatTime(run.time)}` : "did not make it back"}`
+                      : `Run ${number}: ${run.ok ? `reached the centre in ${formatTime(run.time)}` : `failed${run.cell !== null ? ` at cell ${run.cell}` : ""}`}`
+                  }${armed === index ? ". Tap again to remove it" : ""}`}
                 >
-                  <span className="text-[11px] opacity-70">R{index + 1}</span>
-                  {armed === index ? "Remove?" : run.ok ? formatTime(run.time) : run.cell !== null ? `✗ Cell ${run.cell}` : "✗"}
+                  <span className="text-[11px] opacity-70">{run.ret ? "↩" : `R${number}`}</span>
+                  {armed === index ? "Remove?" : run.ok ? formatTime(run.time) : run.ret ? "✗" : run.cell !== null ? `✗ Cell ${run.cell}` : "✗"}
                 </button>
               </li>
             );
@@ -347,6 +390,7 @@ function SideRecorder({
             {sheet.runs}
             {sheet.failed ? <span className="opacity-60"> / {sheet.runs + sheet.failed}</span> : null}
           </p>
+          {sheet.returns ? <p className="day-num mt-0.5 text-xs font-semibold opacity-80">+ {sheet.returns} ↩ × 1.5</p> : null}
         </div>
         <div>
           <p className="text-[11px] font-semibold opacity-60">Official</p>
@@ -361,10 +405,17 @@ function SideRecorder({
       {pad ? (
         <Pad
           kind={pad.kind}
-          title={pad.kind === "cell" ? `Run ${log.length + 1} failed: which cell?` : `Run ${log.length + 1}: its time`}
+          title={pad.ret ? `Return after run ${runNumber - 1}: its time` : pad.kind === "cell" ? `Run ${runNumber} failed: which cell?` : `Run ${runNumber}: its time`}
           onCancel={() => setPad(null)}
           onDone={(value) => {
-            setLog([...log, pad.kind === "cell" ? { ok: false, time: null, cell: value } : { ok: true, time: value, cell: null }]);
+            setLog([
+              ...log,
+              pad.kind === "cell"
+                ? { ok: false, time: null, cell: value }
+                : pad.ret
+                  ? { ok: true, time: value, cell: null, ret: true }
+                  : { ok: true, time: value, cell: null },
+            ]);
             setPad(null);
           }}
         />
@@ -474,12 +525,12 @@ export function JudgeTablet({ data }: { data: JudgeData }) {
   }, [online, outbox.length, flush]);
 
   const fieldsFor = (winnerId = ""): [string, string][] | null => {
-    if (!knockout && team) return [["teamId", team.id], ...logFields(logs[0] ?? [], "time", "result", "cell"), ["note", team.note]];
+    if (!knockout && team) return [["teamId", team.id], ...logFields(logs[0] ?? [], "time", "result", "cell", "kind"), ["note", team.note]];
     if (knockout && match)
       return [
         ["id", match.id],
-        ...logFields(logs[0] ?? [], "timesA", "resultA", "cellA"),
-        ...logFields(logs[1] ?? [], "timesB", "resultB", "cellB"),
+        ...logFields(logs[0] ?? [], "timesA", "resultA", "cellA", "kindA"),
+        ...logFields(logs[1] ?? [], "timesB", "resultB", "cellB", "kindB"),
         ["winnerId", winnerId],
         ["status", "PENDING"],
         ["arena", match.arena],

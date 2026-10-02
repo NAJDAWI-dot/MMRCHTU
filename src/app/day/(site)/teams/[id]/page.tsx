@@ -141,7 +141,7 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
           items={[
             { label: "Qualifying place", value: standing?.rank ? ordinal(standing.rank) : "–", tone: "gold" },
             { label: "Score", value: formatPoints(standing?.best), tone: "crimson" },
-            { label: "Official time", value: formatTime(standing?.official), hint: "The fastest successful run" },
+            { label: "Official time", value: formatTime(standing?.official), hint: "The fastest run or return" },
             { label: team.journey.seed ? `Seed ${team.journey.seed}` : "Knockout", value: wins, hint: `Match${wins === 1 ? "" : "es"} won`, tone: "good" },
           ]}
         />
@@ -171,7 +171,7 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
                   <SheetView times={standing.times} remaining={standing.remaining} log={standing.log} score={standing.best} />
                 </div>
                 <p className="mt-6 text-[0.8125rem] leading-relaxed text-day-muted">
-                  Score = successful runs ÷ official time × 1000. The official time, in gold, is the fastest run. Crossed runs did not reach the centre
+                  Score = (successful runs + 1.5 × successful returns) ÷ official time × 1000. A return, marked ↩, is the mouse driving itself back to the start. The official time, in gold, is the fastest run or return. Crossed runs did not reach the centre
                   and do not count.
                 </p>
               </>

@@ -100,7 +100,7 @@ export default async function DayStandingsPage() {
         title="Qualifying"
         lead={
           state.qualifyingNote ||
-          `Eight minutes each on the maze. Score = successful runs ÷ official time × 1000, the official time being the fastest run. The top ${places} go through.`
+          `Eight minutes each on the maze. Score = (successful runs + 1.5 × successful returns) ÷ official time × 1000, the official time being the fastest run or return. The top ${places} go through.`
         }
       />
 

@@ -38,7 +38,7 @@ Come to the registration desk first, with your whole team and your robot. The de
 Before your first run, the judges inspect your robot against the rulebook: size, weight, sensors, nothing that damages the maze. A robot that fails can be fixed and inspected again. It cannot run until it passes.
 
 ## Qualifying
-Every team runs in qualifying. Your best run counts, and the top teams go through to the knockout: 32, or 16 if the organisers decide on a smaller bracket. The standings page updates as runs are recorded, so you can see where you are all day.
+Every team runs in qualifying. Every run that reaches the centre counts, a return back to the start counts one and a half, and your fastest run or return is your official time. The top teams go through to the knockout: 32, or 16 if the organisers decide on a smaller bracket. The standings page updates as runs are recorded, so you can see where you are all day.
 
 ## The knockout
 The teams that go through are seeded by their qualifying score. First plays last, second plays second to last, and so on. Win and you go through to the next round, all the way to the quarter-finals, the semi-finals and the final. The bracket page shows every match as it is decided.

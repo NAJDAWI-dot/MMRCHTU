@@ -24,17 +24,26 @@ export function PlaceBlock({ rank, size = "md" }: { rank: number | null; size?: 
 
 /**
  * Every run as a tick, in the order it was run: a filled square reached the
- * centre, an empty one did not. Eight minutes at a glance.
+ * centre, an empty one did not. A return is a gold tick, filled when it made it
+ * back. Eight minutes at a glance.
  */
 export function RunTicks({ log, className = "" }: { log: RunEntry[]; className?: string }) {
   if (!log.length) return null;
-  const reached = log.filter((run) => run.ok).length;
+  const runs = log.filter((run) => !run.ret);
+  const reached = runs.filter((run) => run.ok).length;
+  const back = log.filter((run) => run.ret && run.ok).length;
   return (
-    <span className={`inline-flex items-center gap-[3px] ${className}`} role="img" aria-label={`${reached} of ${log.length} runs reached the centre`}>
+    <span
+      className={`inline-flex items-center gap-[3px] ${className}`}
+      role="img"
+      aria-label={`${reached} of ${runs.length} runs reached the centre${back ? `, ${back} ${back === 1 ? "return" : "returns"} back to the start` : ""}`}
+    >
       {log.map((run, index) => (
         <span
           key={index}
-          className={`h-2 w-2 rounded-[1px] ${run.ok ? "bg-day-ink" : "border border-day-line/40"}`}
+          className={`h-2 w-2 rounded-[1px] ${
+            run.ret ? (run.ok ? "bg-day-gold" : "border border-day-gold/60") : run.ok ? "bg-day-ink" : "border border-day-line/40"
+          }`}
         />
       ))}
     </span>
