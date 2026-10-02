@@ -54,6 +54,8 @@ export interface Competitor {
   runOrder: number | null;
   /** A slot time set by hand or imported ("09:40"), or "" to work it out from the order. */
   slotTime: string;
+  /** The maze it runs its qualifying eight minutes on, or "" when nobody has said. */
+  qualifyingMaze: string;
   eligible: boolean;
   standing: Standing | undefined;
   journey: Journey;
@@ -63,6 +65,9 @@ export interface Competitor {
 export interface BracketMatch extends ResolvedMatch {
   status: string;
   arena: string;
+  /** The maze each side runs on, or "". */
+  mazeA: string;
+  mazeB: string;
   scheduledAt: Date | null;
   updatedAt: Date | null;
 }
@@ -128,6 +133,8 @@ export const loadCompetition = cache(async (): Promise<CompetitionState> => {
       // A decided match is never still live, whatever the row last said.
       status: match.winnerId ? "DONE" : (stored?.status ?? "PENDING"),
       arena: stored?.arena ?? "",
+      mazeA: stored?.mazeA ?? "",
+      mazeB: stored?.mazeB ?? "",
       scheduledAt: stored?.scheduledAt ?? null,
       updatedAt: stored?.updatedAt ?? null,
     };
@@ -154,6 +161,7 @@ export const loadCompetition = cache(async (): Promise<CompetitionState> => {
         deskNote: team.dayStatus?.deskNote ?? "",
         runOrder: team.dayStatus?.runOrder ?? null,
         slotTime: team.dayStatus?.slotTime ?? "",
+        qualifyingMaze: team.dayStatus?.qualifyingMaze ?? "",
         teamCode: team.dayStatus?.teamCode ?? "",
         eligible: !ineligible.has(team.id),
         standing,

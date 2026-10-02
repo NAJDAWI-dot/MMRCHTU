@@ -502,6 +502,20 @@ model CompetitionDayConfig {
   // everything at once): the hall screen plays it, and the day site says so.
   lastReveal    String @default("")
 
+  // The mazes on the floor, comma-separated ("Maze A,Maze B"): what the Mazes desk
+  // offers when it puts a team on one.
+  mazeNames String @default("Maze A,Maze B")
+
+  // The judged awards, each a team id or empty until the judges pick: Best
+  // Code and Best Creative Design and their runners-up. The placings and the
+  // highest score are worked out from the bracket. None of the awards reach
+  // the public until awardsShown is on.
+  awardBestCode           String  @default("")
+  awardBestCodeRunnerUp   String  @default("")
+  awardBestDesign         String  @default("")
+  awardBestDesignRunnerUp String  @default("")
+  awardsShown             Boolean @default(false)
+
   updatedAt DateTime @updatedAt
 }
 
@@ -540,6 +554,10 @@ model TeamDayStatus {
   // plus a slot length per place.
   slotTime String @default("")
 
+  // The maze the team runs its qualifying eight minutes on ("Maze A"), or ""
+  // when nobody has said.
+  qualifyingMaze String @default("")
+
   // The judges' say on qualifying, over the table: "IN" goes through to the
   // knockout whatever its place, "OUT" does not. Empty: the table decides.
   qualifyOverride String @default("")
@@ -572,7 +590,8 @@ model QualifyingRun {
 }
 
 // A head-to-head match in the knockout. Round 2 is the round of 32, then 16,
-// quarter-finals, semi-finals and the final at round 6. Slot is the position
+// quarter-finals, semi-finals and the final at round 6. Round 7 is the third
+// place play-off between the two beaten semi-finalists. Slot is the position
 // in the round; the winners of slots 2k and 2k+1 meet in slot k of the next.
 model KnockoutMatch {
   id    String @id @default(cuid())
@@ -607,6 +626,10 @@ model KnockoutMatch {
   status      String    @default("PENDING")
   scheduledAt DateTime?
   arena       String    @default("")
+  // Which maze each side runs on: the two mice race side by side, one maze
+  // each. Empty when nobody has said.
+  mazeA       String    @default("")
+  mazeB       String    @default("")
   updatedBy   String    @default("")
   updatedAt   DateTime  @updatedAt
 

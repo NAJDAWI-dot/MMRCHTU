@@ -39,6 +39,18 @@ export const KNOCKOUT_ROUNDS = [2, 3, 4, 5, 6] as const;
 export type KnockoutRound = (typeof KNOCKOUT_ROUNDS)[number];
 
 /**
+ * The third place play-off: the two beaten semi-finalists, for 3rd place
+ * (rulebook version 3, "the semi-final runners-up bracket"). Kept as round 7
+ * so it never gets in the way of the rounds that lead to the final, and only
+ * played when the bracket has a row for it (src/app/day/hq/scoring/actions.ts
+ * draws one with the rest).
+ */
+export const THIRD_PLACE_ROUND = 7;
+
+/** The rounds a desk or a page lists: the bracket's own, then the play-off. */
+export const PLAYED_ROUNDS = [...KNOCKOUT_ROUNDS, THIRD_PLACE_ROUND] as const;
+
+/**
  * How many teams qualifying sends to the knockout. 32 starts it at the round
  * of 32; 16 skips that round and starts at the round of 16, seeded the same
  * way (1st v 16th, 2nd v 15th). The rounds keep their numbers either way, so
@@ -95,12 +107,28 @@ export const PHASES: readonly PhaseInfo[] = [
   { phase: 6, name: "Final", short: "F", teams: 2, blurb: "One match for the title." },
 ];
 
+/** Not one of PHASES: the play-off is part of the final phase, not a phase of its own. */
+export const THIRD_PLACE_INFO: PhaseInfo = {
+  phase: THIRD_PLACE_ROUND,
+  name: "Third place play-off",
+  short: "3rd",
+  teams: 2,
+  blurb: "The two beaten semi-finalists, for third place.",
+};
+
 export function phaseInfo(phase: number): PhaseInfo {
+  if (phase === THIRD_PLACE_ROUND) return THIRD_PLACE_INFO;
   return PHASES.find((info) => info.phase === phase) ?? PHASES[0]!;
 }
 
-/** Matches in a knockout round: 16, 8, 4, 2, 1. */
+/** The phase a round belongs to for what the public sees: the play-off goes with the final. */
+export function revealPhaseOf(round: number): number {
+  return round === THIRD_PLACE_ROUND ? FINAL_ROUND : round;
+}
+
+/** Matches in a knockout round: 16, 8, 4, 2, 1, and one play-off. */
 export function matchesInRound(round: number): number {
+  if (round === THIRD_PLACE_ROUND) return 1;
   return 2 ** (FINAL_ROUND - round);
 }
 
@@ -423,12 +451,116 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
   const outcome = new Map<string, Side>();
   const firstRound = firstRoundOf(input);
 
+  /** One match, from the two sides that meet in it and what is stored for it. */
+  const settle = (round: number, slot: number, sideA: Side, sideB: Side): ResolvedMatch => {
+    const key = `${round}:${slot}`;
+    const stored = byKey.get(key);
+
+    const teamsChanged =
+      !!stored && (stored.teamAId !== sideA.team || stored.teamBId !== sideB.team);
+    // A result somebody entered: scores, or a winner picked between two real
+    // teams. A winner that only came from a bye is not one; it is redrawn
+    // as freely as the pairing is.
+    const hadResult =
+      !!stored &&
+      (stored.scoreA !== null ||
+        stored.scoreB !== null ||
+        (stored.timesA?.length ?? 0) > 0 ||
+        (stored.timesB?.length ?? 0) > 0 ||
+        (stored.remainingA ?? null) !== null ||
+        (stored.remainingB ?? null) !== null ||
+        cleanLog(stored.runLogA).length > 0 ||
+        cleanLog(stored.runLogB).length > 0 ||
+        (stored.winnerId !== null && stored.teamAId !== null && stored.teamBId !== null));
+
+    let scoreA = teamsChanged ? null : (stored?.scoreA ?? null);
+    let scoreB = teamsChanged ? null : (stored?.scoreB ?? null);
+    let timesA = teamsChanged ? [] : (stored?.timesA ?? []);
+    let timesB = teamsChanged ? [] : (stored?.timesB ?? []);
+    let remainingA = teamsChanged ? null : (stored?.remainingA ?? null);
+    let remainingB = teamsChanged ? null : (stored?.remainingB ?? null);
+    let runLogA = teamsChanged ? [] : cleanLog(stored?.runLogA);
+    let runLogB = teamsChanged ? [] : cleanLog(stored?.runLogB);
+    const storedWinner = teamsChanged ? null : (stored?.winnerId ?? null);
+    let winnerOverride = !teamsChanged && !!stored?.winnerOverride;
+
+    let winnerId: string | null = null;
+    let walkover = false;
+    let tied = false;
+    const isVoid = sideA.bye && sideB.bye;
+
+    if (sideA.team && sideB.team) {
+      if (winnerOverride && (storedWinner === sideA.team || storedWinner === sideB.team)) {
+        // The judges' decision stands, whatever the sheets say.
+        winnerId = storedWinner;
+      } else if (scoreA !== null && scoreB !== null && compareScores(scoreA, scoreB, direction) !== 0) {
+        winnerId = compareScores(scoreA, scoreB, direction) < 0 ? sideA.team : sideB.team;
+      } else {
+        tied = scoreA !== null && scoreB !== null;
+        if (storedWinner === sideA.team || storedWinner === sideB.team) winnerId = storedWinner;
+      }
+    } else if (sideA.team && sideB.bye) {
+      winnerId = sideA.team;
+      walkover = true;
+      scoreA = null;
+      scoreB = null;
+      timesA = [];
+      timesB = [];
+      remainingA = null;
+      remainingB = null;
+      runLogA = [];
+      runLogB = [];
+      winnerOverride = false;
+    } else if (sideB.team && sideA.bye) {
+      winnerId = sideB.team;
+      walkover = true;
+      scoreA = null;
+      scoreB = null;
+      timesA = [];
+      timesB = [];
+      remainingA = null;
+      remainingB = null;
+      runLogA = [];
+      runLogB = [];
+      winnerOverride = false;
+    }
+
+    const match: ResolvedMatch = {
+      id: stored?.id ?? "",
+      round,
+      slot,
+      teamAId: sideA.team,
+      teamBId: sideB.team,
+      seedA: sideA.seed,
+      seedB: sideB.seed,
+      scoreA,
+      scoreB,
+      winnerId,
+      timesA,
+      timesB,
+      remainingA,
+      remainingB,
+      runLogA,
+      runLogB,
+      winnerOverride: winnerOverride && winnerId !== null,
+      void: isVoid,
+      walkover,
+      tied,
+    };
+    resolved.set(key, match);
+    if (teamsChanged && hadResult) {
+      conflicts.push(match);
+    }
+
+    const winnerSeed = winnerId === sideA.team ? sideA.seed : winnerId === sideB.team ? sideB.seed : null;
+    outcome.set(key, { team: winnerId, seed: winnerSeed, bye: isVoid });
+    return match;
+  };
+
   for (const round of KNOCKOUT_ROUNDS) {
     if (round < firstRound) continue;
     for (let slot = 0; slot < matchesInRound(round); slot++) {
-      const key = `${round}:${slot}`;
-      const stored = byKey.get(key);
-
+      const stored = byKey.get(`${round}:${slot}`);
       let sideA: Side;
       let sideB: Side;
       if (round === firstRound) {
@@ -438,106 +570,23 @@ export function resolveBracket(input: MatchInput[], direction: Direction): Brack
         sideA = outcome.get(`${round - 1}:${slot * 2}`) ?? { team: null, seed: null, bye: false };
         sideB = outcome.get(`${round - 1}:${slot * 2 + 1}`) ?? { team: null, seed: null, bye: false };
       }
-
-      const teamsChanged =
-        !!stored && (stored.teamAId !== sideA.team || stored.teamBId !== sideB.team);
-      // A result somebody entered: scores, or a winner picked between two real
-      // teams. A winner that only came from a bye is not one; it is redrawn
-      // as freely as the pairing is.
-      const hadResult =
-        !!stored &&
-        (stored.scoreA !== null ||
-          stored.scoreB !== null ||
-          (stored.timesA?.length ?? 0) > 0 ||
-          (stored.timesB?.length ?? 0) > 0 ||
-          (stored.remainingA ?? null) !== null ||
-          (stored.remainingB ?? null) !== null ||
-          cleanLog(stored.runLogA).length > 0 ||
-          cleanLog(stored.runLogB).length > 0 ||
-          (stored.winnerId !== null && stored.teamAId !== null && stored.teamBId !== null));
-
-      let scoreA = teamsChanged ? null : (stored?.scoreA ?? null);
-      let scoreB = teamsChanged ? null : (stored?.scoreB ?? null);
-      let timesA = teamsChanged ? [] : (stored?.timesA ?? []);
-      let timesB = teamsChanged ? [] : (stored?.timesB ?? []);
-      let remainingA = teamsChanged ? null : (stored?.remainingA ?? null);
-      let remainingB = teamsChanged ? null : (stored?.remainingB ?? null);
-      let runLogA = teamsChanged ? [] : cleanLog(stored?.runLogA);
-      let runLogB = teamsChanged ? [] : cleanLog(stored?.runLogB);
-      const storedWinner = teamsChanged ? null : (stored?.winnerId ?? null);
-      let winnerOverride = !teamsChanged && !!stored?.winnerOverride;
-
-      let winnerId: string | null = null;
-      let walkover = false;
-      let tied = false;
-      const isVoid = sideA.bye && sideB.bye;
-
-      if (sideA.team && sideB.team) {
-        if (winnerOverride && (storedWinner === sideA.team || storedWinner === sideB.team)) {
-          // The judges' decision stands, whatever the sheets say.
-          winnerId = storedWinner;
-        } else if (scoreA !== null && scoreB !== null && compareScores(scoreA, scoreB, direction) !== 0) {
-          winnerId = compareScores(scoreA, scoreB, direction) < 0 ? sideA.team : sideB.team;
-        } else {
-          tied = scoreA !== null && scoreB !== null;
-          if (storedWinner === sideA.team || storedWinner === sideB.team) winnerId = storedWinner;
-        }
-      } else if (sideA.team && sideB.bye) {
-        winnerId = sideA.team;
-        walkover = true;
-        scoreA = null;
-        scoreB = null;
-        timesA = [];
-        timesB = [];
-        remainingA = null;
-        remainingB = null;
-        runLogA = [];
-        runLogB = [];
-        winnerOverride = false;
-      } else if (sideB.team && sideA.bye) {
-        winnerId = sideB.team;
-        walkover = true;
-        scoreA = null;
-        scoreB = null;
-        timesA = [];
-        timesB = [];
-        remainingA = null;
-        remainingB = null;
-        runLogA = [];
-        runLogB = [];
-        winnerOverride = false;
-      }
-
-      const match: ResolvedMatch = {
-        id: stored?.id ?? "",
-        round,
-        slot,
-        teamAId: sideA.team,
-        teamBId: sideB.team,
-        seedA: sideA.seed,
-        seedB: sideB.seed,
-        scoreA,
-        scoreB,
-        winnerId,
-        timesA,
-        timesB,
-        remainingA,
-        remainingB,
-        runLogA,
-        runLogB,
-        winnerOverride: winnerOverride && winnerId !== null,
-        void: isVoid,
-        walkover,
-        tied,
-      };
-      resolved.set(key, match);
-      if (teamsChanged && hadResult) {
-        conflicts.push(match);
-      }
-
-      const winnerSeed = winnerId === sideA.team ? sideA.seed : winnerId === sideB.team ? sideB.seed : null;
-      outcome.set(key, { team: winnerId, seed: winnerSeed, bye: isVoid });
+      settle(round, slot, sideA, sideB);
     }
+  }
+
+  // The third place play-off, when the bracket has one: whoever lost each
+  // semi-final. A semi-final nobody lost (a bye) leaves a bye in its place.
+  const semi = FINAL_ROUND - 1;
+  if (byKey.has(`${THIRD_PLACE_ROUND}:0`) && firstRound <= semi) {
+    const loserOf = (slot: number): Side => {
+      const match = resolved.get(`${semi}:${slot}`);
+      if (!match || match.void || match.walkover) return { team: null, seed: null, bye: true };
+      if (!match.winnerId) return { team: null, seed: null, bye: false };
+      return match.winnerId === match.teamAId
+        ? { team: match.teamBId, seed: match.seedB, bye: false }
+        : { team: match.teamAId, seed: match.seedA, bye: false };
+    };
+    settle(THIRD_PLACE_ROUND, 0, loserOf(0), loserOf(1));
   }
 
   return {
@@ -581,7 +630,11 @@ export type JourneyState =
   | "ALIVE"
   | "ELIMINATED"
   | "RUNNER_UP"
-  | "CHAMPION";
+  | "CHAMPION"
+  /** Won the third place play-off. */
+  | "THIRD"
+  /** Lost it. */
+  | "FOURTH";
 
 export interface Journey {
   state: JourneyState;
@@ -613,6 +666,12 @@ export function journeyOf(
   if (mine.length > 0) {
     const last = mine[mine.length - 1]!;
     const name = phaseInfo(last.round).name;
+    if (last.round === THIRD_PLACE_ROUND) {
+      if (last.winnerId === null) return { state: "ALIVE", label: "In the third place play-off", round: last.round, seed };
+      return last.winnerId === teamId
+        ? { state: "THIRD", label: "Third place", round: last.round, seed }
+        : { state: "FOURTH", label: "Fourth place", round: last.round, seed };
+    }
     if (last.winnerId === null) {
       return { state: "ALIVE", label: `In the ${name}`, round: last.round, seed };
     }

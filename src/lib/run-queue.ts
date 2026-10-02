@@ -22,6 +22,8 @@ export interface QueueEntry {
   ran: boolean;
   /** The organisers' code for the team, when it has one. */
   code?: string;
+  /** The maze it runs on, when the Mazes desk has said. */
+  maze?: string;
 }
 
 export interface RunQueue {

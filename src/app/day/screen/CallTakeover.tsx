@@ -9,6 +9,8 @@ export interface ScreenCall {
   name: string;
   code: string;
   runOrder: number | null;
+  /** The maze it runs on, or "". */
+  maze: string;
   /** ISO time of the call. */
   calledAt: string;
   next: { name: string; code: string } | null;
@@ -76,7 +78,7 @@ export function CallTakeover({ call }: { call: ScreenCall | null }) {
         </h1>
         <p className="day-call-to">
           <span className="day-call-route" aria-hidden="true" />
-          to the maze
+          {shown.maze ? `to ${shown.maze}` : "to the maze"}
         </p>
         {shown.next ? (
           <p className="day-call-next">

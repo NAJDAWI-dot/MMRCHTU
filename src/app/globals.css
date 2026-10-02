@@ -2877,6 +2877,17 @@ svg:hover .maze-progress-ear:nth-of-type(2) {
     box-shadow: 0 0 0 1px rgb(var(--day-line) / 0.14);
   }
 
+  /* The same control as links, for tabs that are pages: the current one is lit. */
+  .day-segment a:hover span {
+    color: rgb(var(--day-ink));
+  }
+
+  .day-segment a[aria-current="page"] span {
+    background: rgb(var(--day-surface));
+    color: rgb(var(--day-ink));
+    box-shadow: 0 0 0 1px rgb(var(--day-line) / 0.14);
+  }
+
   .day-segment input:focus-visible + span {
     outline: 2px solid rgb(var(--day-crimson));
     outline-offset: 2px;

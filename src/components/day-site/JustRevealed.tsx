@@ -6,6 +6,7 @@ import type { LastReveal } from "@/lib/reveal";
 /** What a reveal is called on the day site, and where to see it. */
 export function revealedLink(last: LastReveal): { text: string; href: string } {
   if (last.phase === "all") return { text: "All the results", href: "/day/standings" };
+  if (last.phase === "awards") return { text: "The awards", href: "/results" };
   const name = phaseInfo(last.phase).name;
   if (last.phase === FINAL_ROUND && last.kind === "advance") return { text: "The champions", href: "/day" };
   if (last.phase === 1) return last.kind === "advance" ? { text: "Who qualified, and the draw", href: "/day/bracket" } : { text: "The qualifying results", href: "/day/standings" };

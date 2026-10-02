@@ -57,6 +57,12 @@ const COMPETITION_DAY_FALLBACK: CompetitionDayConfig = {
   hiddenResults: "",
   hiddenAdvance: "",
   lastReveal: "",
+  mazeNames: "Maze A,Maze B",
+  awardBestCode: "",
+  awardBestCodeRunnerUp: "",
+  awardBestDesign: "",
+  awardBestDesignRunnerUp: "",
+  awardsShown: false,
   updatedAt: NEVER_SAVED,
 };
 

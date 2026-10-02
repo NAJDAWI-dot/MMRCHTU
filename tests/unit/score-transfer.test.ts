@@ -65,7 +65,11 @@ describe("phases", () => {
     expect(parsePhase("Semi-finals")).toBe(5);
     expect(parsePhase("Final")).toBe(6);
     expect(parsePhase("Phase 3")).toBe(3);
-    expect(parsePhase("7")).toBeNull();
+    expect(parsePhase("7")).toBe(7);
+    expect(parsePhase("Third place")).toBe(7);
+    expect(parsePhase("3rd place play-off")).toBe(7);
+    expect(parsePhase("Third place play-off")).toBe(7);
+    expect(parsePhase("8")).toBeNull();
     expect(parsePhase("Group stage")).toBeNull();
   });
 });
@@ -129,7 +133,7 @@ describe("the scores file", () => {
       "Line 3: a successful run needs its time.",
       'Line 4: "Maybe" is not a result. Use Success, Fail, Return or Return fail.',
       "Line 5: Round of 32 needs a match number from 1 to 16.",
-      'Line 6: "Semis" is not a phase. Use Qualifying, Round of 32, Round of 16, Quarter-finals, Semi-finals or Final.',
+      'Line 6: "Semis" is not a phase. Use Qualifying, Round of 32, Round of 16, Quarter-finals, Semi-finals, Final or Third place.',
       'Line 7: "100" is not a cell. A failed run reached a cell from 1 to 99.',
       'Line 8: "9:99" is not a run time. Use seconds, like 25.41, inside the 8 minutes.',
     ]);

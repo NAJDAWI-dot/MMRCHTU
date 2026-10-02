@@ -43,7 +43,7 @@ type SortKey = (typeof SORTS)[number]["key"];
 function matches(team: TeamCardData, filter: FilterKey): boolean {
   const state = team.journey.state;
   if (filter === "all") return true;
-  if (filter === "in") return !["NOT_QUALIFIED", "ELIMINATED", "RUNNER_UP"].includes(state);
+  if (filter === "in") return !["NOT_QUALIFIED", "ELIMINATED", "RUNNER_UP", "THIRD", "FOURTH"].includes(state);
   if (filter === "qualified") return team.seed !== null;
   if (filter === "here") return team.checkedIn;
   return ["NOT_QUALIFIED", "ELIMINATED"].includes(state);

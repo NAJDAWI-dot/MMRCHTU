@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireSection } from "@/lib/admin-access";
-import { phaseInfo } from "@/lib/bracket";
+import { THIRD_PLACE_ROUND, phaseInfo } from "@/lib/bracket";
 import { loadCompetition } from "@/lib/competition";
 import { clockTime } from "@/lib/day-mode";
 import { loadQueue } from "@/lib/day-queue";
@@ -37,6 +37,7 @@ export default async function JudgePage() {
       return {
         id: team.id,
         name: team.name,
+        maze: team.qualifyingMaze,
         runOrder: team.runOrder,
         log: row ? scoreSheet({ times: row.runTimes, remaining: row.remaining, log: row.runLog }).log : [],
         note: row?.note ?? "",
@@ -46,14 +47,17 @@ export default async function JudgePage() {
 
   // The knockout: the round being played, live matches first, then the ones still to play.
   const currentRound = state.rounds.find((round) => state.bracket.some((m) => m.round === round && m.teamAId && m.teamBId && !m.winnerId && !m.walkover && !m.void));
+  // The third place play-off is offered as soon as both its teams are known:
+  // it has teams only once both semi-finals are decided, and may be played after the final.
+  const inPlay = (round: number) => round === currentRound || round === THIRD_PLACE_ROUND;
   const matches = state.bracket
-    .filter((m) => m.teamAId && m.teamBId && !m.walkover && !m.void && (m.round === currentRound || m.status === "LIVE"))
+    .filter((m) => m.teamAId && m.teamBId && !m.walkover && !m.void && (inPlay(m.round) || m.status === "LIVE"))
     .sort((a, b) => Number(b.status === "LIVE") - Number(a.status === "LIVE") || Number(!!a.winnerId) - Number(!!b.winnerId) || a.round - b.round || a.slot - b.slot)
     .map((m) => ({
       id: m.id,
       label: `${phaseInfo(m.round).name} · Match ${m.slot + 1}`,
-      teamA: { id: m.teamAId!, name: nameOf(m.teamAId), log: scoreSheet({ times: m.timesA, remaining: m.remainingA, log: m.runLogA }).log },
-      teamB: { id: m.teamBId!, name: nameOf(m.teamBId), log: scoreSheet({ times: m.timesB, remaining: m.remainingB, log: m.runLogB }).log },
+      teamA: { id: m.teamAId!, name: nameOf(m.teamAId), maze: m.mazeA, log: scoreSheet({ times: m.timesA, remaining: m.remainingA, log: m.runLogA }).log },
+      teamB: { id: m.teamBId!, name: nameOf(m.teamBId), maze: m.mazeB, log: scoreSheet({ times: m.timesB, remaining: m.remainingB, log: m.runLogB }).log },
       arena: m.arena,
       time: m.scheduledAt ? clockTime(m.scheduledAt) : "",
       decided: !!m.winnerId,

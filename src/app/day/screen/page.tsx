@@ -3,7 +3,7 @@ import { Crest } from "@/components/day-site/Crest";
 import { DayMouse } from "@/components/day-site/DayMice";
 import { SponsorLogo } from "@/components/day-site/SponsorLogo";
 import { DayIcon } from "@/components/day-site/icons";
-import { matchesInRound, phaseInfo } from "@/lib/bracket";
+import { matchesInRound, phaseInfo, revealPhaseOf } from "@/lib/bracket";
 import { type BracketMatch } from "@/lib/competition";
 import { loadPublicCompetition } from "@/lib/public-competition";
 import { requireDayViewer } from "@/lib/day-access";
@@ -19,6 +19,7 @@ import { formatPoints, formatReached, formatTime } from "@/lib/score-sheet";
 import type { ScreenCall } from "./CallTakeover";
 import { HallScreen, type ScreenPanel } from "./HallScreen";
 import { recentReveal } from "@/lib/reveal";
+import { awardsList, picksOf } from "@/lib/awards";
 import { revealShow } from "@/lib/reveal-show";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 
@@ -51,8 +52,10 @@ export default async function HallScreenPage() {
   const playable = state.bracket.filter((m) => m.teamAId && m.teamBId && !m.walkover);
   const live = playable.filter((m) => m.status === "LIVE");
   const waiting = playable.filter((m) => !m.winnerId && m.status !== "LIVE");
-  const currentRound = champion ? 6 : (live[0]?.round ?? waiting[0]?.round ?? null);
-  const upNext = waiting.filter((m) => m.round === currentRound).slice(0, 4 - Math.min(live.length, 4));
+  // The third place play-off counts as part of the final phase.
+  const playing = live[0]?.round ?? waiting[0]?.round;
+  const currentRound = champion ? 6 : playing !== undefined ? revealPhaseOf(playing) : null;
+  const upNext = waiting.filter((m) => revealPhaseOf(m.round) === currentRound).slice(0, 4 - Math.min(live.length, 4));
   const ranked = state.table.filter((row) => row.rank !== null);
   const ran = state.table.filter((row) => row.recorded).length;
 
@@ -126,6 +129,7 @@ export default async function HallScreenPage() {
               </div>
             </div>
             <p className="day-num mt-[4vh] text-[3vh] text-day-muted">
+              {lead.maze ? <span className="font-semibold text-day-crimson">{lead.maze} · </span> : null}
               Runs #{lead.runOrder}
               {now && queue.calledAt ? ` · called at ${clockTime(queue.calledAt)}` : !now ? ` · ${queue.etaOf(lead.id)}` : ""}
             </p>
@@ -154,7 +158,7 @@ export default async function HallScreenPage() {
                         </p>
                       </div>
                       <p className="day-num mt-[2vh] text-[2.4vh] text-day-muted">
-                        #{entry.runOrder}
+                        {entry.maze ? <span className="font-semibold text-day-crimson">{entry.maze} · </span> : null}#{entry.runOrder}
                         {queue.etaOf(entry.id) ? ` · ${queue.etaOf(entry.id)}` : ""}
                       </p>
                       {label === "On deck" ? <p className="mt-[1vh] text-[2.2vh] font-semibold text-day-ink">Bring your robot to the staging table</p> : null}
@@ -235,11 +239,19 @@ export default async function HallScreenPage() {
     "to-play": { text: "To play", className: "bg-day-ink/[0.07] text-day-muted" },
   };
   if (champion) {
-    const PLACE = { 1: ["Champions", "text-day-gold"], 2: ["Runners-up", "text-day-ink"], 3: ["Semi-finalists", "text-day-plum"] } as const;
+    const placings = finalPlacings(state.bracket);
+    // Third place is shared by the beaten semi-finalists until the play-off is decided.
+    const shared = placings.filter((placing) => placing.place === 3).length > 1;
+    const PLACE = {
+      1: ["Champions", "text-day-gold"],
+      2: ["Runners-up", "text-day-ink"],
+      3: [shared ? "Semi-finalists" : "Third place", "text-day-plum"],
+      4: ["Fourth place", "text-day-faint"],
+    } as const;
     board = {
       kicker: "MMRC 26",
       title: "Final standings",
-      rows: finalPlacings(state.bracket).map((placing) => ({
+      rows: placings.map((placing) => ({
         key: placing.teamId,
         rank: String(placing.place),
         name: nameOf(placing.teamId) ?? "",
@@ -382,7 +394,7 @@ export default async function HallScreenPage() {
 
   // --------------------------------------------------------------- bracket
   if (state.drawn && currentRound && !champion) {
-    const round = state.bracket.filter((m) => m.round === currentRound && !m.void);
+    const round = state.bracket.filter((m) => revealPhaseOf(m.round) === currentRound && !m.void);
     const decided = round.filter((m) => m.winnerId).length;
     const columns = matchesInRound(currentRound) >= 8 ? 4 : matchesInRound(currentRound) >= 2 ? 2 : 1;
     panels.push({
@@ -520,6 +532,7 @@ export default async function HallScreenPage() {
           name: called.name,
           code: called.code ?? "",
           runOrder: called.runOrder,
+          maze: called.maze ?? "",
           calledAt: queue.calledAt.toISOString(),
           next: queue.queue.onDeck ? { name: queue.queue.onDeck.name, code: queue.queue.onDeck.code ?? "" } : null,
           then: queue.queue.inHole ? { name: queue.queue.inHole.name, code: queue.queue.inHole.code ?? "" } : null,
@@ -532,7 +545,7 @@ export default async function HallScreenPage() {
       phaseLine={phaseLine}
       alert={alert ? { title: alert.title, body: alert.body, tone: alert.tone } : null}
       followUrl={shell.isPublic ? "mmrchtu.tech" : "mmrchtu.tech/day"}
-      reveal={revealShow(state, recentReveal(config.lastReveal, Date.now()))}
+      reveal={revealShow(state, recentReveal(config.lastReveal, Date.now()), awardsList(state.bracket, picksOf(config, (id) => state.byId.has(id)), config.awardsShown))}
       call={call}
     />
   );
@@ -550,14 +563,14 @@ function PanelTitle({ kicker, children }: { kicker: string; children: React.Reac
 function MatchPanel({ match, nameOf, big }: { match: BracketMatch; nameOf: (id: string | null) => string | null; big: boolean }) {
   const live = match.status === "LIVE";
   const sides = [
-    { id: match.teamAId, seed: match.seedA, score: match.scoreA },
-    { id: match.teamBId, seed: match.seedB, score: match.scoreB },
+    { id: match.teamAId, seed: match.seedA, score: match.scoreA, maze: match.mazeA },
+    { id: match.teamBId, seed: match.seedB, score: match.scoreB, maze: match.mazeB },
   ];
   return (
     <div className={`day-card flex min-h-0 flex-col justify-center overflow-hidden px-[4vh] py-[2.5vh] ${live ? "border-day-live" : ""}`}>
       <p className={`flex items-center gap-[1vh] text-[2.2vh] font-semibold ${live ? "text-day-live" : "text-day-muted"}`}>
         {live ? <span className="day-live-dot" aria-hidden="true" /> : null}
-        {live ? "On the maze now" : `Match ${match.slot + 1}`}
+        {live ? "On the maze now" : match.round === 7 ? phaseInfo(match.round).name : `Match ${match.slot + 1}`}
         {match.arena ? <span className="text-day-faint">· {match.arena}</span> : null}
       </p>
       <div className="mt-[2vh] space-y-[2vh]">
@@ -568,7 +581,13 @@ function MatchPanel({ match, nameOf, big }: { match: BracketMatch; nameOf: (id: 
               <Crest name={name} size={big ? 96 : 56} />
               <span className="min-w-0 flex-1">
                 <span className={`day-display block truncate leading-none text-day-ink ${big ? "text-[9vh]" : "text-[4.6vh]"}`}>{name}</span>
-                {side.seed ? <span className="mt-[0.6vh] block text-[1.9vh] font-semibold text-day-faint">Seed {side.seed}</span> : null}
+                {side.seed || side.maze ? (
+                  <span className="mt-[0.6vh] block text-[1.9vh] font-semibold text-day-faint">
+                    {side.maze ? <span className="text-day-crimson">{side.maze}</span> : null}
+                    {side.seed && side.maze ? " · " : ""}
+                    {side.seed ? `Seed ${side.seed}` : ""}
+                  </span>
+                ) : null}
               </span>
               <span className={`day-num day-display text-day-ink ${big ? "text-[9vh]" : "text-[5vh]"}`}>{formatPoints(side.score)}</span>
             </div>

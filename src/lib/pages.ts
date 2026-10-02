@@ -59,6 +59,11 @@ export const MANAGED_PAGES: readonly ManagedPage[] = [
     label: "Team",
     covers: "The committee page. Hidden on its own until somebody on it is published.",
   },
+  {
+    href: "/results",
+    label: "Results",
+    covers: "The podium, the awards, the knockout and the qualifying table. In the menu on its own once the awards are revealed, in Competition Day's place.",
+  },
   { href: "/faq", label: "FAQ", covers: "Published answers and the ask-a-question form." },
   {
     href: "/register",

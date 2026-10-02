@@ -188,6 +188,7 @@ export default async function QualifyingDeskPage() {
                   {tile.entry?.runOrder ? `#${tile.entry.runOrder}` : ""}
                   {tile.note ? ` · ${tile.note}` : ""}
                 </p>
+                {tile.entry?.maze ? <p className="mt-1 text-xs font-semibold text-day-crimson">{tile.entry.maze}</p> : null}
               </li>
             ))}
           </ol>

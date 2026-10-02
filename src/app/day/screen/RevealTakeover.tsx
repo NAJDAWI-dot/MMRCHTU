@@ -8,6 +8,8 @@ import type { RevealShow } from "@/lib/reveal-show";
 const PLAYED = "mmrc-screen-reveals";
 const COUNT_MS = 1000;
 const STEP_MS = 1400;
+/** An award at a time, slow enough for the room to cheer each one. */
+const AWARD_MS = 2600;
 
 /** Whether this screen has played this reveal already. */
 export function playedBefore(id: string): boolean {
@@ -73,8 +75,13 @@ export function RevealTakeover({ show, onDone }: { show: RevealShow; onDone: () 
 
   const countdown = reduced ? 0 : 3 * COUNT_MS;
   const rowCount = show.rows.length;
-  const revealAll = show.mode === "ranking" ? countdown + 1200 + rowCount * STEP_MS : countdown + 1200 + rowCount * 90;
-  const hold = show.mode === "champion" ? 22_000 : 14_000;
+  const revealAll =
+    show.mode === "ranking"
+      ? countdown + 1200 + rowCount * STEP_MS
+      : show.mode === "awards"
+        ? countdown + 1200 + rowCount * AWARD_MS
+        : countdown + 1200 + rowCount * 90;
+  const hold = show.mode === "champion" || show.mode === "awards" ? 22_000 : 14_000;
   const total = (reduced ? 0 : revealAll) + hold;
 
   const done = useRef(onDone);
@@ -119,8 +126,10 @@ export function RevealTakeover({ show, onDone }: { show: RevealShow; onDone: () 
     ? rowCount
     : show.mode === "ranking"
       ? Math.max(0, Math.min(rowCount, Math.floor(afterTitle / STEP_MS) + 1))
-      : Math.max(0, Math.min(rowCount, Math.floor(afterTitle / 90) + 1));
-  const firstIn = show.mode === "ranking" && shownRows === rowCount && rowCount > 0;
+      : show.mode === "awards"
+        ? Math.max(0, Math.min(rowCount, Math.floor(afterTitle / AWARD_MS) + 1))
+        : Math.max(0, Math.min(rowCount, Math.floor(afterTitle / 90) + 1));
+  const firstIn = (show.mode === "ranking" || show.mode === "awards") && shownRows === rowCount && rowCount > 0;
 
   return (
     <div className={`reveal-stage ${leaving ? "is-leaving" : ""}`} role="dialog" aria-modal="true" aria-label={`${show.kicker}: ${show.title}`}>
@@ -207,6 +216,32 @@ export function RevealTakeover({ show, onDone }: { show: RevealShow; onDone: () 
                   })}
                 </ol>
               </div>
+            ) : show.mode === "awards" ? (
+              // One award at a time, the last one (the champions) across the bottom.
+              <ol className="grid w-full grid-cols-2 gap-[1.6vh]" aria-live="polite">
+                {show.rows.map((row, index) => {
+                  const last = index === rowCount - 1;
+                  return (
+                    <li
+                      key={row.value}
+                      className={`flex items-center gap-[2.6vh] rounded-[0.5vh] px-[3vh] py-[1.6vh] text-left ${last && rowCount % 2 === 1 ? "col-span-2" : ""} ${
+                        index < shownRows ? "reveal-row" : "invisible"
+                      }`}
+                      style={{
+                        background: last ? "linear-gradient(100deg, rgb(var(--day-gold) / 0.22), rgb(var(--day-gold) / 0.06))" : "rgb(255 255 255 / 0.06)",
+                        border: last ? "2px solid rgb(var(--day-gold) / 0.7)" : undefined,
+                      }}
+                    >
+                      <Crest name={row.name} size={last ? 84 : 52} ring={last} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[2vh] font-bold uppercase tracking-wide text-[rgb(var(--day-gold))]">{row.value}</span>
+                        <span className={`block truncate font-bold leading-tight ${last ? "reveal-shine text-[6vh]" : "text-[3.6vh]"}`}>{row.name}</span>
+                        {row.detail ? <span className="block truncate text-[1.8vh] opacity-70">{row.detail}</span> : null}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
             ) : (
               <ol className="grid w-full grid-cols-4 gap-[1.2vh]" aria-live="polite">
                 {show.rows.map((row, index) => (

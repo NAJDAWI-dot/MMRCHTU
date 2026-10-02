@@ -5,11 +5,12 @@ import { Crest } from "@/components/day-site/Crest";
 import { DayIcon, type DayIconName } from "@/components/day-site/icons";
 import { FollowButton } from "@/components/day-site/Follow";
 import { JourneyBadge, MatchCard, Readout, SectionTitle, SheetView } from "@/components/day-site/ui";
-import { INSPECTION_LABELS, ordinal, phaseInfo } from "@/lib/bracket";
+import { INSPECTION_LABELS, ordinal, phaseInfo, revealPhaseOf } from "@/lib/bracket";
 import { publicMembers } from "@/lib/competition";
 import { loadPublicCompetition } from "@/lib/public-competition";
 import { clockTime } from "@/lib/day-mode";
 import { loadQueue } from "@/lib/day-queue";
+import { readyNotices } from "@/lib/follow";
 import { formatPoints, formatTime } from "@/lib/score-sheet";
 import { canViewDaySite, requireDayViewer } from "@/lib/day-access";
 
@@ -33,6 +34,7 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
   if (!team) notFound();
 
   const [members, queue] = await Promise.all([publicMembers(team.id), loadQueue()]);
+  const notice = readyNotices(state, queue).get(team.id);
   const place = queue.active ? queue.placeOf(team.id) : null;
   const eta = queue.etaOf(team.id);
   const queueChip = !place
@@ -85,6 +87,7 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
     { text: INSPECTION_LABELS[team.inspection], tone: team.inspection === "PASSED" ? "text-day-good bg-day-good/10" : team.inspection === "FAILED" ? "text-day-live bg-day-live/10" : "text-day-muted bg-day-ink/[0.06]" },
     team.teamCode ? { text: team.teamCode, tone: "text-day-on-ink bg-day-ink" } : null,
     team.runOrder ? { text: `Runs ${ordinal(team.runOrder)} in qualifying`, tone: "text-day-plum bg-day-plum/10" } : null,
+    team.qualifyingMaze && !state.drawn ? { text: `Qualifies on ${team.qualifyingMaze}`, tone: "text-day-ink bg-day-ink/[0.06]" } : null,
     team.withdrawn ? { text: "Withdrawn", tone: "text-day-live bg-day-live/10" } : null,
   ].filter((chip): chip is { text: string; tone: string } => chip !== null);
 
@@ -94,6 +97,22 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
         <DayIcon name="back" className="h-4 w-4" />
         All teams
       </Link>
+
+      {notice ? (
+        // Get ready: called to the maze, on deck, or the next match.
+        <section
+          role="status"
+          className={`day-card day-posts flex items-start gap-4 p-5 sm:p-6 ${notice.tone === "live" ? "border-day-live/60 bg-day-live/[0.05]" : "border-day-gold/70 bg-day-gold/[0.08]"}`}
+        >
+          <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-[4px] text-day-on-ink ${notice.tone === "live" ? "bg-day-live" : "bg-day-gold"}`}>
+            <DayIcon name={notice.tone === "live" ? "live" : "timer"} className="h-6 w-6" />
+          </span>
+          <div className="min-w-0">
+            <p className={`day-display text-2xl leading-tight sm:text-3xl ${notice.tone === "live" ? "text-day-live" : "text-day-gold"}`}>{notice.title}</p>
+            <p className="mt-1.5 text-day-ink">{notice.body}</p>
+          </div>
+        </section>
+      ) : null}
 
       {/* ------------------------------------------------------------ hero
           The team's own maze, large on the floor, and its name beside it. */}
@@ -218,7 +237,7 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
                   }`}
                 />
                 <p className="mb-2.5 text-sm font-semibold text-day-muted">
-                  Phase {match.round} · {phaseInfo(match.round).name}
+                  Phase {revealPhaseOf(match.round)} · {phaseInfo(match.round).name}
                   {match.winnerId ? (match.winnerId === team.id ? " · won" : " · lost") : ""}
                 </p>
                 <MatchCard match={match} nameOf={nameOf} live={match.status === "LIVE"} highlight={team.id} arena={match.arena} showSheets />

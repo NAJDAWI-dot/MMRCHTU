@@ -109,6 +109,8 @@ const JOURNEY_TONES: Record<Journey["state"], string> = {
   ELIMINATED: "bg-day-ink/[0.07] text-day-muted",
   RUNNER_UP: "bg-day-plum/10 text-day-plum",
   CHAMPION: "bg-day-gold/15 text-day-gold",
+  THIRD: "bg-day-gold/10 text-day-gold",
+  FOURTH: "bg-day-plum/10 text-day-plum",
 };
 
 export function JourneyBadge({ journey, size = "sm" }: { journey: Journey; size?: "sm" | "lg" }) {
@@ -269,7 +271,7 @@ export function MatchCard({
   arena,
   showSheets = false,
 }: {
-  match: ResolvedMatch & { scheduledAt?: Date | null };
+  match: ResolvedMatch & { scheduledAt?: Date | null; mazeA?: string; mazeB?: string };
   nameOf: (id: string | null) => string | null;
   live?: boolean;
   highlight?: string;
@@ -277,8 +279,8 @@ export function MatchCard({
   showSheets?: boolean;
 }) {
   const sides = [
-    { id: match.teamAId, seed: match.seedA, score: match.scoreA, times: match.timesA, remaining: match.remainingA, log: match.runLogA },
-    { id: match.teamBId, seed: match.seedB, score: match.scoreB, times: match.timesB, remaining: match.remainingB, log: match.runLogB },
+    { id: match.teamAId, seed: match.seedA, score: match.scoreA, times: match.timesA, remaining: match.remainingA, log: match.runLogA, maze: match.mazeA ?? "" },
+    { id: match.teamBId, seed: match.seedB, score: match.scoreB, times: match.timesB, remaining: match.remainingB, log: match.runLogB, maze: match.mazeB ?? "" },
   ];
   const time = match.scheduledAt && !match.winnerId ? clockTime(match.scheduledAt) : "";
   return (
@@ -322,6 +324,7 @@ export function MatchCard({
                     <span className="block truncate text-[15px] italic text-day-faint">{match.seedA !== null || match.seedB !== null ? "Bye" : "To be decided"}</span>
                   )}
                   {side.seed ? <span className="sr-only">Seed {side.seed}</span> : null}
+                  {side.maze && side.id && !match.winnerId ? <span className="block truncate text-xs font-semibold text-day-muted">On {side.maze}</span> : null}
                 </div>
                 {won ? (
                   <span className="grid h-5 w-5 shrink-0 place-items-center rounded-[2px] bg-day-gold text-day-on-ink" aria-label="Winner">

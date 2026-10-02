@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { KNOCKOUT_ROUNDS, phaseInfo } from "@/lib/bracket";
+import { KNOCKOUT_ROUNDS, PLAYED_ROUNDS, phaseInfo } from "@/lib/bracket";
 import { MatchForm, type MatchRow } from "./MatchForm";
 
 /**
@@ -9,10 +9,11 @@ import { MatchForm, type MatchRow } from "./MatchForm";
  * sixteen matches, and nobody on the desk wants to scroll past it during the
  * final. Only the rounds the bracket was drawn with.
  */
-export function BracketRounds({ rows }: { rows: MatchRow[] }) {
+export function BracketRounds({ rows, mazes }: { rows: MatchRow[]; mazes: string[] }) {
   const playable = (row: MatchRow) => !row.void && !!row.teamAId && !!row.teamBId && !row.walkover;
   // The rounds this bracket plays: a draw of sixteen has no round of 32.
-  const rounds = KNOCKOUT_ROUNDS.filter((item) => rows.some((row) => row.round === item));
+  // The play-off gets its own tab, after the final, when the bracket has one.
+  const rounds = PLAYED_ROUNDS.filter((item) => rows.some((row) => row.round === item));
   const tabs = rounds.length ? rounds : [...KNOCKOUT_ROUNDS];
   const current = tabs.find((item) => rows.some((row) => row.round === item && playable(row) && !row.winnerId)) ?? tabs[tabs.length - 1]!;
   const [round, setRound] = useState<number>(current);
@@ -45,8 +46,9 @@ export function BracketRounds({ rows }: { rows: MatchRow[] }) {
           // redraws with fresh values whenever an earlier result changes who
           // is in it; the green "done" state is the confirmation then.
           <MatchForm
-            key={`${row.id}:${row.teamAId}:${row.teamBId}:${JSON.stringify(row.sheetA.log)}:${JSON.stringify(row.sheetB.log)}:${row.winnerId}:${row.status}:${row.time}:${row.arena}`}
+            key={`${row.id}:${row.teamAId}:${row.teamBId}:${JSON.stringify(row.sheetA.log)}:${JSON.stringify(row.sheetB.log)}:${row.winnerId}:${row.status}:${row.time}:${row.arena}:${row.mazeA}:${row.mazeB}`}
             match={row}
+            mazes={mazes}
           />
         ))}
       </div>
