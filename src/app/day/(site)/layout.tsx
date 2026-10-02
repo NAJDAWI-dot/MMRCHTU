@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DayAutoRefresh } from "@/components/day/DayAutoRefresh";
+import { EngineeredBy } from "@/components/layout/EngineeredBy";
 import { DayAlerts } from "@/components/day-site/DayAlerts";
 import { DayMotion } from "@/components/day-site/DayMotion";
 import { DayHeader } from "@/components/day-site/DayNav";
@@ -95,6 +96,8 @@ export default async function DaySiteLayout({ children }: { children: React.Reac
             </nav>
           ))}
         </div>
+        {/* The same credit that closes every page of the main site. */}
+        <EngineeredBy tone="day" />
       </footer>
     </>
   );
