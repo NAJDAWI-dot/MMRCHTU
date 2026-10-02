@@ -54,6 +54,8 @@ export const RULES = {
   matchMinutes: 8,
   /** The multiplier in the score formula. */
   scoreMultiplier: 1000,
+  /** What one successful return is worth in the score, counted in runs (rulebook version 3, 6.3). */
+  returnWeight: 1.5,
 } as const;
 
 /**
@@ -353,7 +355,12 @@ export function pathData(cells: Cell[]): string {
 /**
  * A team's final score, as rulebook 1.1 defines it.
  *
- *     (successful runs / official time) * 1000
+ *     ((successful runs + 1.5 * successful returns) / official time) * 1000
+ *
+ * A return is the mouse driving itself back from the centre to the start after
+ * a successful run (version 3 of the rulebook). The official time is the
+ * fastest run or return. `returns` defaults to none, which is the formula as
+ * the judging desk records it today.
  *
  * The shape of it is the part worth internalising, and it is not obvious: both
  * terms move, so neither "go fast" nor "go often" wins on its own. A team with
@@ -367,12 +374,14 @@ export function pathData(cells: Cell[]): string {
  * Zero would put it on the same axis as the others and imply it merely scored
  * badly.
  */
-export function finalScore(successfulRuns: number, officialTimeSeconds: number): number | null {
+export function finalScore(successfulRuns: number, officialTimeSeconds: number, successfulReturns = 0): number | null {
   const runsValid = Number.isFinite(successfulRuns) && Number.isInteger(successfulRuns) && successfulRuns > 0;
   const timeValid = Number.isFinite(officialTimeSeconds) && officialTimeSeconds > 0;
-  if (!runsValid || !timeValid) return null;
+  // A return follows a successful run, so there can be no more returns than runs.
+  const returnsValid = Number.isInteger(successfulReturns) && successfulReturns >= 0 && successfulReturns <= successfulRuns;
+  if (!runsValid || !timeValid || !returnsValid) return null;
 
-  return (successfulRuns / officialTimeSeconds) * RULES.scoreMultiplier;
+  return ((successfulRuns + RULES.returnWeight * successfulReturns) / officialTimeSeconds) * RULES.scoreMultiplier;
 }
 
 /** The score as the rulebook writes it — one decimal place. */

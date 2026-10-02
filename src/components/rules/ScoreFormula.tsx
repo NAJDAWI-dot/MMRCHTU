@@ -22,10 +22,10 @@ import { Figure, type FigureVariant, Stat } from "@/components/rules/Figure";
 
 /** The rulebook's own worked examples, quoted rather than invented. */
 const REFERENCES = [
-  { name: "Team A", runs: 4, seconds: 25 },
-  { name: "Team B", runs: 1, seconds: 18 },
-  // One run in, and the autonomous return home, which counts as a second run (rulebook version 2).
-  { name: "Team C", runs: 2, seconds: 18 },
+  { name: "Team A", runs: 4, returns: 0, seconds: 25 },
+  { name: "Team B", runs: 1, returns: 0, seconds: 18 },
+  // One run in 20s, then a return home in 18s, worth one and a half runs (rulebook version 3).
+  { name: "Team C", runs: 1, returns: 1, seconds: 18 },
 ] as const;
 
 const MAX_RUNS = 12;
@@ -33,19 +33,25 @@ const MAX_SECONDS = 120;
 
 export function ScoreFormula({ variant }: { variant?: FigureVariant }) {
   const [runs, setRuns] = useState(3);
+  const [chosenReturns, setReturns] = useState(1);
   const [seconds, setSeconds] = useState(30);
   const runsId = useId();
+  const returnsId = useId();
   const secondsId = useId();
+  // Every return follows a run, so lowering the runs lowers the returns with them.
+  const returns = Math.min(chosenReturns, runs);
 
-  const score = finalScore(runs, seconds);
+  const score = finalScore(runs, seconds, returns);
+  const counted = runs + RULES.returnWeight * returns;
 
   const rows = [
-    { name: "Your mouse", runs, seconds, score, you: true },
+    { name: "Your mouse", runs, returns, seconds, score, you: true },
     ...REFERENCES.map((reference) => ({
       name: reference.name,
       runs: reference.runs,
+      returns: reference.returns,
       seconds: reference.seconds,
-      score: finalScore(reference.runs, reference.seconds),
+      score: finalScore(reference.runs, reference.seconds, reference.returns),
       you: false,
     })),
   ];
@@ -67,6 +73,16 @@ export function ScoreFormula({ variant }: { variant?: FigureVariant }) {
       unit: "runs",
     },
     {
+      id: returnsId,
+      label: "Successful returns",
+      value: returns,
+      set: setReturns,
+      min: 0,
+      // No more returns than runs: each one starts from a run that reached the centre.
+      max: runs,
+      unit: "returns",
+    },
+    {
       id: secondsId,
       label: "Official time",
       value: seconds,
@@ -85,9 +101,8 @@ export function ScoreFormula({ variant }: { variant?: FigureVariant }) {
       caption={
         <>
           Your score goes up when you finish more runs and when you finish faster, so the fastest
-          mouse doesn&rsquo;t always win. Teams A, B and C below are the rulebook&rsquo;s examples:
-          four runs at 25 seconds beats one run at 18, and Team C doubles its runs by driving home on
-          its own.
+          mouse doesn&rsquo;t always win. A return, driving back to the start on its own, is worth one
+          and a half runs. Teams A, B and C below are the rulebook&rsquo;s examples.
         </>
       }
     >
@@ -134,7 +149,7 @@ export function ScoreFormula({ variant }: { variant?: FigureVariant }) {
               parenthesised inline division does not have a shape. */}
           <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono font-bold text-ras-purple dark:text-white">
             <div className="text-center text-sm">
-              <div className="px-2 pb-1">{runs}</div>
+              <div className="px-2 pb-1">{returns ? `${runs} + ${RULES.returnWeight}×${returns}` : runs}</div>
               <div className="border-t-2 border-current px-2 pt-1">{seconds}</div>
             </div>
             <span aria-hidden="true">&times;</span>
@@ -149,7 +164,7 @@ export function ScoreFormula({ variant }: { variant?: FigureVariant }) {
           <p className="mt-2 text-xs text-ras-gray dark:text-white/60">
             {score === null
               ? "A mouse that never reaches the centre has no official time, and is ranked by shortest traversable path instead."
-              : `${runs} successful ${runs === 1 ? "run" : "runs"}, divided by a ${seconds} second official time.`}
+              : `${runs} ${runs === 1 ? "run" : "runs"}${returns ? ` and ${returns} ${returns === 1 ? "return" : "returns"} (${counted} in all)` : ""}, divided by a ${seconds} second official time.`}
           </p>
         </div>
 
@@ -172,7 +187,7 @@ export function ScoreFormula({ variant }: { variant?: FigureVariant }) {
                   >
                     {row.name}
                     <span className="ms-2 font-mono text-xs text-ras-gray dark:text-white/50">
-                      {row.runs}/{row.seconds}s
+                      {row.returns ? `${row.runs}+${row.returns}R` : row.runs}/{row.seconds}s
                     </span>
                   </span>
                   <span
