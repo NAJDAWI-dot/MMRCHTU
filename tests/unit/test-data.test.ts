@@ -17,10 +17,11 @@ describe("random test sheets", () => {
   it("are always sheets the desk would accept", () => {
     for (const log of sheets) {
       expect(log.length).toBeGreaterThan(0);
-      expect(log.length).toBeLessThanOrEqual(6);
+      expect(log.filter((run) => !run.ret).length).toBeLessThanOrEqual(6);
       expect(checkLog(log)).toBeNull();
       for (const run of log) {
         if (run.ok) expect(run.time).toBeGreaterThan(0);
+        else if (run.ret) expect(run.time).toBeNull();
         else {
           expect(run.time).toBeNull();
           expect(run.cell).toBeGreaterThanOrEqual(1);
@@ -28,6 +29,13 @@ describe("random test sheets", () => {
         }
       }
     }
+  });
+
+  it("include returns, made and missed, some of them the official time", () => {
+    const results = sheets.map((log) => scoreSheet({ times: [], remaining: null, log }));
+    expect(results.some((sheet) => sheet.returns > 0)).toBe(true);
+    expect(results.some((sheet) => sheet.failedReturns > 0)).toBe(true);
+    expect(results.some((sheet) => sheet.returnTimes.includes(sheet.official ?? -1))).toBe(true);
   });
 
   it("cover all three kinds of sheet", () => {

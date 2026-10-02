@@ -104,8 +104,8 @@ export function MatchForm({ match }: { match: MatchRow }) {
           <form action={action} className="day-dialog space-y-5 border-t border-day-line/[0.07] bg-day-sunk/40 p-4 sm:p-5">
             <input type="hidden" name="id" value={match.id} />
             <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-2">
-              <RunTimes name="timesA" resultName="resultA" cellName="cellA" initialLog={match.sheetA.log} label={match.teamA} compact />
-              <RunTimes name="timesB" resultName="resultB" cellName="cellB" initialLog={match.sheetB.log} label={match.teamB} compact />
+              <RunTimes name="timesA" resultName="resultA" cellName="cellA" kindName="kindA" initialLog={match.sheetA.log} label={match.teamA} compact />
+              <RunTimes name="timesB" resultName="resultB" cellName="cellB" kindName="kindB" initialLog={match.sheetB.log} label={match.teamB} compact />
             </div>
             <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
               <div>

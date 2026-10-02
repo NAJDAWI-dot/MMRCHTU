@@ -97,7 +97,7 @@ export default async function QualifyingDeskPage() {
       <DeskHead
         icon="timer"
         title="Qualifying"
-        lead={`Phase 1 · ${QUALIFYING_STATUS_LABELS[state.qualifyingStatus]} · ${ran} of ${state.competitors.length} teams have run. Write down every run and whether it reached the centre; the score is (successful runs ÷ fastest time) × 1000.`}
+        lead={`Phase 1 · ${QUALIFYING_STATUS_LABELS[state.qualifyingStatus]} · ${ran} of ${state.competitors.length} teams have run. Write down every run and whether it reached the centre, and every return (↩) and whether it made it back; the score is ((successful runs + 1.5 × successful returns) ÷ fastest run or return) × 1000.`}
       />
 
       <RevealBanner phases={[1]} />

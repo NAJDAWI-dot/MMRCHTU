@@ -164,6 +164,8 @@ export interface Standing {
   runs: number;
   /** Runs that did not reach the centre. */
   failed: number;
+  /** Successful returns, centre back to start, each worth 1.5 runs in the score. */
+  returns: number;
   /** Whether the team has run at all, successful or not. */
   recorded: boolean;
   /** 1-based, or null for a team with no sheet or not eligible. */
@@ -174,14 +176,14 @@ export interface Standing {
   eligible: boolean;
 }
 
-type Sheet = { score: number | null; official: number | null; remaining: number | null; times: number[]; log: RunEntry[]; failed: number; at: Date };
+type Sheet = { score: number | null; official: number | null; remaining: number | null; times: number[]; log: RunEntry[]; failed: number; returns: number; at: Date };
 
 function sheetOf(run: RunLike): Sheet {
   const times = run.runTimes ?? [];
   const log = cleanLog(run.runLog);
   if (times.length === 0 && log.length === 0 && run.score !== null) {
     // Written before times were: the score is all there is.
-    return { score: run.score, official: null, remaining: null, times: [], log: [], failed: 0, at: run.createdAt };
+    return { score: run.score, official: null, remaining: null, times: [], log: [], failed: 0, returns: 0, at: run.createdAt };
   }
   const result = scoreSheet({ times, remaining: run.remaining ?? null, log });
   return {
@@ -191,6 +193,7 @@ function sheetOf(run: RunLike): Sheet {
     times: result.times,
     log: result.log,
     failed: result.failed,
+    returns: result.returns,
     at: run.createdAt,
   };
 }
@@ -237,6 +240,7 @@ export function standings(
       bestAt: entry?.at ?? null,
       runs: entry ? entry.times.length || (entry.score !== null && !entry.log.length ? 1 : 0) : 0,
       failed: entry?.failed ?? 0,
+      returns: entry?.returns ?? 0,
       recorded: !!entry,
       eligible: !ineligible.has(team.id),
     };

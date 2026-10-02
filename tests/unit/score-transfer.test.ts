@@ -127,7 +127,7 @@ describe("the scores file", () => {
     expect(read.errors).toEqual([
       'Line 2: there is no confirmed team called "Nobody".',
       "Line 3: a successful run needs its time.",
-      'Line 4: "Maybe" is not a result. Use Success or Fail.',
+      'Line 4: "Maybe" is not a result. Use Success, Fail, Return or Return fail.',
       "Line 5: Round of 32 needs a match number from 1 to 16.",
       'Line 6: "Semis" is not a phase. Use Qualifying, Round of 32, Round of 16, Quarter-finals, Semi-finals or Final.',
       'Line 7: "100" is not a cell. A failed run reached a cell from 1 to 99.',
@@ -161,10 +161,13 @@ describe("the standings file", () => {
   it("writes the table with the runs in words", () => {
     expect(
       standingsRow({ rank: 3, teamId: "t1", name: "Maze Runners", best: 80, runs: 2, failed: 1, official: 25, remaining: null, qualified: true }),
-    ).toEqual([3, "t1", "Maze Runners", "80.0", 2, 1, 25, "", "2 of 3 runs successful", "yes"]);
+    ).toEqual([3, "t1", "Maze Runners", "80.0", 2, 1, 0, 25, "", "2 of 3 runs successful", "yes"]);
     expect(
       standingsRow({ rank: 9, teamId: "t2", name: "Byte Mice", best: null, runs: 0, failed: 2, official: null, remaining: 19, qualified: false }),
-    ).toEqual([9, "t2", "Byte Mice", "", 0, 2, "", 81, "None of 2 runs successful", "no"]);
+    ).toEqual([9, "t2", "Byte Mice", "", 0, 2, 0, "", 81, "None of 2 runs successful", "no"]);
+    expect(
+      standingsRow({ rank: 1, teamId: "t3", name: "=Sneaky", best: 138.9, runs: 1, failed: 0, returns: 1, official: 18, remaining: null, qualified: true }),
+    ).toEqual([1, "t3", "=Sneaky", "138.9", 1, 0, 1, 18, "", "1 run, successful, 1 return", "yes"]);
   });
 
   it("still reads a file written with cells short of the centre", () => {
@@ -214,5 +217,22 @@ describe("the timings file", () => {
       'Line 6: "first" is not a place in the running order.',
       "Line 7: Final needs a match number from 1 to 1.",
     ]);
+  });
+});
+
+describe("returns in a score file", () => {
+  it("writes and reads a return back the same", () => {
+    const sheet = scoreSheet({ times: [], remaining: null, log: [ok(20), { ok: true, time: 18, cell: null, ret: true }, ok(25)] });
+    const csv = toCsv(SCORE_HEADERS, scoreRows(1, null, TEAMS[0]!, sheet, sheet.score));
+    expect(csv).toContain("Return");
+    const read = readScoreFile(csv, TEAMS);
+    expect(read.ok && read.qualifying[0]!.log).toEqual(sheet.log);
+  });
+
+  it("refuses a return that does not follow a successful run", () => {
+    const csv = ["Team,Run,Result,Time,Cell", "Maze Runners,1,Fail,,40", "Maze Runners,2,Return,12,"].join("\n");
+    const read = readScoreFile(csv, TEAMS);
+    expect(read.ok).toBe(false);
+    expect(!read.ok && read.errors.join(" ")).toMatch(/return has to come straight after/);
   });
 });

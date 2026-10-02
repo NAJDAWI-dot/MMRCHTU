@@ -66,7 +66,7 @@ export async function saveSheet(_previous: DeskState, formData: FormData): Promi
   if (!team) return { ok: false, message: "Pick a team from the list." };
   if (!team.eligible) return { ok: false, message: `${team.name} cannot qualify: ${team.withdrawn ? "withdrawn" : "robot not available"}.` };
 
-  const parsed = sheetFromFields(formData.getAll("time"), formData.getAll("result"), formData.getAll("cell"));
+  const parsed = sheetFromFields(formData.getAll("time"), formData.getAll("result"), formData.getAll("cell"), formData.getAll("kind"));
   if (!parsed.ok) return { ok: false, message: PROBLEMS[parsed.problem] };
   const sheet = parsed.sheet;
   const note = String(formData.get("note") ?? "").trim().slice(0, 200);
@@ -362,8 +362,8 @@ export async function saveMatch(_previous: DeskState, formData: FormData): Promi
     return { ok: false, message: "Draw the bracket before entering results." };
   }
 
-  const a = sheetFromFields(formData.getAll("timesA"), formData.getAll("resultA"), formData.getAll("cellA"));
-  const b = sheetFromFields(formData.getAll("timesB"), formData.getAll("resultB"), formData.getAll("cellB"));
+  const a = sheetFromFields(formData.getAll("timesA"), formData.getAll("resultA"), formData.getAll("cellA"), formData.getAll("kindA"));
+  const b = sheetFromFields(formData.getAll("timesB"), formData.getAll("resultB"), formData.getAll("cellB"), formData.getAll("kindB"));
   if (!a.ok) return { ok: false, message: PROBLEMS[a.problem] };
   if (!b.ok) return { ok: false, message: PROBLEMS[b.problem] };
 

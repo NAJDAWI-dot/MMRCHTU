@@ -3,11 +3,13 @@ import { RULES, finalScore } from "@/lib/rules";
 /**
  * A match sheet: what a judge writes down about one team's eight minutes.
  *
- * The rulebook scores both phases the same way:
+ * The rulebook (version 3) scores both phases the same way:
  *
- *     final score = (successful runs / official time) * 1000
+ *     final score = ((successful runs + 1.5 * successful returns) / official time) * 1000
  *
- * where the official time is the team's fastest successful run. The desk
+ * where the official time is the team's fastest successful run or return. A
+ * return is the mouse driving itself back from the centre to the start, and it
+ * can only come straight after a run that reached the centre. The desk
  * writes down every run, successful or not: a time for each one that reached
  * the centre, and for one that did not, the cell it got to. Every maze has 100
  * cells and the centre is the 100th, so a failed run reached cell 1 to 99. The
@@ -34,6 +36,12 @@ export interface RunEntry {
   ok: boolean;
   time: number | null;
   cell: number | null;
+  /**
+   * A return, centre back to start, rather than a run. Only present when true,
+   * so every log written before returns existed reads exactly as it did. A
+   * return has a time when it made it back and nothing when it did not.
+   */
+  ret?: true;
 }
 
 export interface SheetInput {
@@ -61,9 +69,15 @@ export interface SheetResult {
   log: RunEntry[];
   /** Successful runs: how many times there are. */
   runs: number;
-  /** Runs that did not reach the centre. */
+  /** Runs that did not reach the centre. Returns are not counted here. */
   failed: number;
-  /** The fastest run, or null with none. */
+  /** Successful returns that count: each straight after a successful run. */
+  returns: number;
+  /** Those returns' times, in the order they were made. */
+  returnTimes: number[];
+  /** Returns that did not make it back to the start. */
+  failedReturns: number;
+  /** The fastest run or return, or null with no successful run. */
   official: number | null;
   /** The formula's result, or null with no successful run. */
   score: number | null;
@@ -87,7 +101,12 @@ export function cleanLog(raw: unknown): RunEntry[] {
   const log: RunEntry[] = [];
   for (const item of raw) {
     if (!item || typeof item !== "object") continue;
-    const { ok, time, cell, short } = item as Record<string, unknown>;
+    const { ok, time, cell, short, ret } = item as Record<string, unknown>;
+    if (ret === true) {
+      if (ok === true && isTime(time)) log.push({ ok: true, time, cell: null, ret: true });
+      else if (ok === false) log.push({ ok: false, time: null, cell: null, ret: true });
+      continue;
+    }
     if (ok === true) {
       if (isTime(time)) log.push({ ok: true, time, cell: null });
     } else if (ok === false) {
@@ -104,18 +123,31 @@ function legacyLog(times: number[], remaining: number | null): RunEntry[] {
   return log;
 }
 
+/** Whether the entry before `index` is a run that reached the centre: the only thing a return can follow. */
+const followsSuccess = (log: RunEntry[], index: number): boolean => {
+  const before = log[index - 1];
+  return !!before && before.ok && !before.ret;
+};
+
 export function scoreSheet({ times, remaining, log: rawLog }: SheetInput): SheetResult {
   const stored = cleanLog(rawLog);
   const log = stored.length ? stored : legacyLog(times, remaining);
-  const clean = log.filter((run) => run.ok).map((run) => run.time!);
-  const cells = log.filter((run) => !run.ok && run.cell !== null).map((run) => run.cell!);
-  const official = clean.length ? Math.min(...clean) : null;
-  const score = official === null ? null : finalScore(clean.length, official);
+  const runsOnly = log.filter((run) => !run.ret);
+  const clean = runsOnly.filter((run) => run.ok).map((run) => run.time!);
+  const cells = runsOnly.filter((run) => !run.ok && run.cell !== null).map((run) => run.cell!);
+  // A return out of place is refused when a sheet is saved; this keeps one
+  // that got in some other way from scoring.
+  const returnTimes = log.flatMap((run, index) => (run.ret && run.ok && followsSuccess(log, index) ? [run.time!] : []));
+  const official = clean.length ? Math.min(...clean, ...returnTimes) : null;
+  const score = official === null ? null : finalScore(clean.length, official, returnTimes.length);
   return {
     times: clean,
     log,
     runs: clean.length,
-    failed: log.length - clean.length,
+    failed: runsOnly.length - clean.length,
+    returns: returnTimes.length,
+    returnTimes,
+    failedReturns: log.filter((run) => run.ret && !run.ok).length,
     official,
     score,
     // Only meaningful without a successful run; one that got there is not ranked by it.
@@ -134,14 +166,17 @@ export function outcomeOf(sheet: Pick<SheetResult, "runs" | "failed">): SheetOut
   return sheet.failed === 0 ? "all-successful" : "mixed";
 }
 
-/** The outcome in a few words: "All 4 runs successful", "3 of 5 runs successful". */
-export function outcomeText(sheet: Pick<SheetResult, "runs" | "failed">): string {
+/** The returns in a few words, to follow the runs: ", 2 returns". Empty with none. */
+const returnsText = (returns = 0) => (returns ? `, ${returns} ${returns === 1 ? "return" : "returns"}` : "");
+
+/** The outcome in a few words: "All 4 runs successful", "3 of 5 runs successful, 1 return". */
+export function outcomeText(sheet: Pick<SheetResult, "runs" | "failed"> & { returns?: number }): string {
   const total = sheet.runs + sheet.failed;
   switch (outcomeOf(sheet)) {
     case "all-successful":
-      return total === 1 ? "1 run, successful" : `All ${total} runs successful`;
+      return (total === 1 ? "1 run, successful" : `All ${total} runs successful`) + returnsText(sheet.returns);
     case "mixed":
-      return `${sheet.runs} of ${total} runs successful`;
+      return `${sheet.runs} of ${total} runs successful${returnsText(sheet.returns)}`;
     case "none-successful":
       return total === 1 ? "1 run, not successful" : `None of ${total} runs successful`;
     default:
@@ -214,7 +249,7 @@ export function parseCell(value: unknown): number | null {
   return cell >= 1 && cell < MAZE_CELLS ? cell : null;
 }
 
-export type SheetProblem = "bad-time" | "bad-cell" | "too-long";
+export type SheetProblem = "bad-time" | "bad-cell" | "too-long" | "bad-return";
 
 /** A run's result as typed: "yes", "Success" or "✓" is successful; "no", "Fail" or "✗" is not. */
 export function parseRunResult(value: unknown): boolean | null {
@@ -224,9 +259,37 @@ export function parseRunResult(value: unknown): boolean | null {
   return null;
 }
 
-/** Runs about to be saved: every successful one has a time, and together they fit in the match. */
+/** Whether a run's kind as typed says it is a return: "return", "ret", "R" or "↩". */
+export function parseRunKind(value: unknown): boolean {
+  return ["return", "returns", "ret", "r", "↩", "back"].includes(String(value ?? "").trim().toLowerCase());
+}
+
+/**
+ * A result as written in a score file, which can also say it is a return:
+ * "Success", "Fail", "Return" (made it back) or "Return fail". Null when it is
+ * none of them.
+ */
+export function parseResultKind(value: unknown): { ok: boolean; ret: boolean } | null {
+  const raw = String(value ?? "").trim().toLowerCase();
+  const back = /^(return|ret|↩)\s*[:\-]?\s*/.exec(raw);
+  if (!back) {
+    const ok = parseRunResult(raw);
+    return ok === null ? null : { ok, ret: false };
+  }
+  const rest = raw.slice(back[0].length);
+  if (!rest) return { ok: true, ret: true };
+  const ok = parseRunResult(rest);
+  return ok === null ? null : { ok, ret: true };
+}
+
+/**
+ * Runs about to be saved: every successful one has a time, every return comes
+ * straight after a run that reached the centre, and together they fit in the
+ * match.
+ */
 export function checkLog(log: RunEntry[]): SheetProblem | null {
   if (log.some((run) => run.ok && run.time === null)) return "bad-time";
+  if (log.some((run, index) => run.ret && !followsSuccess(log, index))) return "bad-return";
   if (log.reduce((sum, run) => sum + (run.time ?? 0), 0) > MATCH_SECONDS) return "too-long";
   return null;
 }
@@ -246,15 +309,22 @@ export function sheetFromFields(
   times: unknown[],
   results: unknown[] = [],
   cells: unknown[] = [],
+  kinds: unknown[] = [],
 ): { ok: true; sheet: SheetResult } | { ok: false; problem: SheetProblem } {
   const log: RunEntry[] = [];
   for (let index = 0; index < times.length; index++) {
     const ok = parseRunResult(results[index]) ?? true;
+    const ret = parseRunKind(kinds[index]);
     if (ok) {
       const timeText = String(times[index] ?? "").trim();
       const time = timeText ? parseRunTime(timeText) : null;
       if (timeText && time === null) return { ok: false, problem: "bad-time" };
-      if (time !== null) log.push({ ok: true, time, cell: null });
+      if (time !== null) log.push(ret ? { ok: true, time, cell: null, ret: true } : { ok: true, time, cell: null });
+      continue;
+    }
+    // A return that did not make it back: nothing to write but that it happened.
+    if (ret) {
+      log.push({ ok: false, time: null, cell: null, ret: true });
       continue;
     }
     const cellText = String(cells[index] ?? "").trim();
@@ -290,15 +360,18 @@ export function formatPoints(score: number | null | undefined): string {
  * The whole working, for a team page: "4 runs ÷ 25.0 s × 1000 = 160.0", owning
  * up to the failed runs when there were some.
  */
-export function workingOf(sheet: Pick<SheetResult, "runs" | "official" | "score" | "remaining"> & { failed?: number }): string {
+export function workingOf(sheet: Pick<SheetResult, "runs" | "official" | "score" | "remaining"> & { failed?: number; returns?: number }): string {
   const failed = sheet.failed ?? 0;
+  const returns = sheet.returns ?? 0;
   if (sheet.score === null || sheet.official === null) {
     const tries = failed > 1 ? ` in ${failed} runs` : "";
     return sheet.remaining === null
       ? `No run reached the centre${tries}.`
       : `No run reached the centre${tries}. The furthest reached ${formatReached(sheet.remaining)} of ${MAZE_CELLS}.`;
   }
-  const sum = `${sheet.runs} ${failed ? "successful " : ""}${sheet.runs === 1 ? "run" : "runs"} ÷ ${formatTime(sheet.official)} × 1000 = ${formatPoints(sheet.score)}`;
+  const runs = `${sheet.runs} ${failed ? "successful " : ""}${sheet.runs === 1 ? "run" : "runs"}`;
+  const counted = returns ? `(${runs} + ${RULES.returnWeight} × ${returns} ${returns === 1 ? "return" : "returns"})` : runs;
+  const sum = `${counted} ÷ ${formatTime(sheet.official)} × 1000 = ${formatPoints(sheet.score)}`;
   return failed ? `${sum}. ${failed === 1 ? "The failed run does" : `The ${failed} failed runs do`} not count.` : sum;
 }
 

@@ -8,7 +8,7 @@ import {
   MAZE_CELLS,
   cellFromShort,
   parseCell,
-  parseRunResult,
+  parseResultKind,
   parseRunTime,
   type RunEntry,
   type SheetProblem,
@@ -34,6 +34,7 @@ export const SHEET_PROBLEMS: Record<SheetProblem, string> = {
   "bad-time": "One of the run times is not a time. Use seconds (25.41) or minutes and seconds (1:05.3).",
   "bad-cell": "One of the failed runs has a cell that is not a whole number from 1 to 99.",
   "too-long": "Those runs add up to more than the eight minute match. Check the times.",
+  "bad-return": "A return has to come straight after a run that reached the centre.",
 };
 
 export const SCORE_HEADERS = ["Phase", "Match", "Team ID", "Team", "Run", "Result", "Time (s)", "Cell reached", "Score", "Note"] as const;
@@ -44,6 +45,7 @@ export const STANDINGS_HEADERS = [
   "Score",
   "Successful runs",
   "Failed runs",
+  "Successful returns",
   "Official time (s)",
   "Furthest cell (no successful run)",
   "Runs",
@@ -69,7 +71,7 @@ export function scoreRows(phase: number, match: number | null, team: TeamRef, sh
   return sheet.log.map((run, index) => [
     ...head,
     index + 1,
-    run.ok ? "Success" : "Fail",
+    run.ret ? (run.ok ? "Return" : "Return fail") : run.ok ? "Success" : "Fail",
     run.time ?? "",
     run.cell ?? "",
     points,
@@ -78,7 +80,7 @@ export function scoreRows(phase: number, match: number | null, team: TeamRef, sh
 }
 
 export function standingsRow(
-  row: { rank: number | null; teamId: string; name: string; best: number | null; runs: number; failed: number; official: number | null; remaining: number | null; qualified: boolean },
+  row: { rank: number | null; teamId: string; name: string; best: number | null; runs: number; failed: number; returns?: number; official: number | null; remaining: number | null; qualified: boolean },
 ): unknown[] {
   return [
     row.rank ?? "",
@@ -87,6 +89,7 @@ export function standingsRow(
     row.best === null ? "" : formatPoints(row.best),
     row.runs,
     row.failed,
+    row.returns ?? 0,
     row.official ?? "",
     row.remaining === null ? "" : cellFromShort(row.remaining),
     outcomeText(row),
@@ -291,13 +294,21 @@ export function readScoreFile(text: string, teams: TeamRef[]): ScoreImport {
     if (!resultText && !timeText && !cellText && !shortText) continue;
 
     // No result written: a time means it reached the centre, a cell means it did not.
-    const result = resultText ? parseRunResult(resultText) : !!timeText && !cellText && !shortText;
-    if (result === null) {
-      fail(`"${resultText}" is not a result. Use Success or Fail`);
+    const kind = resultText ? parseResultKind(resultText) : { ok: !!timeText && !cellText && !shortText, ret: false };
+    if (kind === null) {
+      fail(`"${resultText}" is not a result. Use Success, Fail, Return or Return fail`);
       continue;
     }
+    const result = kind.ok;
     let run: RunEntry;
-    if (result) {
+    if (kind.ret) {
+      const time = timeText ? parseRunTime(timeText) : null;
+      if (result && time === null) {
+        fail(timeText ? `"${timeText}" is not a return time. Use seconds, like 18.2, inside the 8 minutes` : "a successful return needs its time");
+        continue;
+      }
+      run = result ? { ok: true, time, cell: null, ret: true } : { ok: false, time: null, cell: null, ret: true };
+    } else if (result) {
       const time = timeText ? parseRunTime(timeText) : null;
       if (timeText && time === null) {
         fail(`"${timeText}" is not a run time. Use seconds, like 25.41, inside the 8 minutes`);

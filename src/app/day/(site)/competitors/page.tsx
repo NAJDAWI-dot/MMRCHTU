@@ -28,9 +28,10 @@ export default async function DayCompetitorsPage() {
         <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
           <div className="day-floor day-posts p-6" data-reveal>
             <p className="text-sm font-semibold text-day-crimson">Your eight minutes</p>
-            <p className="day-display mt-3 text-xl leading-snug text-day-ink">Score = successful runs ÷ official time × 1000</p>
+            <p className="day-display mt-3 text-xl leading-snug text-day-ink">Score = (successful runs + 1.5 × successful returns) ÷ official time × 1000</p>
             <p className="mt-3 text-sm leading-relaxed text-day-muted">
-              Every run that reaches the centre counts. Your official time is the fastest of them.
+              Every run that reaches the centre counts. A return, your mouse driving itself back to the start straight after a run, counts one and a half. Your
+              official time is the fastest run or return.
             </p>
           </div>
           <ul className="border-t-2 border-day-line/85" data-reveal>

@@ -117,6 +117,7 @@ export function QualifyingDesk({ teams, locked, cut }: { teams: DeskTeam[]; lock
                   name="time"
                   resultName="result"
                   cellName="cell"
+                  kindName="kind"
                   initialLog={team.sheet?.log ?? []}
                   label="Every run, in the order it was run"
                 />
