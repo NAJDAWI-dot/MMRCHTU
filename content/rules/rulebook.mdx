@@ -1,4 +1,4 @@
-This page follows the *MMRC26 Official Rulebook & Contest Manual*, version 2 (1 October 2026). If this page
+This page follows the *MMRC26 Official Rulebook & Contest Manual*, version 3 (2 October 2026). If this page
 and the printed rulebook disagree, the printed rulebook wins, and the judges have the final say
 on what it means.
 
@@ -24,8 +24,8 @@ square, with a 5% tolerance. The corners of each cell meet at a 1.2cm lattice po
 one wall is attached to every post.
 
 The start cell is in one of the four corners and has walls on three sides. The start line sits
-between that cell and the next one clockwise, so your clock starts when the mouse leaves the
-corner, not when you let go of it. The goal is the block of four cells at the centre, and it has
+between that cell and the next one, and a run's clock starts when the mouse touches it, not when
+you let go of the mouse. The goal is the block of four cells at the centre, and it has
 one entrance.
 
 **The centre is an island.** Its walls don't touch the rest of the maze, so a mouse that follows
@@ -60,22 +60,29 @@ Breaking any of these rules means immediate disqualification.
 
 ## The match
 
-Each team gets **8 minutes** at the maze, starting when the contest administrator gives you
-access. The clock keeps running between runs. Adjusting the mouse, changing a battery or
+Each team gets **8 minutes** at the maze, starting the moment the judges declare the start of the
+match. The clock keeps running between runs. Adjusting the mouse, changing a battery or
 restarting all use up the same 8 minutes as your runs.
 
 You can make as many runs as fit in that time, and each one starts from the start cell. Every run
-that reaches the centre gets a run time, and your fastest one is your **official time**.
+that reaches the centre gets a run time.
 
-**Driving back counts as a run.** If your mouse reaches the centre and then drives itself back to
-the start cell without anyone touching it, the trip back is an extra run with its own run time. A
-mouse that comes home on its own after every run to the centre doubles its run count.
+**Returns.** After a successful run, your mouse may drive itself back from the centre to the start
+cell without anyone touching it. That trip is a return, and only the mouse can decide to make
+one. Its clock starts when the front of the mouse crosses the finish line and stops when the front
+crosses the start line. A return is worth one and a half runs in the score.
+
+Your **official time** is your fastest run or return.
 
 - You can abort a run at any point.
-- If you touch the mouse during a run, that run is aborted and you must take the mouse off the
-  maze.
-- After the mouse crosses the finish line you can pick it up whenever you like. The run time is
-  already recorded.
+- If you touch the mouse or interfere with it during a run or a return, it is aborted and you must
+  take the mouse off the maze.
+- Once the mouse crosses the finish line, its run time is recorded. You can then pick it up to
+  start a new run, or leave it in the maze to try a return.
+
+**No interference.** Anything you do to influence the mouse during a run or a return is
+interference: a hand or an object near its sensors, kicking the arena, remote control. The judges
+answer it with a warning, then a final warning, then disqualification.
 
 After the maze is revealed, you can't give the mouse any information about it. You can change
 switch positions, but you can't load a map. The judges collect and check every team's source code.
@@ -95,15 +102,15 @@ has to guess through.
 
 Both phases use the same formula:
 
-> **Final score = (total successful runs ÷ official time) × 1000**
+> **Final score = ((successful runs + 1.5 × successful returns) ÷ official time) × 1000**
 
-The higher score ranks higher. The rulebook gives examples. A team with four runs and a best
-time of 25 seconds scores 160.0. A team with one run and a best time of 18 seconds scores 55.6.
-The second mouse is faster, but the first team ranks higher.
+The higher score ranks higher. The rulebook gives examples. A team with four runs and an official
+time of 25 seconds scores 160.0. A team with one run and an official time of 18 seconds scores
+55.6. The second mouse is faster, but the first team ranks higher.
 
 A third team reaches the centre once in 20 seconds, then drives back to the start on its own in
-18 seconds. That is two runs, and the return is the faster one, so its official time is 18
-seconds and it scores 111.1.
+18 seconds. One run and one return count as 2.5, the return is the faster of the two, so its
+official time is 18 seconds and it scores 138.9.
 
 (The printed rulebook shows the second score as 55.5. The exact value is 1000 ÷ 18 = 55.55…, so
 this site rounds it to 55.6. The ranking is the same either way.)
@@ -112,7 +119,10 @@ this site rounds it to 55.6. The ranking is the same either way.)
 
 **If a mouse doesn't reach the centre.** Any mouse that reaches the centre within its 8 minutes
 ranks above every mouse that doesn't. Mice that never reach it are ranked by how far along the
-shortest traversable path they got, and the lowest remaining distance ranks highest.
+shortest traversable path they got. Every cell is numbered with how many cells it is from the
+centre, and an unfinished run scores the number of the cell where the mouse stops. A mouse that
+starts on 57 and stops on 20 scores 20, and the lower number ranks higher. If teams are still tied,
+the judges decide.
 
 ## The tournament
 
@@ -135,8 +145,10 @@ bracket. Two teams run at the same time on identical mazes placed side by side, 
 - **Overall Highest Score:** the best single score in any Phase 2 match.
 - **Best Code:** the best logic, algorithmic efficiency or mapping technique, judged during the
   source code review.
+- **Best Code runner-up:** the second best code.
 - **Best Creative Design:** the best physical build, such as hardware solutions, custom PCB work or
   chassis design.
+- **Best Creative Design runner-up:** the second best physical build.
 
 ## Conduct
 
@@ -154,12 +166,14 @@ Words the judges use, and what they mean.
 - **Destination zone:** the four cells at the centre, with one entrance.
 - **Start line / finish line:** the invisible lines that start and stop the clock.
 - **Match:** your 8-minute slot at the maze.
-- **Run:** one attempt from the start square to the centre, or an autonomous return from the
-  centre back to the start square.
-- **Autonomous return:** after reaching the centre, the mouse drives itself back to the start
-  square without being touched. It counts as an extra run.
-- **Official time:** your fastest run time in the match.
-- **Touch:** any contact with the mouse after a run has started. It ends the run.
+- **Run:** one attempt from the start square to the centre.
+- **Return:** after a successful run, the mouse drives itself back from the centre to the start
+  square without being touched. It is worth one and a half runs in the score.
+- **Run time / return time:** the time recorded for one successful run or return.
+- **Official time:** your fastest run or return time in the match.
+- **Touch:** any contact with the mouse after a run or return has started. It ends it.
+- **Interference:** anything the team does to influence the mouse during a run or return. It
+  brings a warning, a final warning or disqualification.
 - **Abort:** ending a run on purpose, usually to rescue a stuck mouse.
 - **Island goal:** a centre whose walls don't connect to the rest of the maze. The MMRC 26 maze
   has one.

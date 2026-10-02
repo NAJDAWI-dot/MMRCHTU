@@ -381,6 +381,19 @@ describe("finalScore", () => {
     expect(finalScore(2, 0)).toBeNull();
   });
 
+  it("counts a return as one and a half runs (rulebook version 3)", () => {
+    // Team C: one run in 20s, one return in 18s, so the official time is the return's.
+    expect(finalScore(1, 18, 1)).toBeCloseTo(2500 / 18, 10);
+    expect(finalScore(1, 18, 1)!.toFixed(1)).toBe("138.9");
+    expect(finalScore(4, 25, 0)).toBe(finalScore(4, 25));
+  });
+
+  it("refuses more returns than runs, or a part of one", () => {
+    expect(finalScore(1, 18, 2)).toBeNull();
+    expect(finalScore(2, 18, 0.5)).toBeNull();
+    expect(finalScore(2, 18, -1)).toBeNull();
+  });
+
   it("refuses input that cannot describe a real match", () => {
     expect(finalScore(-1, 30)).toBeNull();
     expect(finalScore(2, -30)).toBeNull();

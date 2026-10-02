@@ -13,7 +13,7 @@ deploy pipeline has either, so this runs on an organiser's machine whenever the
 PDF changes and never at build time.
 
 Writes, under public/rulebook/:
-  MMRC26-Official-Rulebook-v2.pdf   the source, for the download button
+  MMRC26-Official-Rulebook-v3.pdf   the source, for the download button
   pages/pNN.webp                 each page at 2x for sharp spreads and zoom
   pages/pNN-sm.webp              each page at 1x for phones
   pages/template(-sm).webp       a text-free page in the manual's livery
@@ -34,7 +34,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "public" / "rulebook"
 PAGES = OUT / "pages"
-PDF_NAME = "MMRC26-Official-Rulebook-v2.pdf"
+PDF_NAME = "MMRC26-Official-Rulebook-v3.pdf"
 
 # 2x of A4 in points is ~1190px wide: sharp on a retina spread, and enough for
 # the zoom view to be worth opening. Past that the files grow faster than the
