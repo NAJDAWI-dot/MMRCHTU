@@ -9,7 +9,7 @@ import { FollowPicker } from "@/components/day-site/Follow";
 import { Road } from "@/components/day-site/Road";
 import { PlaceBlock, RunTicks, gapToLeader } from "@/components/day-site/Tower";
 import { Empty, HeldBack, MatchCard, MoreLink, Post, SectionTitle } from "@/components/day-site/ui";
-import { matchesInRound, phaseInfo } from "@/lib/bracket";
+import { matchesInRound, phaseInfo, revealPhaseOf } from "@/lib/bracket";
 import { loadPublicCompetition } from "@/lib/public-competition";
 import { shouldShowCountdown } from "@/lib/countdown";
 import { clockTime, postedAgo } from "@/lib/day-mode";
@@ -53,8 +53,10 @@ export default async function DayLivePage() {
   const playable = state.bracket.filter((m) => m.teamAId && m.teamBId && !m.walkover);
   const live = playable.filter((m) => m.status === "LIVE");
   const waiting = playable.filter((m) => !m.winnerId && m.status !== "LIVE");
-  const currentRound = champion ? 6 : (live[0]?.round ?? waiting[0]?.round ?? null);
-  const upNext = waiting.filter((m) => m.round === currentRound).slice(0, 4);
+  // The third place play-off counts as part of the final phase.
+  const playing = live[0]?.round ?? waiting[0]?.round;
+  const currentRound = champion ? 6 : playing !== undefined ? revealPhaseOf(playing) : null;
+  const upNext = waiting.filter((m) => revealPhaseOf(m.round) === currentRound).slice(0, 4);
   const results = playable
     .filter((m) => m.winnerId)
     .sort((a, b) => (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0))
@@ -75,10 +77,10 @@ export default async function DayLivePage() {
     title = "The final is decided";
     detail = `${champion.name} are the champions of MMRC 26.`;
   } else if (state.drawn && currentRound) {
-    const round = state.bracket.filter((m) => m.round === currentRound && !m.void);
+    const round = state.bracket.filter((m) => revealPhaseOf(m.round) === currentRound && !m.void);
     const decided = round.filter((m) => m.winnerId).length;
     title = phaseInfo(currentRound).name;
-    detail = `Phase ${currentRound} · ${decided} of ${matchesInRound(currentRound)} matches decided${live.length ? ` · ${live.length} on the maze now` : ""}`;
+    detail = `Phase ${currentRound} · ${decided} of ${round.length} matches decided${live.length ? ` · ${live.length} on the maze now` : ""}`;
     cells = round.map((m) => ({
       id: m.id,
       name: `${nameOf(m.teamAId) ?? "To be decided"} v ${nameOf(m.teamBId) ?? "To be decided"}`,

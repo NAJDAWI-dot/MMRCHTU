@@ -20,6 +20,7 @@ import {
   phaseInfo,
   resolveBracket,
   seedFirstRound,
+  THIRD_PLACE_ROUND,
   type MatchInput,
   type ResolvedMatch,
 } from "@/lib/bracket";
@@ -28,6 +29,7 @@ import { cleanLog, formatPoints, scoreSheet, sheetFromFields, workingOf } from "
 import { SHEET_PROBLEMS as PROBLEMS, readScoreFile, readTimingFile } from "@/lib/score-transfer";
 import { TEST_DATA_BY, TEST_DATA_NOTE, randomSheet } from "@/lib/test-data";
 import { MAX_SHIFT, planShift } from "@/lib/time-shift";
+import { cleanMaze } from "@/lib/mazes";
 import type { DeskState } from "../state";
 
 const SECTION = "/day/hq/scoring";
@@ -318,6 +320,8 @@ export async function drawBracket(_previous: DeskState, formData: FormData): Pro
       empty.push({ id: "", round, slot, teamAId: null, teamBId: null, seedA: null, seedB: null, scoreA: null, scoreB: null, winnerId: null });
     }
   }
+  // The third place play-off, between the two beaten semi-finalists.
+  empty.push({ id: "", round: THIRD_PLACE_ROUND, slot: 0, teamAId: null, teamBId: null, seedA: null, seedB: null, scoreA: null, scoreB: null, winnerId: null });
   await writeBracket([...first.map((match) => ({ id: "", ...match, scoreA: null, scoreB: null, winnerId: null })), ...empty]);
   await upsertConfig({ qualifyingStatus: "LOCKED" });
   refreshDaySite();
@@ -375,6 +379,9 @@ export async function saveMatch(_previous: DeskState, formData: FormData): Promi
   const picked = String(formData.get("winnerId") ?? "") || null;
   const status = String(formData.get("status") ?? "PENDING").toUpperCase() === "LIVE" ? "LIVE" : "PENDING";
   const arena = String(formData.get("arena") ?? "").trim().slice(0, 60);
+  // Each side's maze, only when the form has the fields: the judge's tablet
+  // saves through here too and does not send them, which must not clear them.
+  const mazes = formData.has("mazeA") || formData.has("mazeB") ? { mazeA: cleanMaze(formData.get("mazeA")), mazeB: cleanMaze(formData.get("mazeB")) } : {};
 
   // A team picked here is the judges' decision: it goes through whatever the sheets say.
   const plan = planMatchResult(rows, target, a.sheet, b.sheet, picked, !!picked);
@@ -389,13 +396,15 @@ export async function saveMatch(_previous: DeskState, formData: FormData): Promi
 
   const statusFor = (winner: string | null, current: string, isTarget: boolean) =>
     winner ? "DONE" : isTarget ? status : current === "DONE" ? "PENDING" : current;
-  const own = { arena, scheduledAt, updatedBy: admin.username };
+  const own = { arena, scheduledAt, updatedBy: admin.username, ...mazes };
 
   await prisma.$transaction([
-    ...plan.changed.map((match) => {
-      const row = rows.find((r) => r.round === match.round && r.slot === match.slot)!;
+    // Only rows that exist: a bracket drawn before the play-off has no row for it.
+    ...plan.changed.flatMap((match) => {
+      const row = rows.find((r) => r.round === match.round && r.slot === match.slot);
+      if (!row) return [];
       const isTarget = row.id === id;
-      return prisma.knockoutMatch.update({
+      return [prisma.knockoutMatch.update({
         where: { id: row.id },
         data: {
           teamAId: match.teamAId,
@@ -415,7 +424,7 @@ export async function saveMatch(_previous: DeskState, formData: FormData): Promi
           status: statusFor(match.winnerId, row.status, isTarget),
           ...(isTarget ? own : {}),
         },
-      });
+      })];
     }),
     // The target's own status, time and maze, when nothing about its result moved.
     ...(plan.changed.some((match) => match.round === target.round && match.slot === target.slot)

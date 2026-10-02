@@ -27,6 +27,7 @@ const LINKS = [
   { href: "/schedule", label: "Schedule" },
   { href: "/competition-day", label: "Competition Day" },
   { href: "/gallery", label: "Gallery" },
+  { href: "/results", label: "Results" },
   // Marked special so it renders as a pill rather than another plain link:
   // the committee page is the one page about people rather than about the
   // competition, and it was disappearing among six siblings that all look
@@ -67,6 +68,11 @@ async function hiddenHrefs(): Promise<Set<string>> {
   // No row yet means the schema defaults apply, and the default is not HIDDEN.
   if (parseStatus(config?.status) === "HIDDEN") hidden.add("/competition-day");
   if (publishedAlbums === 0) hidden.add("/gallery");
+  // Results, once the awards are revealed: before that there is nothing final
+  // to show. It then takes Competition Day's place, which is over, so the row
+  // does not grow; that page still answers at its address.
+  if (config?.awardsShown) hidden.add("/competition-day");
+  else hidden.add("/results");
   // And Open Day until the doors open, for the same reason as the other two:
   // the menu should not offer a page that has nothing on it yet. The homepage
   // band is where the countdown is announced, and admins reach the page by

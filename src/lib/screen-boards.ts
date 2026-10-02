@@ -7,7 +7,7 @@
  * be tested on their own.
  */
 
-import { FINAL_ROUND } from "@/lib/bracket";
+import { FINAL_ROUND, THIRD_PLACE_ROUND } from "@/lib/bracket";
 
 export interface BoardMatch {
   round: number;
@@ -65,13 +65,15 @@ export function roundLeaderboard(matches: readonly BoardMatch[], round: number):
 }
 
 export interface Placing {
-  place: 1 | 2 | 3;
+  place: 1 | 2 | 3 | 4;
   teamId: string;
 }
 
 /**
- * The podium once the final is decided: the champion, the runner-up, and the
- * two beaten semi-finalists sharing third. Empty until there is a champion.
+ * The podium once the final is decided: the champion, the runner-up, then
+ * the third place play-off's winner and loser. Until the play-off is decided
+ * (or in a bracket without one) the two beaten semi-finalists share third.
+ * Empty until there is a champion.
  */
 export function finalPlacings(matches: readonly BoardMatch[]): Placing[] {
   const final = matches.find((match) => match.round === FINAL_ROUND && match.winnerId);
@@ -80,6 +82,13 @@ export function finalPlacings(matches: readonly BoardMatch[]): Placing[] {
   const placings: Placing[] = [{ place: 1, teamId: final.winnerId }];
   const runnerUp = loserOf(final);
   if (runnerUp) placings.push({ place: 2, teamId: runnerUp });
+  const playoff = matches.find((match) => match.round === THIRD_PLACE_ROUND && match.winnerId && !match.void);
+  if (playoff?.winnerId) {
+    placings.push({ place: 3, teamId: playoff.winnerId });
+    const fourth = playoff.walkover ? null : loserOf(playoff);
+    if (fourth) placings.push({ place: 4, teamId: fourth });
+    return placings;
+  }
   for (const semi of matches.filter((match) => match.round === FINAL_ROUND - 1 && match.winnerId && !match.walkover)) {
     const third = loserOf(semi);
     if (third) placings.push({ place: 3, teamId: third });

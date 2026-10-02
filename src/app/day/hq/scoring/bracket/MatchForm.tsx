@@ -38,6 +38,9 @@ export interface MatchRow {
   winnerOverride: boolean;
   status: string;
   arena: string;
+  /** The maze each side runs on, or "". */
+  mazeA: string;
+  mazeB: string;
   /** "14:20", when the match has a start time. */
   time: string;
   walkover: boolean;
@@ -74,7 +77,7 @@ function Side({ name, id, seed, score, sheet, winner }: { name: string; id: stri
  * match sheets side by side when open. The winner is worked out from the
  * sheets; the pick is only for a dead heat or a match that was never run.
  */
-export function MatchForm({ match }: { match: MatchRow }) {
+export function MatchForm({ match, mazes }: { match: MatchRow; mazes: string[] }) {
   const [state, action] = useFormState(saveMatch, EMPTY_DESK_STATE);
   const ready = !!match.teamAId && !!match.teamBId;
   const done = !!match.winnerId;
@@ -89,6 +92,11 @@ export function MatchForm({ match }: { match: MatchRow }) {
           {match.label}
           {match.time ? <span className="day-num text-day-faint">· {match.time}</span> : null}
           {match.arena ? <span className="text-day-faint">· {match.arena}</span> : null}
+          {match.mazeA || match.mazeB ? (
+            <span className="text-day-faint">
+              · {match.mazeA || "?"} / {match.mazeB || "?"}
+            </span>
+          ) : null}
         </span>
         <span className={done ? "text-day-good" : live ? "text-day-live" : "text-day-faint"}>
           {match.void ? "No match" : match.walkover ? "Bye" : done ? (match.winnerOverride ? "Judges' decision" : "Done") : live ? "On the maze" : ready ? "Ready" : "Waiting for teams"}
@@ -127,11 +135,26 @@ export function MatchForm({ match }: { match: MatchRow }) {
                   <option value="LIVE">On the maze now</option>
                 </select>
               </div>
+              {(["A", "B"] as const).map((side) => (
+                <div key={side}>
+                  <label className="day-label" htmlFor={`m${side}-${match.id}`}>
+                    Maze for {side === "A" ? match.teamA : match.teamB}
+                  </label>
+                  <select id={`m${side}-${match.id}`} name={`maze${side}`} defaultValue={side === "A" ? match.mazeA : match.mazeB} className="day-input">
+                    <option value="">Not set</option>
+                    {[...new Set([...mazes, side === "A" ? match.mazeA : match.mazeB].filter(Boolean))].map((maze) => (
+                      <option key={maze} value={maze}>
+                        {maze}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
               <div>
                 <label className="day-label" htmlFor={`a-${match.id}`}>
-                  Maze
+                  Area <span className="font-normal text-day-faint">(optional)</span>
                 </label>
-                <input id={`a-${match.id}`} name="arena" defaultValue={match.arena} placeholder="Maze A" className="day-input" />
+                <input id={`a-${match.id}`} name="arena" defaultValue={match.arena} placeholder="Table 1" className="day-input" />
               </div>
               <div>
                 <label className="day-label" htmlFor={`t-${match.id}`}>

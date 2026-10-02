@@ -1,4 +1,4 @@
-import { FINAL_ROUND, PHASES, matchesInRound, phaseInfo } from "@/lib/bracket";
+import { PHASES, THIRD_PLACE_INFO, THIRD_PLACE_ROUND, matchesInRound, phaseInfo } from "@/lib/bracket";
 import { parseCsv } from "@/lib/csv";
 import { parseClock } from "@/lib/day-slots";
 import {
@@ -151,16 +151,20 @@ function columnOf(header: string): Column | null {
   return HEADER_NAMES[key] ?? null;
 }
 
-/** Qualifying is 1, the round of 32 is 2, up to the final at 6; "Round of 16", "QF", "Phase 3" and "3" all read. */
+/**
+ * Qualifying is 1, the round of 32 is 2, up to the final at 6, and the third
+ * place play-off 7; "Round of 16", "QF", "Phase 3", "3" and "Third place" all read.
+ */
 export function parsePhase(value: string): number | null {
   const raw = value.trim().toLowerCase().replace(/\s+/g, " ");
   if (!raw) return null;
   const number = /^(?:phase |round )?(\d)$/.exec(raw);
   if (number) {
     const phase = Number(number[1]);
-    return phase >= 1 && phase <= FINAL_ROUND ? phase : null;
+    return phase >= 1 && phase <= THIRD_PLACE_ROUND ? phase : null;
   }
   const clean = raw.replace(/-/g, " ").replace(/s$/, "");
+  if (/^(3rd|third)( place)?( play ?off)?$/.test(clean) || clean === THIRD_PLACE_INFO.name.toLowerCase().replace(/-/g, " ")) return THIRD_PLACE_ROUND;
   for (const info of PHASES) {
     const name = info.name.toLowerCase().replace(/-/g, " ").replace(/s$/, "");
     if (clean === name || raw === info.short.toLowerCase()) return info.phase;
@@ -269,7 +273,7 @@ export function readScoreFile(text: string, teams: TeamRef[]): ScoreImport {
     const phaseText = row.get("phase");
     const round = phaseText ? parsePhase(phaseText) : 1;
     if (round === null) {
-      fail(`"${phaseText}" is not a phase. Use Qualifying, Round of 32, Round of 16, Quarter-finals, Semi-finals or Final`);
+      fail(`"${phaseText}" is not a phase. Use Qualifying, Round of 32, Round of 16, Quarter-finals, Semi-finals, Final or Third place`);
       continue;
     }
     let slot = -1;
@@ -405,7 +409,7 @@ export function readTimingFile(text: string, teams: TeamRef[]): TimingImport {
     const phaseText = row.get("phase");
     const round = phaseText ? parsePhase(phaseText) : 1;
     if (round === null) {
-      fail(`"${phaseText}" is not a phase. Use Qualifying, Round of 32, Round of 16, Quarter-finals, Semi-finals or Final`);
+      fail(`"${phaseText}" is not a phase. Use Qualifying, Round of 32, Round of 16, Quarter-finals, Semi-finals, Final or Third place`);
       continue;
     }
     const timeText = row.get("time");

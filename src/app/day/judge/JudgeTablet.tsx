@@ -9,7 +9,7 @@ import { callNext, saveMatch, saveSheet } from "@/app/day/hq/scoring/actions";
 import { EMPTY_DESK_STATE, type DeskState } from "@/app/day/hq/state";
 import { MATCH_SECONDS, MAZE_CELLS, formatPoints, formatTime, outcomeText, parseCell, parseRunTime, scoreSheet, type RunEntry } from "@/lib/score-sheet";
 
-type Side = { id: string; name: string; log: RunEntry[] };
+type Side = { id: string; name: string; log: RunEntry[]; maze?: string };
 
 export interface JudgeData {
   mode: "qualifying" | "knockout";
@@ -268,7 +268,10 @@ function SideRecorder({
       <div className="flex items-center gap-4">
         <Crest name={side.name} size={compact ? 36 : 48} />
         <div className="min-w-0">
-          <p className="day-kicker">{compact ? "Side" : "On the maze"}</p>
+          <p className="day-kicker">
+            {compact ? "Side" : "On the maze"}
+            {side.maze ? <span className="text-day-crimson"> · {side.maze}</span> : null}
+          </p>
           <h2 className={`day-display truncate text-day-ink ${compact ? "text-2xl" : "text-3xl sm:text-4xl"}`}>{side.name}</h2>
         </div>
       </div>
@@ -661,6 +664,7 @@ export function JudgeTablet({ data }: { data: JudgeData }) {
                     {item.id === data.onMaze ? "● " : item.hasSheet ? "✓ " : ""}
                     {item.runOrder ? `#${item.runOrder} ` : ""}
                     {item.name}
+                    {item.maze ? ` · ${item.maze}` : ""}
                   </option>
                 ))}
               </select>

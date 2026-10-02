@@ -5,7 +5,7 @@ import { Crest } from "@/components/day-site/Crest";
 import { DayIcon } from "@/components/day-site/icons";
 import { Empty, HeldBack, MatchCard, MoreLink, PageHead, SectionTitle } from "@/components/day-site/ui";
 import { advanceShown } from "@/lib/reveal";
-import { phaseInfo } from "@/lib/bracket";
+import { THIRD_PLACE_ROUND, phaseInfo } from "@/lib/bracket";
 import { type BracketMatch } from "@/lib/competition";
 import { loadPublicCompetition } from "@/lib/public-competition";
 import { formatPoints } from "@/lib/score-sheet";
@@ -107,6 +107,7 @@ export default async function DayBracketPage() {
   };
 
   const final = at(6, 0);
+  const thirdPlace = at(THIRD_PLACE_ROUND, 0);
   const size = state.bracketSize;
   const sixteen = size === 16;
   // The tree's columns, outside in: from the first round the bracket plays.
@@ -171,6 +172,12 @@ export default async function DayBracketPage() {
                   ) : (
                     <p className="text-center text-xs text-day-faint">The winner lifts the MMRC 26 trophy</p>
                   )}
+                  {thirdPlace && !thirdPlace.void ? (
+                    <div className="w-full border-t border-day-line/[0.12] pt-5">
+                      <p className="mb-2 text-center text-xs font-semibold text-day-muted">Third place play-off</p>
+                      <Cell match={thirdPlace} nameOf={nameOf} />
+                    </div>
+                  ) : null}
                 </div>
 
                 {[...outer].reverse().map((round) => (
@@ -215,6 +222,18 @@ export default async function DayBracketPage() {
                 </section>
               );
             })}
+            {thirdPlace && !thirdPlace.void ? (
+              <section aria-labelledby="r-third" className="space-y-4">
+                <SectionTitle id="r-third" kicker="Phase 6">
+                  {phaseInfo(THIRD_PLACE_ROUND).name}
+                </SectionTitle>
+                {thirdPlace.teamAId || thirdPlace.teamBId ? (
+                  <MatchCard match={thirdPlace} nameOf={nameOf} live={thirdPlace.status === "LIVE"} arena={thirdPlace.arena} showSheets />
+                ) : (
+                  <p className="text-sm text-day-muted">The two beaten semi-finalists, for third place, once the semi-finals are played.</p>
+                )}
+              </section>
+            ) : null}
           </div>
         </>
       )}

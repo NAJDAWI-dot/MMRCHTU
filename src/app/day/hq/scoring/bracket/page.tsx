@@ -3,6 +3,8 @@ import Link from "next/link";
 import { requireSection } from "@/lib/admin-access";
 import { phaseInfo } from "@/lib/bracket";
 import { loadCompetition } from "@/lib/competition";
+import { parseMazeNames } from "@/lib/mazes";
+import { getCompetitionDayConfig } from "@/lib/site-config";
 import { clockTime } from "@/lib/day-mode";
 import { scoreSheet } from "@/lib/score-sheet";
 import { DeskHead } from "../../DeskKit";
@@ -16,7 +18,7 @@ export const metadata: Metadata = { title: "Bracket" };
 /** Phases two to six: every match, round by round, with both teams' sheets. */
 export default async function BracketDeskPage() {
   await requireSection("/day/hq/scoring");
-  const state = await loadCompetition();
+  const [state, config] = await Promise.all([loadCompetition(), getCompetitionDayConfig()]);
 
   const sideSheet = (times: number[], remaining: number | null, log: unknown): SideSheet => {
     const sheet = scoreSheet({ times, remaining, log });
@@ -41,6 +43,8 @@ export default async function BracketDeskPage() {
     winnerOverride: match.winnerOverride,
     status: match.status,
     arena: match.arena,
+    mazeA: match.mazeA,
+    mazeB: match.mazeB,
     time: match.scheduledAt ? clockTime(match.scheduledAt) : "",
     walkover: match.walkover,
     void: match.void,
@@ -72,7 +76,7 @@ export default async function BracketDeskPage() {
           .
         </p>
       ) : (
-        <BracketRounds rows={rows} />
+        <BracketRounds rows={rows} mazes={parseMazeNames(config.mazeNames)} />
       )}
       {state.drawn ? <TransferPanel drawn /> : null}
     </div>

@@ -27,7 +27,7 @@ export default async function DayTeamsPage() {
   const byTeam = new Map<string, string[]>();
   for (const member of members) byTeam.set(member.registrationId, [...(byTeam.get(member.registrationId) ?? []), member.university]);
 
-  const stillIn = state.competitors.filter((team) => !["NOT_QUALIFIED", "ELIMINATED", "RUNNER_UP"].includes(team.journey.state)).length;
+  const stillIn = state.competitors.filter((team) => !["NOT_QUALIFIED", "ELIMINATED", "RUNNER_UP", "THIRD", "FOURTH"].includes(team.journey.state)).length;
 
   return (
     <div className="space-y-12">

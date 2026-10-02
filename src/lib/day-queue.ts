@@ -33,6 +33,7 @@ export const loadQueue = cache(async (now: Date = new Date()): Promise<QueueView
     eligible: team.eligible,
     ran: !!team.standing?.recorded,
     code: team.teamCode,
+    maze: team.qualifyingMaze,
   }));
   const queue = buildQueue(entries, config.queueTeamId);
   const slotMinutes = config.runSlotMinutes || 10;

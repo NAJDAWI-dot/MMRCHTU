@@ -1,3 +1,4 @@
+import type { Award } from "@/lib/awards";
 import { FINAL_ROUND, phaseInfo } from "@/lib/bracket";
 import type { CompetitionState } from "@/lib/competition";
 import type { LastReveal } from "@/lib/reveal";
@@ -14,19 +15,33 @@ export interface RevealShow {
   id: string;
   kicker: string;
   title: string;
-  /** ranking: best first, revealed from the bottom up. names: everyone at once, in a cascade. */
-  mode: "ranking" | "names" | "champion";
+  /**
+   * ranking: best first, revealed from the bottom up. names: everyone at once,
+   * in a cascade. awards: one award at a time, the title in `value`.
+   */
+  mode: "ranking" | "names" | "champion" | "awards";
   rows: { name: string; value: string; detail: string }[];
   champion?: { name: string; detail: string };
 }
 
-export function revealShow(state: CompetitionState, last: LastReveal | null): RevealShow | null {
+export function revealShow(state: CompetitionState, last: LastReveal | null, awards: readonly Award[] = []): RevealShow | null {
   if (!last) return null;
   const id = String(last.at);
   const nameOf = (teamId: string | null) => (teamId ? (state.byId.get(teamId)?.name ?? "") : "");
 
+  // The prize-giving: the judges' awards first and the champions last, so the
+  // room waits for the one it came for.
+  if (last.phase === "awards") {
+    const rows = [...awards]
+      .reverse()
+      .filter((award) => award.teamId && nameOf(award.teamId))
+      .map((award) => ({ name: nameOf(award.teamId), value: award.title, detail: award.detail }));
+    return rows.length ? { id, kicker: "MMRC 26", title: "The awards", mode: "awards", rows } : null;
+  }
+  const phase = last.phase;
+
   const champion = state.competitors.find((team) => team.journey.state === "CHAMPION");
-  if (champion && (last.phase === "all" || (last.phase === FINAL_ROUND && last.kind === "advance"))) {
+  if (champion && (phase === "all" || (phase === FINAL_ROUND && last.kind === "advance"))) {
     const runnerUp = state.competitors.find((team) => team.journey.state === "RUNNER_UP");
     return {
       id,
@@ -50,7 +65,7 @@ export function revealShow(state: CompetitionState, last: LastReveal | null): Re
     return rows.length ? { id, kicker: "Phase 1", title: "Qualifying results", mode: "ranking", rows } : null;
   };
 
-  if (last.phase === "all" || last.phase === 1) {
+  if (phase === "all" || phase === 1) {
     if (last.kind === "advance") {
       const through = state.table.filter((row) => row.qualified);
       const seedOf = (teamId: string) => state.byId.get(teamId)?.journey.seed ?? null;
@@ -63,7 +78,7 @@ export function revealShow(state: CompetitionState, last: LastReveal | null): Re
     return qualifyingRanking();
   }
 
-  const round = last.phase;
+  const round = phase;
   if (last.kind === "advance") {
     const rows = state.bracket
       .filter((match) => match.round === round && match.winnerId && !match.void)

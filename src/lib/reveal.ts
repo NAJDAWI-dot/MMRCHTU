@@ -1,4 +1,4 @@
-import { FINAL_ROUND, FIRST_KNOCKOUT_ROUND, firstRoundOf, journeyOf, phaseInfo, type ResolvedMatch, type Standing } from "@/lib/bracket";
+import { FINAL_ROUND, FIRST_KNOCKOUT_ROUND, firstRoundOf, journeyOf, phaseInfo, revealPhaseOf, type ResolvedMatch, type Standing } from "@/lib/bracket";
 import type { BracketMatch, CompetitionState } from "@/lib/competition";
 
 /**
@@ -83,7 +83,10 @@ export function redactTable(table: Standing[], reveal: Reveal): Standing[] {
 export function redactBracket<T extends ResolvedMatch>(matches: T[], reveal: Reveal): T[] {
   const hiddenFrom = firstHiddenRound(reveal, firstRoundOf(matches));
   return matches.map((match) => {
-    if (match.round >= hiddenFrom) {
+    // The third place play-off goes with the final: its pairing gives the
+    // semi-finals away just as the final's does.
+    const phase = revealPhaseOf(match.round);
+    if (phase >= hiddenFrom) {
       // Who is even in it would say who won before.
       return {
         ...match,
@@ -107,10 +110,10 @@ export function redactBracket<T extends ResolvedMatch>(matches: T[], reveal: Rev
       };
     }
     let out = match;
-    if (!resultsShown(reveal, match.round)) {
+    if (!resultsShown(reveal, phase)) {
       out = { ...out, scoreA: null, scoreB: null, timesA: [], timesB: [], remainingA: null, remainingB: null, runLogA: [], runLogB: [], tied: false };
     }
-    if (!advanceShown(reveal, match.round) && !match.walkover) {
+    if (!advanceShown(reveal, phase) && !match.walkover) {
       const status = "status" in out ? (out as unknown as BracketMatch).status : undefined;
       out = { ...out, winnerId: null, winnerOverride: false, tied: false, ...(status === "DONE" ? { status: "PENDING" } : {}) };
     }
@@ -149,8 +152,8 @@ export function redactCompetition(state: CompetitionState, reveal: Reveal): Comp
 
 /** The last reveal, when it was within `windowMs` of now: what the hall screen plays. */
 export interface LastReveal {
-  phase: number | "all";
-  kind: "results" | "advance" | "all";
+  phase: number | "all" | "awards";
+  kind: "results" | "advance" | "all" | "awards";
   at: number;
 }
 
@@ -158,6 +161,7 @@ export function recentReveal(value: string, now: number, windowMs = 10 * 60_000)
   const [phaseText, kindText, atText] = String(value ?? "").split("|");
   const at = Number(atText);
   if (!Number.isFinite(at) || now - at > windowMs || at - now > 60_000) return null;
+  if (phaseText === "awards") return kindText === "awards" ? { phase: "awards", kind: "awards", at } : null;
   const phase = phaseText === "all" ? "all" : Number(phaseText);
   if (phase !== "all" && !(REVEAL_PHASES as readonly number[]).includes(phase)) return null;
   const kind = kindText === "advance" || kindText === "results" || kindText === "all" ? kindText : null;

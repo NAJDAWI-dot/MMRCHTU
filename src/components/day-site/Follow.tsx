@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Crest } from "@/components/day-site/Crest";
 import { DayIcon } from "@/components/day-site/icons";
-import type { FollowCard } from "@/lib/follow";
+import type { FollowCard, ReadyNotice } from "@/lib/follow";
 
 /**
  * Following a team: one team per browser, kept in this browser only. The team
@@ -97,11 +97,58 @@ const TONE: Record<FollowCard["tone"], string> = {
   muted: "text-day-muted",
 };
 
+/**
+ * "Get ready", across the top of the screen: the followed team has been put
+ * on deck, called to the maze, or its match is next. Stays until it is
+ * dismissed, since it is the one thing on the page that cannot be missed.
+ */
+function ReadyBanner({ notice, name, onClose }: { notice: ReadyNotice; name: string; onClose: () => void }) {
+  const live = notice.tone === "live";
+  return (
+    <div className="fixed inset-x-3 top-3 z-[70] mx-auto max-w-xl sm:top-5" role="alert">
+      <div className={`day-card day-posts day-banner-in flex items-start gap-3 p-4 shadow-[var(--day-shadow-lift)] sm:p-5 ${live ? "border-day-live/60" : "border-day-gold/70"}`}>
+        <span className={`mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-[4px] ${live ? "bg-day-live text-day-on-ink" : "bg-day-gold text-day-on-ink"}`}>
+          <DayIcon name={live ? "live" : "timer"} className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className={`text-xs font-bold ${live ? "text-day-live" : "text-day-gold"}`}>{name}</p>
+          <p className="day-display mt-0.5 text-xl leading-tight text-day-ink">{notice.title}</p>
+          <p className="mt-1 text-sm leading-relaxed text-day-muted">{notice.body}</p>
+        </div>
+        <button type="button" onClick={onClose} className="day-btn day-btn-ink day-btn-sm shrink-0">
+          Got it
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** The corner card, and the light on the followed team wherever it appears. */
 export function FollowDock({ cards }: { cards: FollowCard[] }) {
   const id = useFollow();
   const [open, setOpen] = useState(true);
   const card = cards.find((item) => item.id === id);
+  // A new call for the followed team pops the banner and buzzes the phone, once per call.
+  const [banner, setBanner] = useState<ReadyNotice | null>(null);
+  const announced = useRef("");
+  const noticeKey = card?.notice ? `${card.id}:${card.notice.key}` : "";
+  useEffect(() => {
+    if (!noticeKey || !card?.notice) {
+      announced.current = "";
+      setBanner(null);
+      return;
+    }
+    if (announced.current === noticeKey) return;
+    announced.current = noticeKey;
+    setBanner(card.notice);
+    try {
+      // Browsers only allow it once the page has been touched; before that it would only log a warning.
+      if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.([250, 120, 250]);
+    } catch {
+      // No vibration on this device: the banner is enough.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noticeKey]);
   const [seen, setSeen] = useState("");
   // On a phone the card would cover the page, so it opens to say hello, or when
   // something changes, and folds itself away again after a few seconds.
@@ -126,6 +173,7 @@ export function FollowDock({ cards }: { cards: FollowCard[] }) {
 
   return (
     <>
+      {banner ? <ReadyBanner notice={banner} name={card.name} onClose={() => setBanner(null)} /> : null}
       <style>{`[data-team="${card.id}"]{background-color:rgb(var(--day-gold)/0.1)!important;outline:2px solid rgb(var(--day-gold)/0.7);outline-offset:-2px}[data-cell-team="${card.id}"]{outline:2px solid rgb(var(--day-gold));outline-offset:2px}`}</style>
       <aside
         className="day-follow fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-3 z-40 w-[min(22rem,calc(100vw-1.5rem))] lg:bottom-6 lg:right-6"
