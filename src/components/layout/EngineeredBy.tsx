@@ -32,28 +32,55 @@ function LinkedInMark({ className }: { className?: string }) {
   );
 }
 
-export function EngineeredBy() {
+/**
+ * The same lockup in two palettes. "site" is the main site's, light and dark.
+ * "day" is the competition day site's footer, which stands on the dark maze
+ * floor in either theme and has its own colour tokens (see .day-floor).
+ */
+const TONES = {
+  site: {
+    strip: "border-ras-gray/10",
+    link: "rounded-lg hover:bg-ras-purple/5 focus-visible:ring-ras-purple/50 dark:hover:bg-white/[0.06] dark:focus-visible:ring-white/60",
+    label: "text-ras-gray dark:text-white/65",
+    rule: "bg-ras-gray/40 dark:bg-white/30",
+    name: "text-ras-purple group-hover:text-accent dark:text-white/85 dark:group-hover:text-white",
+    mark: "text-ras-gray/45 group-hover:text-accent dark:text-white/40 dark:group-hover:text-white",
+    underline: "bg-accent/60 dark:bg-white/60",
+  },
+  day: {
+    strip: "border-day-line/[0.1]",
+    link: "rounded-[4px] hover:bg-day-ink/[0.06] focus-visible:ring-day-ink/60",
+    label: "text-day-muted",
+    rule: "bg-day-line/30",
+    name: "text-day-ink group-hover:text-day-crimson",
+    mark: "text-day-faint group-hover:text-day-crimson",
+    underline: "bg-day-crimson/70",
+  },
+} as const;
+
+export function EngineeredBy({ tone = "site" }: { tone?: keyof typeof TONES } = {}) {
+  const c = TONES[tone];
   return (
-    <div className="border-t border-ras-gray/10 px-4 py-6 text-center">
+    <div className={`border-t px-4 py-6 text-center ${c.strip}`}>
       <a
         href={LINKEDIN_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="group inline-flex flex-col items-center gap-2 rounded-lg px-5 py-2 transition-colors duration-200 hover:bg-ras-purple/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ras-purple/50 motion-reduce:transition-none dark:hover:bg-white/[0.06] dark:focus-visible:ring-white/60"
+        className={`group inline-flex flex-col items-center gap-2 px-5 py-2 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 motion-reduce:transition-none ${c.link}`}
       >
         {/* The label, held between two hairlines that draw outwards on hover —
             a corridor opening, which is the one visual idea this whole site is
             built on. They scale rather than change width: a width transition
             here would push the label around mid-hover. */}
-        <span className="flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.3em] text-ras-gray dark:text-white/65">
+        <span className={`flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.3em] ${c.label}`}>
           <span
             aria-hidden="true"
-            className="h-px w-5 origin-right bg-ras-gray/40 transition-transform duration-300 group-hover:scale-x-150 motion-reduce:transition-none dark:bg-white/30"
+            className={`h-px w-5 origin-right transition-transform duration-300 group-hover:scale-x-150 motion-reduce:transition-none ${c.rule}`}
           />
           Engineered by
           <span
             aria-hidden="true"
-            className="h-px w-5 origin-left bg-ras-gray/40 transition-transform duration-300 group-hover:scale-x-150 motion-reduce:transition-none dark:bg-white/30"
+            className={`h-px w-5 origin-left transition-transform duration-300 group-hover:scale-x-150 motion-reduce:transition-none ${c.rule}`}
           />
         </span>
 
@@ -61,7 +88,7 @@ export function EngineeredBy() {
           {/* The padding answers the letter-spacing: tracking adds its space
               after the final letter too, so without it the wordmark sits half
               a space left of centre under the label above. */}
-          <span className="ps-[0.35em] font-display text-base font-extrabold tracking-[0.35em] text-ras-purple transition-colors duration-200 group-hover:text-accent motion-reduce:transition-none dark:text-white/85 dark:group-hover:text-white">
+          <span className={`ps-[0.35em] font-display text-base font-extrabold tracking-[0.35em] transition-colors duration-200 motion-reduce:transition-none ${c.name}`}>
             NAJDAWI
           </span>
 
@@ -69,14 +96,14 @@ export function EngineeredBy() {
               the name plus a badge — is what centres under the label. Quiet
               until the link is pointed at: it is a signpost, not a logo the
               chapter is displaying. */}
-          <LinkedInMark className="absolute left-full top-1/2 ml-2 h-3 w-3 -translate-y-1/2 text-ras-gray/45 transition-colors duration-200 group-hover:text-accent motion-reduce:transition-none dark:text-white/40 dark:group-hover:text-white" />
+          <LinkedInMark className={`absolute left-full top-1/2 ml-2 h-3 w-3 -translate-y-1/2 transition-colors duration-200 motion-reduce:transition-none ${c.mark}`} />
 
           {/* Drawn on hover rather than always present: an underline under a
               wordmark reads as part of the wordmark, and this one is meant to
               read as "this is a link". */}
           <span
             aria-hidden="true"
-            className="absolute -bottom-1.5 left-0 h-px w-full origin-left scale-x-0 bg-accent/60 transition-transform duration-300 group-hover:scale-x-100 motion-reduce:transition-none dark:bg-white/60"
+            className={`absolute -bottom-1.5 left-0 h-px w-full origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100 motion-reduce:transition-none ${c.underline}`}
           />
         </span>
 
