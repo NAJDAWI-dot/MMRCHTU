@@ -40,3 +40,4 @@ npm-debug.log*
 # The Vercel CLI appends a bare `.env*` here on link. Left in place it would
 # sit after the negation above and re-ignore .env.example, since later rules
 # win — the env patterns are already covered on lines 18-20.
+scripts/team-codes-backup-*.json
