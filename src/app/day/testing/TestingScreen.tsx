@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { DayAutoRefresh } from "@/components/day/DayAutoRefresh";
 import { DayIcon } from "@/components/day-site/icons";
+import { SponsorWall, type WallSponsor } from "@/components/day-site/SponsorWall";
 import { BOARD_VIEWBOX, BoardMouse, BoardRoute, BoardWalls, FloodNumbers, HEAD_START, useBoard } from "@/components/day-site/MazeBoard";
 import { MMRC_PLATE } from "@/lib/brand";
 import { Clock } from "../screen/HallScreen";
@@ -15,11 +16,13 @@ export interface TestingPhoto {
   posted: string;
 }
 
-type Slide = "main" | "photos";
+type Slide = "main" | "photos" | "sponsors";
+const SLIDES: readonly Slide[] = ["main", "photos", "sponsors"];
 
-/** Seconds on the title slide, and on each photo. */
+/** Seconds on the title slide, on each photo, and on the sponsors. */
 const MAIN_S = 15;
 const PHOTO_S = 6;
+const SPONSORS_S = 12;
 /** The photo slide shows at most this many before handing back. */
 const PHOTOS_PER_PASS = 8;
 
@@ -201,10 +204,23 @@ function PhotoSlide({ photos, count }: { photos: TestingPhoto[]; count: number }
   );
 }
 
+function SponsorsSlide({ sponsors }: { sponsors: WallSponsor[] }) {
+  return (
+    <div className="testing-rise flex h-full flex-col">
+      <p className="day-kicker text-center text-[2.2vh]">With thanks</p>
+      <h2 className="day-display mt-[1vh] text-center text-[8vh] leading-none text-day-ink">Our sponsors</h2>
+      <div className="mt-[4vh] flex min-h-0 flex-1 flex-col">
+        <SponsorWall sponsors={sponsors} />
+      </div>
+    </div>
+  );
+}
+
 /**
- * The testing day screen: a title slide and a slide of the photos as they come
- * in, taking turns. Arrow keys step, space pauses, F goes full screen.
- * ?slide=photos holds one slide; ?theme=light suits a bright room.
+ * The testing day screen: a title slide, a slide of the photos as they come
+ * in and, once the Sponsors desk has any, the sponsors, taking turns. Arrow
+ * keys step, space pauses, F goes full screen. ?slide=photos (or main, or
+ * sponsors) holds one slide; ?theme=light suits a bright room.
  */
 export function TestingScreen({
   today,
@@ -212,23 +228,26 @@ export function TestingScreen({
   countdown,
   photos,
   count,
+  sponsors,
 }: {
   today: string;
   venue: Venue;
   countdown: { value: string; label: string } | null;
   photos: TestingPhoto[];
   count: number;
+  sponsors: WallSponsor[];
 }) {
   const slides: { key: Slide; label: string }[] = [
     { key: "main", label: "Testing day" },
     { key: "photos", label: "Photos" },
+    ...(sponsors.length ? [{ key: "sponsors" as const, label: "Sponsors" }] : []),
   ];
   const [pinned, setPinned] = useState<Slide | null>(null);
   const [light, setLight] = useState(false);
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
     const slide = query.get("slide");
-    setPinned(slide === "photos" || slide === "main" ? slide : null);
+    setPinned(SLIDES.find((key) => key === slide) ?? null);
     setLight(query.get("theme") === "light");
   }, []);
 
@@ -237,12 +256,14 @@ export function TestingScreen({
   const [idle, setIdle] = useState(false);
   const [full, setFull] = useState(false);
 
-  const at = pinned ? slides.findIndex((slide) => slide.key === pinned) : index % slides.length;
+  // A slide held by the address that is not on (sponsors, before there are any) holds nothing.
+  const held = pinned && slides.some((slide) => slide.key === pinned) ? pinned : null;
+  const at = held ? slides.findIndex((slide) => slide.key === held) : index % slides.length;
   const current = slides[at]!;
   const photoCount = Math.min(photos.length, PHOTOS_PER_PASS);
   // The photo slide stays long enough to go through the latest photos once.
-  const dwell = (current.key === "main" ? MAIN_S : photoCount ? Math.max(2, photoCount) * PHOTO_S : 8) * 1000;
-  const holding = paused || pinned !== null;
+  const dwell = (current.key === "main" ? MAIN_S : current.key === "sponsors" ? SPONSORS_S : photoCount ? Math.max(2, photoCount) * PHOTO_S : 8) * 1000;
+  const holding = paused || held !== null;
 
   const step = useCallback((delta: number) => setIndex((value) => (value + delta + slides.length) % slides.length), [slides.length]);
 
@@ -317,7 +338,13 @@ export function TestingScreen({
 
           <main className="relative min-h-0 px-[4vh] py-[2vh]">
             <section key={`${current.key}-${index}`} aria-label={current.label} className="screen-panel h-full">
-              {current.key === "main" ? <MainSlide today={today} venue={venue} countdown={countdown} /> : <PhotoSlide photos={photos} count={count} />}
+              {current.key === "main" ? (
+                <MainSlide today={today} venue={venue} countdown={countdown} />
+              ) : current.key === "sponsors" ? (
+                <SponsorsSlide sponsors={sponsors} />
+              ) : (
+                <PhotoSlide photos={photos} count={count} />
+              )}
             </section>
           </main>
 

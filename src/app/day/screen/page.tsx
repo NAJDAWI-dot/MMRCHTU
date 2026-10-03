@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Crest } from "@/components/day-site/Crest";
 import { DayMouse } from "@/components/day-site/DayMice";
-import { SponsorLogo } from "@/components/day-site/SponsorLogo";
+import { SponsorWall } from "@/components/day-site/SponsorWall";
 import { DayIcon } from "@/components/day-site/icons";
 import { matchesInRound, phaseInfo, revealPhaseOf } from "@/lib/bracket";
 import { type BracketMatch } from "@/lib/competition";
@@ -14,7 +14,7 @@ import { loadDayShell } from "@/lib/day-shell";
 import { loadDaySite } from "@/lib/day-site";
 import { prisma } from "@/lib/prisma";
 import { finalPlacings, roundLeaderboard, type RoundResult } from "@/lib/screen-boards";
-import { groupByTier } from "@/lib/sponsors";
+import { loadSlideSponsors } from "@/lib/day-sponsors";
 import { formatPoints, formatReached, formatTime } from "@/lib/score-sheet";
 import type { ScreenCall } from "./CallTakeover";
 import { HallScreen, type ScreenPanel } from "./HallScreen";
@@ -43,7 +43,7 @@ export default async function HallScreenPage() {
     loadQueue(),
     loadDayPhotos(5),
     loadDayShell(),
-    prisma.sponsor.findMany({ where: { isPublished: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], select: { id: true, name: true, tier: true, logoUrl: true } }),
+    loadSlideSponsors(),
     getCompetitionDayConfig(),
   ]);
   const nameOf = (id: string | null) => (id ? (state.byId.get(id)?.name ?? null) : null);
@@ -493,29 +493,14 @@ export default async function HallScreenPage() {
 
   // -------------------------------------------------------------- sponsors
   if (sponsors.length) {
-    const groups = groupByTier(sponsors);
-    // Fewer sponsors, bigger logos; with tiers, the first tier leads.
-    const size = (count: number) => (count <= 3 ? "h-[26vh] w-[40vh]" : count <= 8 ? "h-[19vh] w-[30vh]" : "h-[13vh] w-[21vh]");
-    const tileFor = (index: number, count: number) => (groups.length === 1 ? size(count) : index === 0 ? size(Math.max(count, 4)) : size(Math.max(count, 9)));
     panels.push({
       key: "sponsors",
       label: "Sponsors",
       node: (
         <div className="flex h-full flex-col">
           <PanelTitle kicker="With thanks">Our sponsors</PanelTitle>
-          <div className="mt-[3vh] flex min-h-0 flex-1 flex-col justify-center gap-[3.5vh] overflow-hidden">
-            {groups.map((group, index) => (
-              <div key={group.tier || "untiered"} role="group" aria-label={group.tier || "Sponsors"}>
-                {group.tier ? <p className="day-kicker mb-[1.8vh] text-center text-[2vh]">{group.tier}</p> : null}
-                <ul className="flex flex-wrap justify-center gap-[2.5vh]">
-                  {group.sponsors.map((sponsor) => (
-                    <li key={sponsor.id}>
-                      <SponsorLogo name={sponsor.name} logoUrl={sponsor.logoUrl} className={`${tileFor(index, group.sponsors.length)} p-[2.4vh]`} nameClass="text-[3.4vh]" />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+          <div className="mt-[3vh] flex min-h-0 flex-1 flex-col">
+            <SponsorWall sponsors={sponsors} />
           </div>
         </div>
       ),

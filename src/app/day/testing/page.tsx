@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { requireDayViewer } from "@/lib/day-access";
 import { DAY_TIME_ZONE, dayKey, postedAgo } from "@/lib/day-mode";
 import { loadDayPhotos } from "@/lib/day-photos";
+import { loadSlideSponsors } from "@/lib/day-sponsors";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import { TestingScreen } from "./TestingScreen";
 
@@ -33,13 +34,14 @@ function countdown(eventDate: Date | null, now: Date): { value: string; label: s
 }
 
 /**
- * The testing day on a projector: a title slide, and the photos from the hall
- * as they are taken. Photos come from the Photos desk in HQ, the same album
- * the day site and the hall screen show. Same access as the hall screen.
+ * The testing day on a projector: a title slide, the photos from the hall as
+ * they are taken, and the sponsors. Photos come from the Photos desk in HQ and
+ * sponsors from the Sponsors desk, the same ones the hall screen shows. Same
+ * access as the hall screen.
  */
 export default async function TestingScreenPage() {
   await requireDayViewer();
-  const [config, gallery] = await Promise.all([getCompetitionDayConfig(), loadDayPhotos(SHOWN)]);
+  const [config, gallery, sponsors] = await Promise.all([getCompetitionDayConfig(), loadDayPhotos(SHOWN), loadSlideSponsors()]);
   const now = new Date();
 
   return (
@@ -48,6 +50,7 @@ export default async function TestingScreenPage() {
       venue={VENUE}
       countdown={countdown(config.eventDate, now)}
       count={gallery.count}
+      sponsors={sponsors}
       photos={gallery.photos.map((photo) => ({
         id: photo.id,
         url: photo.url,
