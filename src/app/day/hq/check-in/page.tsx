@@ -6,6 +6,7 @@ import { PAYMENT_STATUS_LABELS, type PaymentStatus } from "@/lib/payment";
 import { prisma } from "@/lib/prisma";
 import { DeskHead } from "../DeskKit";
 import { CheckInBoard, type CheckInTeam } from "./CheckInBoard";
+import { CodeImport } from "./CodeImport";
 
 export const metadata: Metadata = { title: "Check-in" };
 
@@ -96,6 +97,8 @@ export default async function CheckInPage() {
           </div>
         ))}
       </dl>
+
+      {teams.length ? <CodeImport /> : null}
 
       {teams.length ? (
         <CheckInBoard teams={teams} />
