@@ -5,7 +5,7 @@ import { refreshDaySite } from "@/lib/day-refresh";
 import { SNIFF_BYTES, checkUpload, reorder, sniffImageType } from "@/lib/gallery";
 import { removePhoto, storePhoto } from "@/lib/photo-storage";
 import { prisma } from "@/lib/prisma";
-import { logoKey, sponsorFields } from "@/lib/sponsors";
+import { logoKey, parseLogoBackground, sponsorFields } from "@/lib/sponsors";
 import type { DeskState } from "../state";
 
 const SECTION = "/day/hq/sponsors";
@@ -52,6 +52,7 @@ export async function addSponsor(_previous: DeskState, formData: FormData): Prom
       website: fields.website,
       logoUrl: logo?.url ?? "",
       logoKey: logo?.key ?? "",
+      logoBackground: parseLogoBackground(formData.get("logoBackground")),
       sortOrder: (last?.sortOrder ?? -1) + 1,
     },
   });
@@ -77,6 +78,7 @@ export async function saveSponsor(_previous: DeskState, formData: FormData): Pro
       tier: fields.tier,
       website: fields.website,
       isPublished: formData.get("isPublished") === "on",
+      logoBackground: parseLogoBackground(formData.get("logoBackground")),
       ...(logo ? { logoUrl: logo.url, logoKey: logo.key } : removing ? { logoUrl: "", logoKey: "" } : {}),
     },
   });

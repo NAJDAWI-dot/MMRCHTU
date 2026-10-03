@@ -63,3 +63,40 @@ export function groupByTier<T extends { tier: string }>(sponsors: readonly T[]):
   }
   return groups;
 }
+
+/** The tile behind a logo. */
+export const LOGO_BACKGROUNDS = ["WHITE", "DARK"] as const;
+export type LogoBackground = (typeof LOGO_BACKGROUNDS)[number];
+
+export function parseLogoBackground(value: unknown): LogoBackground {
+  return value === "DARK" ? "DARK" : "WHITE";
+}
+
+/** The dark tile's colour, the day site's darkest plum, in either theme. */
+export const DARK_TILE = "#24102a";
+
+/**
+ * Which tile shows a logo best, from its pixels (RGBA, as a canvas gives them).
+ *
+ * A logo with no transparency brings its own background, so it stays on white.
+ * Otherwise the logo's visible pixels are counted twice: how many would show
+ * up on white, and how many on the dark tile. A white or pale logo, made for
+ * dark backgrounds, all but vanishes on white and goes on the dark tile; a
+ * logo that shows equally well on either stays on white.
+ */
+export function logoBackgroundFor(pixels: ArrayLike<number>): LogoBackground {
+  let total = 0;
+  let solid = 0;
+  let onWhite = 0;
+  let onDark = 0;
+  for (let i = 0; i + 3 < pixels.length; i += 4) {
+    total++;
+    if (pixels[i + 3]! < 128) continue;
+    solid++;
+    const light = (0.2126 * pixels[i]! + 0.7152 * pixels[i + 1]! + 0.0722 * pixels[i + 2]!) / 255;
+    if (light < 0.85) onWhite++;
+    if (light > 0.15) onDark++;
+  }
+  if (!solid || solid / total > 0.98) return "WHITE";
+  return (onDark - onWhite) / solid > 0.1 ? "DARK" : "WHITE";
+}

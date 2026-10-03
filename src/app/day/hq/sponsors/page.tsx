@@ -5,14 +5,13 @@ import { requireSection } from "@/lib/admin-access";
 import { MAX_UPLOAD_BYTES, formatBytes } from "@/lib/gallery";
 import { isStorageConfigured } from "@/lib/photo-storage";
 import { prisma } from "@/lib/prisma";
-import { SPONSOR_NAME_MAX, SPONSOR_TIER_MAX } from "@/lib/sponsors";
+import { SPONSOR_NAME_MAX, SPONSOR_TIER_MAX, parseLogoBackground } from "@/lib/sponsors";
 import { ArmedForm, DeskForm, DeskHead, Submit, Toggle } from "../DeskKit";
 import { addSponsor, deleteSponsor, moveSponsor, saveSponsor } from "./actions";
+import { LogoField } from "./LogoField";
 import { openDaySite } from "@/lib/day-links";
 
 export const metadata: Metadata = { title: "Sponsors" };
-
-const LOGO_TYPES = "image/png,image/webp,image/jpeg,image/avif";
 
 /**
  * The sponsors on the hall screen's sponsors slide: add them with their logos,
@@ -28,7 +27,7 @@ export default async function SponsorsDeskPage() {
       <DeskHead
         icon="star"
         title="Sponsors"
-        lead="The sponsors slide on the hall screen. Sponsors with the same tier are shown together, in the order of this list."
+        lead="The sponsors slide on the hall screen and the testing day screen. Sponsors with the same tier are shown together, in the order of this list."
       >
         <a href={openDaySite("/day/screen?panel=sponsors")} target="_blank" className="day-btn day-btn-soft day-btn-sm">
           <DayIcon name="expand" className="h-4 w-4" />
@@ -70,12 +69,9 @@ export default async function SponsorsDeskPage() {
             </div>
           </div>
           <div>
-            <label className="day-label" htmlFor="new-logo">
-              Logo
-            </label>
-            <input id="new-logo" name="logo" type="file" accept={LOGO_TYPES} className="day-input py-2" />
+            <LogoField id="new-logo" name="" label="Logo" />
             <p className="mt-1.5 text-xs text-day-muted">
-              A PNG with a transparent background looks best. Up to {formatBytes(MAX_UPLOAD_BYTES)}. Without one, the name is shown instead.
+              A PNG with a transparent background looks best. Up to {formatBytes(MAX_UPLOAD_BYTES)}. Without one, the name is shown instead. A white logo goes on the dark tile by itself.
             </p>
           </div>
           <Submit pending="Adding…">Add the sponsor</Submit>
@@ -93,7 +89,7 @@ export default async function SponsorsDeskPage() {
               <li key={sponsor.id} className={`day-card p-4 sm:p-5 ${sponsor.isPublished ? "" : "opacity-70"}`}>
                 <div className="grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-[12rem_minmax(0,1fr)]">
                   <div className="space-y-3">
-                    <SponsorLogo name={sponsor.name} logoUrl={sponsor.logoUrl} className="aspect-[3/2] w-full p-3" nameClass="text-xl" />
+                    <SponsorLogo name={sponsor.name} logoUrl={sponsor.logoUrl} background={parseLogoBackground(sponsor.logoBackground)} className="aspect-[3/2] w-full p-3" nameClass="text-xl" />
                     <div className="flex items-center gap-2">
                       <DeskForm action={moveSponsor} className="flex">
                         <input type="hidden" name="id" value={sponsor.id} />
@@ -141,19 +137,18 @@ export default async function SponsorsDeskPage() {
                           <input id={`website-${sponsor.id}`} name="website" inputMode="url" defaultValue={sponsor.website} className="day-input" />
                         </div>
                       </div>
-                      <div className="grid grid-cols-[minmax(0,1fr)] items-end gap-3 sm:grid-cols-2">
-                        <div>
-                          <label className="day-label" htmlFor={`logo-${sponsor.id}`}>
-                            {sponsor.logoUrl ? "Replace the logo" : "Add a logo"}
-                          </label>
-                          <input id={`logo-${sponsor.id}`} name="logo" type="file" accept={LOGO_TYPES} className="day-input py-2" />
-                        </div>
-                        {sponsor.logoUrl ? (
-                          <label className="flex items-center gap-2 pb-3 text-sm text-day-ink">
-                            <input type="checkbox" name="removeLogo" /> Remove the logo and show the name
-                          </label>
-                        ) : null}
-                      </div>
+                      <LogoField
+                        id={`logo-${sponsor.id}`}
+                        name={sponsor.name}
+                        label={sponsor.logoUrl ? "Replace the logo" : "Add a logo"}
+                        currentUrl={sponsor.logoUrl}
+                        currentBackground={parseLogoBackground(sponsor.logoBackground)}
+                      />
+                      {sponsor.logoUrl ? (
+                        <label className="flex items-center gap-2 text-sm text-day-ink">
+                          <input type="checkbox" name="removeLogo" /> Remove the logo and show the name
+                        </label>
+                      ) : null}
                       <Toggle name="isPublished" defaultChecked={sponsor.isPublished} label="On the sponsors slide" />
                       <Submit pending="Saving…" variant="secondary">
                         Save
