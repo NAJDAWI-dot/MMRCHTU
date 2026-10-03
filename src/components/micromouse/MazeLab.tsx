@@ -2,15 +2,22 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CELL, MAZE_GOLD, generateMaze, type Maze } from "@/lib/maze";
-import { DIAGRAM_BRAID, RULES, cellCentre, goalCells, pathData, startCell } from "@/lib/rules";
+import { DIAGRAM_BRAID, RULES, goalCells, pathData } from "@/lib/rules";
+import { downloadMazePng, startArrow, startCaption } from "@/lib/maze-image";
 import {
+  CORNERS,
+  HEADING_NAMES,
+  cornerExits,
   countTurns,
   floodFill,
   floodRoute,
   islandMaze,
+  placeStart,
   toggleWall,
   wallFollow,
   wallSegments,
+  type Corner,
+  type StartPlace,
 } from "@/lib/micromouse";
 
 /**
@@ -21,6 +28,10 @@ import {
  * itself and picking a different route while you watch, is the same paragraph
  * arriving as an experiment. Nothing here is a video: every number on screen
  * is computed by the same function the guide tells you to write.
+ *
+ * The start can go in any corner, facing either way out of it, as the rules
+ * allow; its three walls close and the numbers flood round them. The maze can
+ * be saved as a PNG, drawn as it is showing.
  *
  * It also carries the rulebook's warning about wall-following, and the maze is
  * picked rather than taken for that: the site's generator does not promise an
@@ -40,6 +51,10 @@ const FLOOD_STEP_MS = 90;
 
 export function MazeLab() {
   const [maze, setMaze] = useState<Maze | null>(null);
+  const [corner, setCorner] = useState<Corner>("bottom-left");
+  const [start, setStart] = useState<StartPlace | null>(null);
+  const [saving, setSaving] = useState(false);
+  const cornerRef = useRef<Corner>("bottom-left");
   const [isIsland, setIsIsland] = useState(true);
   const [view, setView] = useState<View>("numbers");
   const [handStep, setHandStep] = useState(0);
@@ -49,7 +64,10 @@ export function MazeLab() {
 
   const roll = useCallback(() => {
     const picked = islandMaze(() => generateMaze(RULES.mazeGrid, Math.random, DIAGRAM_BRAID));
-    setMaze(picked.maze);
+    // A new maze keeps the corner the reader chose.
+    const placed = placeStart(picked.maze, cornerRef.current);
+    setMaze(placed.maze);
+    setStart(placed.start);
     setIsIsland(picked.isIsland);
     setHandStep(0);
     setWave(null);
@@ -62,12 +80,26 @@ export function MazeLab() {
     reducedRef.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
+  /** Moves the start: its three walls close, and the numbers flood round them. */
+  const moveStart = useCallback(
+    (to: Corner, heading?: number) => {
+      if (!maze) return;
+      const placed = placeStart(maze, to, heading);
+      cornerRef.current = to;
+      setCorner(to);
+      setMaze(placed.maze);
+      setStart(placed.start);
+      setWave(null);
+      setHandStep(0);
+    },
+    [maze],
+  );
+
   const figure = useMemo(() => {
-    if (!maze) return null;
+    if (!maze || !start) return null;
     const distances = floodFill(maze);
-    const route = floodRoute(maze, distances);
-    const start = startCell(maze);
-    const reach = distances[start.y]![start.x]!;
+    const route = floodRoute(maze, distances, start.cell);
+    const reach = distances[start.cell.y]![start.cell.x]!;
     return {
       distances,
       route,
@@ -75,15 +107,15 @@ export function MazeLab() {
       turns: countTurns(route),
       reachable: Number.isFinite(reach),
       reach,
-      hand: wallFollow(maze, "left", 600),
+      hand: wallFollow(maze, "left", 600, start),
       segments: wallSegments(maze, CELL),
-      start,
+      start: start.cell,
       goal: goalCells(maze),
       deepest: Math.max(
         ...distances.flat().filter((value) => Number.isFinite(value)),
       ),
     };
-  }, [maze]);
+  }, [maze, start]);
 
   // The wavefront, one ring a tick. This is the algorithm's own order, not an
   // effect laid over it: ring n is every cell exactly n moves from the centre.
@@ -112,7 +144,20 @@ export function MazeLab() {
     [],
   );
 
-  if (!maze || !figure) {
+  const save = async () => {
+    if (!maze || !start || !figure) return;
+    setSaving(true);
+    try {
+      await downloadMazePng(
+        { maze, distances: figure.distances, start, corner, show: view, route: figure.reachable ? figure.route : [], hand: figure.hand.path },
+        `mmrc-maze-${corner}-${view}.png`,
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!maze || !start || !figure) {
     return (
       <div className="not-prose aspect-square w-full max-w-[460px] rounded-xl border border-dashed border-ras-gray/30 dark:border-white/20" />
     );
@@ -129,7 +174,7 @@ export function MazeLab() {
           <svg
             viewBox={maze.viewBox}
             role="img"
-            aria-label={label(view, figure.reach, figure.reachable)}
+            aria-label={`${label(view, figure.reach, figure.reachable)} ${startCaption(corner, start.heading)}.`}
             className="h-auto w-full touch-manipulation"
           >
             {/* The goal, drawn first so walls sit over its edges. */}
@@ -166,13 +211,14 @@ export function MazeLab() {
               ),
             )}
 
-            <circle
-              cx={cellCentre(figure.start).x}
-              cy={cellCentre(figure.start).y}
-              r={6}
-              fill="none"
-              strokeWidth={1.4}
-              className="stroke-ras-gray/70 dark:stroke-white/60"
+            {/* The start: a tinted cell with an arrow at its way out, clear of its number. */}
+            <rect
+              data-start
+              x={figure.start.x * CELL}
+              y={figure.start.y * CELL}
+              width={CELL}
+              height={CELL}
+              className="fill-ras-gray/15 dark:fill-white/15"
             />
 
             {view === "numbers"
@@ -221,6 +267,9 @@ export function MazeLab() {
                 strokeLinejoin="round"
               />
             ) : null}
+
+            {/* The start's way out, over the route so it still shows. */}
+            <path d={startArrow(start)} className="fill-ras-gray/80 dark:fill-white/70" />
 
             {/* The walls, drawn from the grid rather than from the maze's own
                 merged paths, because merged paths cannot be edited. */}
@@ -283,6 +332,56 @@ export function MazeLab() {
             ))}
           </div>
 
+          <div className="mt-4 flex flex-wrap items-start gap-x-5 gap-y-3">
+            <fieldset>
+              <legend className="text-xs font-semibold text-ras-gray dark:text-white/65">Robot start</legend>
+              <div className="mt-1.5 grid w-[84px] grid-cols-2 gap-1">
+                {CORNERS.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => moveStart(option)}
+                    aria-pressed={corner === option}
+                    aria-label={`Start ${option}`}
+                    title={`Start ${option}`}
+                    className={`relative h-10 rounded-md border transition-colors ${
+                      corner === option
+                        ? "border-ras-purple bg-ras-purple"
+                        : "border-ras-purple/40 hover:bg-ras-purple/10 dark:border-white/30 dark:hover:bg-white/10"
+                    }`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`absolute h-2.5 w-2.5 rounded-full ${option.startsWith("top") ? "top-1.5" : "bottom-1.5"} ${
+                        option.endsWith("left") ? "left-1.5" : "right-1.5"
+                      } ${corner === option ? "bg-white" : "bg-ras-purple dark:bg-white"}`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend className="text-xs font-semibold text-ras-gray dark:text-white/65">Facing</legend>
+              <div className="mt-1.5 flex gap-1.5">
+                {cornerExits(corner).map((heading) => (
+                  <button
+                    key={heading}
+                    type="button"
+                    onClick={() => moveStart(corner, heading)}
+                    aria-pressed={start.heading === heading}
+                    className={`min-h-[40px] rounded-full px-3.5 text-sm font-semibold capitalize transition-colors ${
+                      start.heading === heading
+                        ? "bg-ras-purple text-white"
+                        : "border border-ras-purple/40 text-ras-purple dark:border-white/30 dark:text-white"
+                    }`}
+                  >
+                    {HEADING_NAMES[heading]}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          </div>
+
           <p className="mt-4 text-sm leading-relaxed text-ras-gray dark:text-white/75">
             {view === "numbers" ? (
               <>
@@ -292,7 +391,8 @@ export function MazeLab() {
                 <strong className="text-ras-purple dark:text-white">
                   Click any wall to knock it down or build it back
                 </strong>
-                , and watch the numbers rearrange themselves.
+                , and watch the numbers rearrange themselves. Move the start to another corner and
+                its three walls close, so the numbers flood round them.
               </>
             ) : view === "route" ? (
               figure.reachable ? (
@@ -345,6 +445,14 @@ export function MazeLab() {
               className="min-h-[44px] rounded-full border border-ras-purple/40 px-4 text-sm font-semibold text-ras-purple transition-transform active:scale-95 dark:border-white/30 dark:text-white"
             >
               New maze
+            </button>
+            <button
+              type="button"
+              onClick={() => void save()}
+              disabled={saving}
+              className="min-h-[44px] rounded-full border border-ras-purple/40 px-4 text-sm font-semibold text-ras-purple transition-transform active:scale-95 disabled:opacity-60 dark:border-white/30 dark:text-white"
+            >
+              {saving ? "Saving…" : "Download PNG"}
             </button>
           </div>
         </div>

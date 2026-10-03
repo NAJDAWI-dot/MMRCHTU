@@ -225,12 +225,14 @@ export function wallFollow(
   maze: Maze,
   hand: "left" | "right" = "left",
   maxSteps = 400,
+  from: StartPlace = { cell: startCell(maze), heading: 0 },
 ): WallFollow {
-  const start = startCell(maze);
+  const start = from.cell;
   const path: Cell[] = [start];
   let cell = start;
-  // Facing north, the way a mouse leaves a corner with walls on three sides.
-  let heading = 0;
+  // Facing out of the one open side, the way a mouse leaves a corner with
+  // walls on three sides (north, from the generator's own corner).
+  let heading = from.heading;
   const seen = new Set<string>();
 
   for (let step = 0; step < maxSteps; step++) {
@@ -504,4 +506,111 @@ export function toggleWall(maze: Maze, cell: Cell, dir: number): Maze {
   there[d.opp] = next;
 
   return { ...maze, cells };
+}
+
+/* ------------------------------------------------------------ the start */
+
+/** The four corners a mouse may start in, named as they look on the page. */
+export type Corner = "bottom-left" | "bottom-right" | "top-left" | "top-right";
+
+export const CORNERS: readonly Corner[] = ["top-left", "top-right", "bottom-left", "bottom-right"];
+
+/** Where a mouse starts and which way it faces: an index into DIRS. */
+export interface StartPlace {
+  cell: Cell;
+  heading: number;
+}
+
+/** The names of the four headings, indexed like DIRS. */
+export const HEADING_NAMES = ["up", "right", "down", "left"] as const;
+
+export function cornerCell(maze: Maze, corner: Corner): Cell {
+  const far = maze.size - 1;
+  return { x: corner.endsWith("right") ? far : 0, y: corner.startsWith("bottom") ? far : 0 };
+}
+
+/** The two sides of a corner cell that lead into the maze, as DIRS indices: up or down, then left or right. */
+export function cornerExits(corner: Corner): [number, number] {
+  return [corner.startsWith("bottom") ? 0 : 2, corner.endsWith("right") ? 3 : 1];
+}
+
+/** The same maze with one wall set either way, on both sides of it. */
+function setWall(maze: Maze, cell: Cell, dir: number, present: boolean): Maze {
+  const d = DIRS[dir]!;
+  const nx = cell.x + d.dx;
+  const ny = cell.y + d.dy;
+  if (nx < 0 || ny < 0 || nx >= maze.size || ny >= maze.size) return maze;
+  if (maze.cells[cell.y * maze.size + cell.x]![d.wall] === present) return maze;
+  return toggleWall(maze, cell, dir);
+}
+
+/**
+ * Puts the start in a corner, the way the rulebook has it: walls on three
+ * sides and one way out, facing `heading` (one of the corner's two exits).
+ *
+ * Without a heading it keeps the way out the maze already has; when both are
+ * open it keeps the one nearer the centre, so the route stays as short as it
+ * can. Closing the other side can shut cells off from the centre (a corridor
+ * that only led through the corner), so the maze is then mended: a wall
+ * between a shut-off cell and the rest is opened, never one of the start
+ * cell's or the goal room's own, until every cell is reachable again.
+ */
+export function placeStart(maze: Maze, corner: Corner, heading?: number): { maze: Maze; start: StartPlace } {
+  const cell = cornerCell(maze, corner);
+  const exits = cornerExits(corner);
+  let out = heading !== undefined && exits.includes(heading) ? heading : undefined;
+  if (out === undefined) {
+    const walls = maze.cells[cell.y * maze.size + cell.x]!;
+    const open = exits.filter((dir) => !walls[DIRS[dir]!.wall]);
+    if (open.length === 1) out = open[0]!;
+    else {
+      const distances = floodFill(maze);
+      const away = (dir: number) => distances[cell.y + DIRS[dir]!.dy]![cell.x + DIRS[dir]!.dx]!;
+      out = open.length === 2 && away(exits[1]) < away(exits[0]) ? exits[1] : exits[0];
+    }
+  }
+  const closed = exits.find((dir) => dir !== out)!;
+
+  let next = setWall(setWall(maze, cell, out, false), cell, closed, true);
+  next = reconnect(next, cell);
+  return { maze: next, start: { cell, heading: out } };
+}
+
+/** Opens walls until every cell reaches the centre, leaving `keep` and the goal room as they are. */
+function reconnect(maze: Maze, keep: Cell): Maze {
+  const goal = goalCells(maze);
+  const inGoal = (c: Cell) => goal.some((g) => g.x === c.x && g.y === c.y);
+  const isKeep = (c: Cell) => c.x === keep.x && c.y === keep.y;
+  let current = maze;
+  // Each pass opens one wall and joins at least one cell, so this ends.
+  for (let pass = 0; pass < maze.size * maze.size; pass++) {
+    const distances = floodFill(current);
+    let mended = false;
+    let fallback: { cell: Cell; dir: number } | null = null;
+    for (let y = 0; y < current.size && !mended; y++) {
+      for (let x = 0; x < current.size && !mended; x++) {
+        if (Number.isFinite(distances[y]![x]!)) continue;
+        const cell = { x, y };
+        for (let dir = 0; dir < 4; dir++) {
+          const d = DIRS[dir]!;
+          const other = { x: x + d.dx, y: y + d.dy };
+          if (other.x < 0 || other.y < 0 || other.x >= current.size || other.y >= current.size) continue;
+          if (!Number.isFinite(distances[other.y]![other.x]!) || isKeep(cell) || isKeep(other)) continue;
+          if (inGoal(other)) {
+            fallback ??= { cell, dir };
+            continue;
+          }
+          current = setWall(current, cell, dir, false);
+          mended = true;
+          break;
+        }
+      }
+    }
+    if (!mended && fallback) {
+      current = setWall(current, fallback.cell, fallback.dir, false);
+      mended = true;
+    }
+    if (!mended) return current;
+  }
+  return current;
 }
