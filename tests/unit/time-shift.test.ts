@@ -59,3 +59,13 @@ describe("planShift", () => {
     expect(planShift(moved, 4, 5)).toEqual([{ id: "d", slotTime: "10:15" }]);
   });
 });
+
+describe("slots with two mazes side by side", () => {
+  it("gives the two teams of a call the same slot", () => {
+    expect(drawnClock("09:30", 10, 1, 2)).toBe("09:30");
+    expect(drawnClock("09:30", 10, 2, 2)).toBe("09:30");
+    expect(drawnClock("09:30", 10, 3, 2)).toBe("09:40");
+    expect(drawnClock("09:30", 10, 6, 2)).toBe("09:50");
+    expect(drawnClock("09:30", 10, 7, 2)).toBe("10:00");
+  });
+});

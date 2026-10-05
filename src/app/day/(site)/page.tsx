@@ -69,7 +69,7 @@ export default async function DayLivePage() {
   const phase = champion ? 6 : state.drawn ? (currentRound ?? 2) : 1;
 
   // The state of play, in words and in cells.
-  const onMaze = queue.active ? queue.queue.now?.id : undefined;
+  const onMaze = new Set(queue.active ? queue.queue.nowGroup.map((entry) => entry.id) : []);
   let title: string;
   let detail: string;
   let cells: DayCell[] = [];
@@ -96,7 +96,7 @@ export default async function DayLivePage() {
     cells = byOrder.map((team) => ({
       id: team.id,
       name: team.name,
-      state: !team.eligible ? "out" : team.id === onMaze ? "live" : team.standing?.recorded ? "ran" : team.checkedIn ? "here" : "waiting",
+      state: !team.eligible ? "out" : onMaze.has(team.id) ? "live" : team.standing?.recorded ? "ran" : team.checkedIn ? "here" : "waiting",
     }));
   }
 
@@ -257,9 +257,10 @@ export default async function DayLivePage() {
           </div>
         ) : showQueue ? (
           <QueueCards
-            now={queue.queue.now}
-            onDeck={queue.queue.onDeck}
-            inHole={queue.queue.inHole}
+            now={queue.queue.nowGroup}
+            onDeck={queue.queue.deckGroup}
+            inHole={queue.queue.holeGroup}
+            mazeOf={queue.mazeOf}
             calledAt={queue.calledAt ? clockTime(queue.calledAt) : ""}
             onDeckEta={queue.queue.onDeck ? queue.etaOf(queue.queue.onDeck.id) : ""}
             inHoleEta={queue.queue.inHole ? queue.etaOf(queue.queue.inHole.id) : ""}

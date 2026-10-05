@@ -137,3 +137,21 @@ describe("a qualifying slot", () => {
     expect(qualifyingSlot({ runOrder: 2, slotTime: "" }, { ...config, runOrderStart: "" }, "2026-03-14")).toBeNull();
   });
 });
+
+describe("qualifying slots with two mazes", () => {
+  it("counts slots in calls, two teams to a call", async () => {
+    const { qualifyingSlot, lanesOf, slotIndex } = await import("@/lib/match-results");
+    const config = { runOrderStart: "09:30", runSlotMinutes: 10, mazeNames: "Maze A,Maze B" };
+    const at = (runOrder: number) => qualifyingSlot({ runOrder, slotTime: "" }, config, "2026-11-14")!.toISOString();
+    expect(at(1)).toBe(at(2));
+    expect(new Date(at(3)).getTime() - new Date(at(1)).getTime()).toBe(10 * 60_000);
+    expect(new Date(at(4)).getTime()).toBe(new Date(at(3)).getTime());
+    expect(lanesOf("Maze A,Maze B")).toBe(2);
+    expect(lanesOf("")).toBe(1);
+    expect(slotIndex(5, 2)).toBe(2);
+    expect(slotIndex(5, 1)).toBe(4);
+    // One maze: one team a slot, as before.
+    const single = qualifyingSlot({ runOrder: 2, slotTime: "" }, { ...config, mazeNames: "Maze A" }, "2026-11-14")!;
+    expect(single.getTime() - new Date(at(1)).getTime()).toBe(10 * 60_000);
+  });
+});

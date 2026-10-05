@@ -67,8 +67,8 @@ export default async function JudgePage() {
   const data: JudgeData = {
     mode: state.qualifyingStatus === "LOCKED" ? "knockout" : "qualifying",
     teams,
-    onMaze: config.queueTeamId || "",
-    onDeck: queue.queue.onDeck?.id ?? "",
+    onMaze: queue.queue.nowGroup.map((entry) => ({ id: entry.id, maze: queue.mazeOf(entry) })),
+    mazes: queue.mazes,
     queueActive: queue.active,
     matches,
   };

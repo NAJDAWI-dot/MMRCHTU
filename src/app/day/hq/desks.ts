@@ -6,7 +6,7 @@ export const DESKS: readonly { href: string; label: string; blurb: string; icon:
   { href: "/day/hq/check-in", label: "Check-in", blurb: "Arrivals, members, badges, team codes and robots.", icon: "badge" },
   { href: "/day/hq/scoring", label: "Qualifying", blurb: "Enter each team's run times; the score works itself out.", icon: "timer" },
   { href: "/day/hq/scoring/bracket", label: "Bracket", blurb: "Draw the knockout and enter every match.", icon: "bracket" },
-  { href: "/day/hq/scoring/mazes", label: "Mazes", blurb: "Which maze every team runs on, in qualifying and each knockout match.", icon: "compass" },
+  { href: "/day/hq/scoring/mazes", label: "Mazes & times", blurb: "Which maze every team runs on and when: qualifying side by side, and every knockout match.", icon: "compass" },
   { href: "/day/judge", label: "Judge", blurb: "The tablet at the maze: big buttons, the clock, and saves that wait out a lost connection.", icon: "flag" },
   { href: "/day/hq/scoring/reveal", label: "Reveal", blurb: "Choose which results the day site and the hall screen show, and when.", icon: "eye" },
   { href: "/day/hq/scoring/awards", label: "Awards", blurb: "The podium, the highest score and the judges' awards, and revealing them.", icon: "trophy" },

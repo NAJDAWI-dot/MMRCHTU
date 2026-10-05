@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Crest } from "@/components/day-site/Crest";
 import { DayIcon } from "@/components/day-site/icons";
-import { callNext, saveMatch, saveSheet } from "@/app/day/hq/scoring/actions";
+import { callNext, callNextOn, saveMatch, saveSheet } from "@/app/day/hq/scoring/actions";
 import { EMPTY_DESK_STATE, type DeskState } from "@/app/day/hq/state";
 import { MATCH_SECONDS, MAZE_CELLS, formatPoints, formatTime, outcomeText, parseCell, parseRunTime, scoreSheet, type RunEntry } from "@/lib/score-sheet";
 
@@ -14,9 +14,10 @@ type Side = { id: string; name: string; log: RunEntry[]; maze?: string };
 export interface JudgeData {
   mode: "qualifying" | "knockout";
   teams: (Side & { runOrder: number | null; note: string; hasSheet: boolean })[];
-  /** The team the call queue has on the maze, if any. */
-  onMaze: string;
-  onDeck: string;
+  /** The teams the call queue has on the mazes, one per maze. */
+  onMaze: { id: string; maze: string }[];
+  /** The mazes on the floor: with more than one, each tablet follows its own. */
+  mazes: string[];
   queueActive: boolean;
   matches: { id: string; label: string; teamA: Side; teamB: Side; arena: string; time: string; decided: boolean; live: boolean }[];
 }
@@ -34,6 +35,7 @@ interface Pending {
 const OUTBOX = "mmrc-judge-outbox";
 const DRAFT = (key: string) => `mmrc-judge-draft:${key}`;
 const CLOCK = "mmrc-judge-clock";
+const MY_MAZE = "mmrc-judge-maze";
 
 const read = <T,>(key: string, fallback: T): T => {
   try {
@@ -435,7 +437,18 @@ export function JudgeTablet({ data }: { data: JudgeData }) {
   const knockout = data.mode === "knockout";
 
   const known = (id: string) => data.teams.some((item) => item.id === id);
-  const firstTeam = (known(data.onMaze) && data.onMaze) || data.teams.find((item) => !item.hasSheet)?.id || data.teams[0]?.id || "";
+  // With mazes side by side, this tablet stands at one of them and follows the team on it.
+  const sideBySide = data.mazes.length > 1;
+  const [myMaze, setMyMaze] = useState("");
+  useEffect(() => setMyMaze(read<string>(MY_MAZE, "")), []);
+  const chooseMaze = (maze: string) => {
+    setMyMaze(maze);
+    write(MY_MAZE, maze || null);
+  };
+  const atMyMaze = sideBySide && myMaze ? data.onMaze.find((entry) => entry.maze.toLowerCase() === myMaze.toLowerCase()) : undefined;
+  const followed = (sideBySide && myMaze ? atMyMaze?.id : data.onMaze[0]?.id) ?? "";
+  const onMazeIds = new Set(data.onMaze.map((entry) => entry.id));
+  const firstTeam = (known(followed) && followed) || data.teams.find((item) => !item.hasSheet)?.id || data.teams[0]?.id || "";
   const [teamId, setTeamId] = useState(firstTeam);
   const [matchId, setMatchId] = useState(data.matches.find((match) => !match.decided)?.id ?? data.matches[0]?.id ?? "");
   const team = data.teams.find((item) => item.id === teamId);
@@ -476,10 +489,10 @@ export function JudgeTablet({ data }: { data: JudgeData }) {
 
   // Follow the call queue while nothing unsaved is on the screen.
   useEffect(() => {
-    if (!knockout && known(data.onMaze) && data.onMaze !== teamId && !dirty) setTeamId(data.onMaze);
-    // Only when the queue moves.
+    if (!knockout && known(followed) && followed !== teamId && !dirty) setTeamId(followed);
+    // Only when the queue moves, or the tablet changes maze.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.onMaze]);
+  }, [followed]);
 
   // --------------------------------------------------- saving, and the outbox
   const saveOutbox = (items: Pending[]) => {
@@ -570,7 +583,10 @@ export function JudgeTablet({ data }: { data: JudgeData }) {
   const next = async () => {
     setBusy(true);
     try {
-      const result = await callNext(EMPTY_DESK_STATE, new FormData());
+      // At one of two mazes, only this maze's next team: the other may still be running.
+      const form = new FormData();
+      if (sideBySide && myMaze) form.set("maze", myMaze);
+      const result = sideBySide && myMaze ? await callNextOn(EMPTY_DESK_STATE, form) : await callNext(EMPTY_DESK_STATE, new FormData());
       setState(result);
       if (result.ok) {
         clock.reset();
@@ -661,7 +677,7 @@ export function JudgeTablet({ data }: { data: JudgeData }) {
               <select id="judge-pick" value={teamId} onChange={(event) => setTeamId(event.target.value)} className="day-input h-14 max-w-xl text-lg">
                 {data.teams.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.id === data.onMaze ? "● " : item.hasSheet ? "✓ " : ""}
+                    {onMazeIds.has(item.id) ? "● " : item.hasSheet ? "✓ " : ""}
                     {item.runOrder ? `#${item.runOrder} ` : ""}
                     {item.name}
                     {item.maze ? ` · ${item.maze}` : ""}
@@ -670,6 +686,21 @@ export function JudgeTablet({ data }: { data: JudgeData }) {
               </select>
             )}
           </div>
+          {!knockout && sideBySide ? (
+            <div>
+              <label className="day-label" htmlFor="judge-maze">
+                This tablet is at
+              </label>
+              <select id="judge-maze" value={myMaze} onChange={(event) => chooseMaze(event.target.value)} className="day-input h-14 text-lg">
+                <option value="">Any maze</option>
+                {data.mazes.map((maze) => (
+                  <option key={maze} value={maze}>
+                    {maze}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <Clock clock={clock} />
         </div>
 
@@ -720,7 +751,7 @@ export function JudgeTablet({ data }: { data: JudgeData }) {
             <div className="flex flex-wrap gap-2">
               {!knockout && data.queueActive ? (
                 <button type="button" disabled={busy || dirty} onClick={() => void next()} className="day-btn day-btn-soft h-14 px-5 text-base" title={dirty ? "Save first" : undefined}>
-                  Call the next team
+                  {sideBySide && myMaze ? `Next team on ${myMaze}` : sideBySide ? "Call the next teams" : "Call the next team"}
                   <DayIcon name="arrow" className="h-5 w-5" />
                 </button>
               ) : null}

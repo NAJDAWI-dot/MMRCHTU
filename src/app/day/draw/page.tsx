@@ -22,9 +22,12 @@ export default async function DrawPage() {
   const [state, config, queue] = await Promise.all([loadCompetition(), getCompetitionDayConfig(), loadQueue()]);
   const day = competitionDayKey(config.eventDate);
   const slotMinutes = config.runSlotMinutes || 10;
-  const now = queue.active ? queue.queue.now?.id : undefined;
-  const onDeck = queue.active ? queue.queue.onDeck?.id : undefined;
-  const inHole = queue.active ? queue.queue.inHole?.id : undefined;
+  // With mazes side by side each call is a group, one team per maze.
+  const ids = (group: { id: string }[]) => new Set(queue.active ? group.map((entry) => entry.id) : []);
+  const now = ids(queue.queue.nowGroup);
+  const onDeck = ids(queue.queue.deckGroup);
+  const inHole = ids(queue.queue.holeGroup);
+  const lanes = Math.max(1, queue.mazes.length);
 
   const cells: DrawCell[] = state.competitors
     .filter((team) => team.runOrder !== null)
@@ -32,7 +35,7 @@ export default async function DrawPage() {
     .map((team) => {
       const at = qualifyingSlot(team, config, day);
       const slot = at ? clockTime(at) : "";
-      const drawn = config.runOrderStart ? drawnClock(config.runOrderStart, slotMinutes, team.runOrder!) : null;
+      const drawn = config.runOrderStart ? drawnClock(config.runOrderStart, slotMinutes, team.runOrder!, lanes) : null;
       const shift = slot && drawn ? (minutesBetween(drawn, slot) ?? 0) : 0;
       return {
         id: team.id,
@@ -43,11 +46,11 @@ export default async function DrawPage() {
         shift,
         state: !team.eligible
           ? "out"
-          : team.id === now
+          : now.has(team.id)
             ? "now"
-            : team.id === onDeck
+            : onDeck.has(team.id)
               ? "next"
-              : team.id === inHole
+              : inHole.has(team.id)
                 ? "after"
                 : team.standing?.recorded
                   ? "ran"

@@ -2,7 +2,8 @@ import { cache } from "react";
 import { loadCompetition } from "@/lib/competition";
 import { clockTime } from "@/lib/day-mode";
 import { competitionDayKey, qualifyingSlot } from "@/lib/match-results";
-import { buildQueue, estimateCall, placeOf, type QueueEntry, type QueuePlace, type RunQueue } from "@/lib/run-queue";
+import { buildQueue, estimateCall, laneOf, placeOf, type QueueEntry, type QueuePlace, type RunQueue } from "@/lib/run-queue";
+import { parseMazeNames } from "@/lib/mazes";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 
 export interface QueueView {
@@ -13,11 +14,15 @@ export interface QueueView {
   active: boolean;
   queue: RunQueue;
   entries: QueueEntry[];
+  /** The mazes on the floor, in order: the lanes of the queue. */
+  mazes: string[];
   calledAt: Date | null;
   slotMinutes: number;
   /** "about 14:20" for a team still to run, "" for anyone else. */
   etaOf: (id: string) => string;
   placeOf: (id: string) => QueuePlace | null;
+  /** The maze a team runs on: its own, or its lane's; "" with one maze and none set. */
+  mazeOf: (entry: QueueEntry) => string;
 }
 
 /**
@@ -35,7 +40,8 @@ export const loadQueue = cache(async (now: Date = new Date()): Promise<QueueView
     code: team.teamCode,
     maze: team.qualifyingMaze,
   }));
-  const queue = buildQueue(entries, config.queueTeamId);
+  const mazes = parseMazeNames(config.mazeNames);
+  const queue = buildQueue(entries, config.queueTeamId, mazes);
   const slotMinutes = config.runSlotMinutes || 10;
 
   // Before the first call the slot times are the best guess there is.
@@ -46,22 +52,24 @@ export const loadQueue = cache(async (now: Date = new Date()): Promise<QueueView
   };
 
   const etaOf = (id: string) => {
-    const index = queue.upcoming.findIndex((entry) => entry.id === id);
-    if (index === -1) return "";
+    const calls = queue.callsAhead.get(id);
+    if (calls === undefined) return "";
     if (!queue.now) {
       const slot = drawnSlot(id);
       return slot ? `about ${clockTime(slot)}` : "";
     }
-    return `about ${clockTime(estimateCall(config.queueCalledAt, now, slotMinutes, index))}`;
+    return `about ${clockTime(estimateCall(config.queueCalledAt, now, slotMinutes, calls))}`;
   };
 
   return {
     active: queue.total > 0 && state.qualifyingStatus !== "LOCKED",
     queue,
     entries,
+    mazes,
     calledAt: config.queueCalledAt,
     slotMinutes,
     etaOf,
     placeOf: (id: string) => placeOf(queue, entries, id),
+    mazeOf: (entry: QueueEntry) => entry.maze || (mazes.length > 1 ? mazes[laneOf(entry, mazes)]! : ""),
   };
 });

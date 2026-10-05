@@ -1,3 +1,4 @@
+import { parseMazeNames } from "@/lib/mazes";
 import type { Prisma } from "@prisma/client";
 import { changedMatches, resolveBracket, type MatchInput, type ResolvedMatch } from "@/lib/bracket";
 import { dayKey, runningDayKey } from "@/lib/day-mode";
@@ -25,17 +26,30 @@ export function competitionDayKey(eventDate: Date | null, now: Date = new Date()
 
 /**
  * When a team runs in qualifying: its own slot time when one was set or
- * imported, otherwise the start plus a slot length for each place before it.
+ * imported, otherwise the start plus a slot length for each call before its
+ * own. With two mazes running at once two teams share a slot (#1 and #2, then
+ * #3 and #4), so the slots are counted in calls, not places.
  */
 export function qualifyingSlot(
   team: { runOrder: number | null; slotTime: string },
-  config: { runOrderStart: string; runSlotMinutes: number },
+  config: { runOrderStart: string; runSlotMinutes: number; mazeNames?: string },
   day: string,
 ): Date | null {
   if (team.slotTime) return zonedInstant(day, team.slotTime);
   if (!team.runOrder || !config.runOrderStart) return null;
   const start = zonedInstant(day, config.runOrderStart);
-  return new Date(start.getTime() + (team.runOrder - 1) * (config.runSlotMinutes || 10) * 60_000);
+  const call = slotIndex(team.runOrder, lanesOf(config.mazeNames));
+  return new Date(start.getTime() + call * (config.runSlotMinutes || 10) * 60_000);
+}
+
+/** How many mazes run at once: one per name on the Mazes desk, at least one. */
+export function lanesOf(mazeNames: string | undefined): number {
+  return Math.max(1, parseMazeNames(mazeNames ?? "").length);
+}
+
+/** Which slot a place in the order falls in, from 0: places share a slot when mazes run side by side. */
+export function slotIndex(runOrder: number, lanes: number): number {
+  return Math.floor((runOrder - 1) / Math.max(1, lanes));
 }
 
 export type MatchPlan =
