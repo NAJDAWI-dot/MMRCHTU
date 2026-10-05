@@ -52,13 +52,17 @@ export async function saveQualifyingMazes(_previous: DeskState, formData: FormDa
   return { ok: true, message: `Saved. ${set} of ${writes.length} teams have a maze.` };
 }
 
-/** A match's maze, kept the same everywhere the site reads it from. */
-const matchMaze = (maze: string) => ({ arena: maze, mazeA: maze, mazeB: maze });
+/**
+ * Both teams' mazes. The match's own "arena" is cleared: each team's maze is
+ * what the team page, the hall screen and the judge's tablet show.
+ */
+const sideMazes = (mazeA: string, mazeB: string) => ({ arena: "", mazeA, mazeB });
 
 /**
- * Times the knockout from a round onwards: two matches at a time, one per
- * maze, the third place play-off and the final on their own. Matches already
- * played keep their times; any time can be changed by hand afterwards.
+ * Times the knockout from a round onwards: one match after another, each head
+ * to head, its top team on the first maze and its bottom team on the second.
+ * Matches already played keep their times; any time or maze can be changed by
+ * hand afterwards.
  */
 export async function autoSchedule(_previous: DeskState, formData: FormData): Promise<DeskState> {
   await requireSection(SECTION);
@@ -84,7 +88,7 @@ export async function autoSchedule(_previous: DeskState, formData: FormData): Pr
   const day = competitionDayKey(config.eventDate);
   const writes = plan
     .filter((match) => known.has(match.id))
-    .map((match) => prisma.knockoutMatch.update({ where: { id: match.id }, data: { scheduledAt: zonedInstant(day, match.time), ...matchMaze(match.maze) } }));
+    .map((match) => prisma.knockoutMatch.update({ where: { id: match.id }, data: { scheduledAt: zonedInstant(day, match.time), ...sideMazes(match.mazeA, match.mazeB) } }));
   await prisma.$transaction(writes);
   refreshDaySite();
   const last = plan[plan.length - 1]!;
@@ -95,15 +99,16 @@ export async function autoSchedule(_previous: DeskState, formData: FormData): Pr
 }
 
 /**
- * The schedule as typed on the desk: matchId, time and maze for every match
- * on the form, in threes. An empty time clears it.
+ * The schedule as typed on the desk: matchId, time and both teams' mazes for
+ * every match on the form, in fours. An empty time clears it.
  */
 export async function saveSchedule(_previous: DeskState, formData: FormData): Promise<DeskState> {
   await requireSection(SECTION);
   const ids = formData.getAll("matchId").map(String);
   const times = formData.getAll("time").map((value) => String(value).trim());
-  const mazes = formData.getAll("maze").map(cleanMaze);
-  if (ids.length !== times.length || ids.length !== mazes.length) {
+  const mazeA = formData.getAll("mazeA").map(cleanMaze);
+  const mazeB = formData.getAll("mazeB").map(cleanMaze);
+  if (ids.length !== times.length || ids.length !== mazeA.length || ids.length !== mazeB.length) {
     return { ok: false, message: "The form came through incomplete. Reload the page and try again." };
   }
   const bad = times.filter((time) => time && !parseClock(time));
@@ -115,7 +120,7 @@ export async function saveSchedule(_previous: DeskState, formData: FormData): Pr
   const writes = ids.flatMap((id, index) => {
     if (!known.has(id)) return [];
     const clock = times[index] ? parseClock(times[index]) : null;
-    return [prisma.knockoutMatch.update({ where: { id }, data: { scheduledAt: clock ? zonedInstant(day, clock) : null, ...matchMaze(mazes[index]!) } })];
+    return [prisma.knockoutMatch.update({ where: { id }, data: { scheduledAt: clock ? zonedInstant(day, clock) : null, ...sideMazes(mazeA[index]!, mazeB[index]!) } })];
   });
   if (!writes.length) return { ok: false, message: "Those matches are gone. Reload the page." };
   await prisma.$transaction(writes);

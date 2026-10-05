@@ -95,23 +95,25 @@ export interface ScheduleRow {
   teamB: string;
   /** "14:20", or "" for no time yet. */
   time: string;
-  maze: string;
+  mazeA: string;
+  mazeB: string;
   played: boolean;
 }
 
 /**
- * Every knockout match's time and maze, by hand. One maze a match: both teams
- * of a match take their turns on it, while the match beside it uses the other.
+ * Every knockout match's time and each of its teams' mazes, by hand. A match
+ * is head to head: its two teams run at the same time, one on each maze.
  */
 export function MatchSchedule({ rows, mazes }: { rows: ScheduleRow[]; mazes: string[] }) {
   const [state, action] = useFormState(saveSchedule, EMPTY_DESK_STATE);
-  const [mazeOf, setMazeOf] = useState<Record<string, string>>(() => Object.fromEntries(rows.map((row) => [row.id, row.maze])));
+  const sidesOf = () => Object.fromEntries(rows.map((row) => [row.id, { a: row.mazeA, b: row.mazeB }]));
+  const [mazeOf, setMazeOf] = useState<Record<string, { a: string; b: string }>>(sidesOf);
   const [timeOf, setTimeOf] = useState<Record<string, string>>(() => Object.fromEntries(rows.map((row) => [row.id, row.time])));
   // New times from the server (the automatic timing, another desk) replace
   // what is on screen; the table itself stays, and so does its saved notice.
-  const saved = rows.map((row) => `${row.id}:${row.time}:${row.maze}`).join(",");
+  const saved = rows.map((row) => `${row.id}:${row.time}:${row.mazeA}/${row.mazeB}`).join(",");
   useEffect(() => {
-    setMazeOf(Object.fromEntries(rows.map((row) => [row.id, row.maze])));
+    setMazeOf(sidesOf());
     setTimeOf(Object.fromEntries(rows.map((row) => [row.id, row.time])));
     // Only when what is saved changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -127,29 +129,43 @@ export function MatchSchedule({ rows, mazes }: { rows: ScheduleRow[]; mazes: str
             {rows
               .filter((row) => row.round === round)
               .map((row) => (
-                <li key={row.id} className="grid grid-cols-[minmax(0,1fr)] items-center gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_8.5rem_11rem] sm:gap-3">
+                <li key={row.id} className="grid grid-cols-[minmax(0,1fr)] items-center gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_8.5rem] md:gap-4">
                   <input type="hidden" name="matchId" value={row.id} />
-                  <span className="min-w-0">
-                    {row.label ? <span className="block text-xs font-semibold text-day-muted">{row.label}{row.played ? " · played" : ""}</span> : null}
-                    <span className="block truncate font-semibold text-day-ink">
-                      {row.teamA || row.teamB ? `${row.teamA || "To be decided"} v ${row.teamB || "To be decided"}` : <span className="italic text-day-faint">To be decided</span>}
-                    </span>
-                  </span>
-                  <input
-                    type="time"
-                    name="time"
-                    value={timeOf[row.id] ?? ""}
-                    onChange={(event) => setTimeOf((current) => ({ ...current, [row.id]: event.target.value }))}
-                    aria-label={`Time of ${round}${row.label ? ` ${row.label}` : ""}`}
-                    className="day-input day-num h-11"
-                  />
-                  <MazeSelect
-                    name="maze"
-                    value={mazeOf[row.id] ?? ""}
-                    mazes={mazes}
-                    label={`Maze for ${round}${row.label ? ` ${row.label}` : ""}`}
-                    onChange={(maze) => setMazeOf((current) => ({ ...current, [row.id]: maze }))}
-                  />
+                  <div className="min-w-0 space-y-2">
+                    {row.label || row.played ? (
+                      <p className="text-xs font-semibold text-day-muted">
+                        {[row.label, row.played ? "played" : ""].filter(Boolean).join(" · ")}
+                      </p>
+                    ) : null}
+                    {(["a", "b"] as const).map((side) => {
+                      const team = side === "a" ? row.teamA : row.teamB;
+                      return (
+                        <div key={side} className="flex items-center gap-3">
+                          <span className={`min-w-0 flex-1 truncate font-semibold ${team ? "text-day-ink" : "italic text-day-faint"}`}>{team || "To be decided"}</span>
+                          <span className="w-36 shrink-0 sm:w-44">
+                            <MazeSelect
+                              name={side === "a" ? "mazeA" : "mazeB"}
+                              value={mazeOf[row.id]?.[side] ?? ""}
+                              mazes={mazes}
+                              label={`Maze for ${team || "the other side"} in ${round}${row.label ? ` ${row.label}` : ""}`}
+                              onChange={(maze) => setMazeOf((current) => ({ ...current, [row.id]: { ...current[row.id]!, [side]: maze } }))}
+                            />
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <label className="block">
+                    <span className="day-label md:sr-only">Start</span>
+                    <input
+                      type="time"
+                      name="time"
+                      value={timeOf[row.id] ?? ""}
+                      onChange={(event) => setTimeOf((current) => ({ ...current, [row.id]: event.target.value }))}
+                      aria-label={`Time of ${round}${row.label ? ` ${row.label}` : ""}`}
+                      className="day-input day-num h-11"
+                    />
+                  </label>
                 </li>
               ))}
           </ol>

@@ -4,7 +4,7 @@ import { requireSection } from "@/lib/admin-access";
 import { phaseInfo } from "@/lib/bracket";
 import { loadCompetition } from "@/lib/competition";
 import { clockTime } from "@/lib/day-mode";
-import { ALONE_ROUNDS, PLAY_ORDER } from "@/lib/knockout-schedule";
+import { PLAY_ORDER, THIRD_OR_FINAL } from "@/lib/knockout-schedule";
 import { parseMazeNames } from "@/lib/mazes";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import { DeskForm, DeskHead, Submit } from "../../DeskKit";
@@ -41,11 +41,12 @@ export default async function MazesDeskPage({ searchParams }: { searchParams?: {
       .map((match) => ({
         id: match.id,
         round: phaseInfo(round).name,
-        label: ALONE_ROUNDS.includes(round) ? "" : `Match ${match.slot + 1}`,
+        label: THIRD_OR_FINAL.includes(round) ? "" : `Match ${match.slot + 1}`,
         teamA: nameOf(match.teamAId),
         teamB: nameOf(match.teamBId),
         time: match.scheduledAt ? clockTime(match.scheduledAt) : "",
-        maze: match.arena || match.mazeA || match.mazeB,
+        mazeA: match.mazeA || match.arena,
+        mazeB: match.mazeB || match.arena,
         played: !!match.winnerId,
       })),
   );
@@ -73,7 +74,7 @@ export default async function MazesDeskPage({ searchParams }: { searchParams?: {
           </div>
           <p className="text-xs text-day-muted">
             Separate them with commas. They run side by side:{" "}
-            {sideBySide ? `${mazes.length} qualifying runs at once, and ${mazes.length} knockout matches at once until the play-off and the final` : "one run and one match at a time"}.
+            {sideBySide ? `${mazes.length} qualifying runs at once, and in the knockout the two teams of a match head to head, one on each maze` : "one run at a time, and one team at a time in a match"}.
           </p>
         </DeskForm>
       </section>
@@ -113,7 +114,7 @@ export default async function MazesDeskPage({ searchParams }: { searchParams?: {
               </h2>
               <p className="mt-1 text-sm text-day-muted">
                 {sideBySide
-                  ? `Two matches at a time, one on ${mazes[0]} and one on ${mazes[1]}${mazes.length > 2 ? " and so on" : ""}. The third place play-off and then the final are played on their own, on ${mazes[0]}.`
+                  ? `One match at a time, head to head: the top team on ${mazes[0]} and the bottom team on ${mazes[1]}, at the same time. The third place play-off comes before the final.`
                   : "One match at a time, the third place play-off before the final."}{" "}
                 Matches already played keep their times. Change any time or maze below afterwards.
               </p>

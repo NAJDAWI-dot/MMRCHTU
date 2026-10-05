@@ -2,8 +2,8 @@
  * The mazes on the floor, and which one each team runs on.
  *
  * The mazes run side by side: in qualifying one team on each maze at a time,
- * in the knockout one match on each maze (both its teams take their turns on
- * it) until the play-off and the final, played alone. The names are whatever the
+ * and in the knockout the two teams of a match head to head, one maze each.
+ * The names are whatever the
  * organisers call them ("Maze A", "Left table"), kept in
  * CompetitionDayConfig.mazeNames, and a team's maze is stored as that name.
  *
