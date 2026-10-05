@@ -1,52 +1,63 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSection } from "@/lib/admin-access";
-import { PLAYED_ROUNDS, phaseInfo } from "@/lib/bracket";
+import { phaseInfo } from "@/lib/bracket";
 import { loadCompetition } from "@/lib/competition";
+import { clockTime } from "@/lib/day-mode";
+import { ALONE_ROUNDS, PLAY_ORDER } from "@/lib/knockout-schedule";
 import { parseMazeNames } from "@/lib/mazes";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import { DeskForm, DeskHead, Submit } from "../../DeskKit";
-import { saveMazeNames } from "./actions";
-import { MatchMazes, QualifyingMazes } from "./MazeForms";
+import { autoSchedule, saveMazeNames } from "./actions";
+import { MatchSchedule, QualifyingMazes, type ScheduleRow } from "./MazeForms";
 
-export const metadata: Metadata = { title: "Mazes" };
+export const metadata: Metadata = { title: "Mazes and times" };
 
 /**
- * Which maze every team runs on, stage by stage: qualifying, then each side
- * of each knockout match. Shown wherever the team is called: its page, the
- * "get ready" message, the hall screen and the judge's tablet.
+ * Which maze every team runs on, and when: qualifying, where the mazes run
+ * side by side and the draw shares the order round them, then the knockout,
+ * one maze a match, two matches at a time, the play-off and the final alone.
+ * Shown wherever the team is called: its page, the "get ready" message, the
+ * hall screen and the judge's tablet.
  */
 export default async function MazesDeskPage({ searchParams }: { searchParams?: { stage?: string } }) {
   await requireSection("/day/hq/scoring/mazes");
   const [state, config] = await Promise.all([loadCompetition(), getCompetitionDayConfig()]);
   const mazes = parseMazeNames(config.mazeNames);
   const nameOf = (id: string | null) => (id ? (state.byId.get(id)?.name ?? "") : "");
-
-  const rounds = PLAYED_ROUNDS.filter((round) => state.bracket.some((match) => match.round === round && !match.void));
-  const stages = [{ key: "q", label: "Qualifying" }, ...rounds.map((round) => ({ key: String(round), label: phaseInfo(round).name }))];
-  const stage = stages.some((item) => item.key === searchParams?.stage) ? searchParams!.stage! : "q";
+  const stage = searchParams?.stage === "ko" && state.drawn ? "ko" : "q";
 
   const teams = state.competitors
     .filter((team) => team.eligible)
     .sort((a, b) => (a.runOrder ?? 9999) - (b.runOrder ?? 9999) || a.name.localeCompare(b.name, "en", { sensitivity: "base" }))
     .map((team) => ({ id: team.id, name: team.name, code: team.teamCode, runOrder: team.runOrder, maze: team.qualifyingMaze }));
-  const matches = state.bracket
-    .filter((match) => String(match.round) === stage && !match.void && !match.walkover)
-    .map((match) => ({
-      id: match.id,
-      label: `${phaseInfo(match.round).name}${match.round === 7 ? "" : ` · Match ${match.slot + 1}`}`,
-      teamA: nameOf(match.teamAId),
-      teamB: nameOf(match.teamBId),
-      mazeA: match.mazeA,
-      mazeB: match.mazeB,
-    }));
+
+  const playable = state.bracket.filter((match) => !match.void && !match.walkover);
+  const rounds = PLAY_ORDER.filter((round) => playable.some((match) => match.round === round));
+  const rows: ScheduleRow[] = rounds.flatMap((round) =>
+    playable
+      .filter((match) => match.round === round)
+      .sort((a, b) => a.slot - b.slot)
+      .map((match) => ({
+        id: match.id,
+        round: phaseInfo(round).name,
+        label: ALONE_ROUNDS.includes(round) ? "" : `Match ${match.slot + 1}`,
+        teamA: nameOf(match.teamAId),
+        teamB: nameOf(match.teamBId),
+        time: match.scheduledAt ? clockTime(match.scheduledAt) : "",
+        maze: match.arena || match.mazeA || match.mazeB,
+        played: !!match.winnerId,
+      })),
+  );
+  const firstToPlay = rounds.find((round) => playable.some((match) => match.round === round && !match.winnerId)) ?? rounds[0];
+  const sideBySide = mazes.length > 1;
 
   return (
     <div className="space-y-8">
       <DeskHead
         icon="compass"
-        title="Mazes"
-        lead="Put every team on a maze, stage by stage. The team's page, its get ready message, the hall screen and the judge's tablet all say where to go."
+        title="Mazes and times"
+        lead="Where every team runs, and when. The team's page, its get ready message, the hall screen and the judge's tablet all follow it."
       />
 
       <section className="day-card p-5 sm:p-6">
@@ -60,32 +71,97 @@ export default async function MazesDeskPage({ searchParams }: { searchParams?: {
               Save names
             </Submit>
           </div>
-          <p className="text-xs text-day-muted">Separate them with commas. These are the choices below.</p>
+          <p className="text-xs text-day-muted">
+            Separate them with commas. They run side by side:{" "}
+            {sideBySide ? `${mazes.length} qualifying runs at once, and ${mazes.length} knockout matches at once until the play-off and the final` : "one run and one match at a time"}.
+          </p>
         </DeskForm>
       </section>
 
-      <div className="day-no-scrollbar -mx-1 overflow-x-auto px-1">
-        <nav aria-label="Stages" className="day-segment flex-nowrap">
-          {stages.map((item) => (
-            <Link key={item.key} href={`/day/hq/scoring/mazes?stage=${item.key}`} aria-current={item.key === stage ? "page" : undefined}>
-              <span className="whitespace-nowrap">{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-      </div>
+      <nav aria-label="Stages" className="day-segment">
+        <Link href="/day/hq/scoring/mazes?stage=q" aria-current={stage === "q" ? "page" : undefined}>
+          <span>Qualifying</span>
+        </Link>
+        {state.drawn ? (
+          <Link href="/day/hq/scoring/mazes?stage=ko" aria-current={stage === "ko" ? "page" : undefined}>
+            <span>Knockout</span>
+          </Link>
+        ) : null}
+      </nav>
 
       {stage === "q" ? (
-        teams.length ? (
-          <QualifyingMazes key={`q:${teams.map((team) => team.maze).join(",")}`} teams={teams} mazes={mazes} />
-        ) : (
-          <p className="day-card p-6 text-day-muted">No confirmed teams yet.</p>
-        )
-      ) : matches.length ? (
-        <MatchMazes key={`${stage}:${matches.map((match) => `${match.mazeA}/${match.mazeB}`).join(",")}`} matches={matches} mazes={mazes} />
+        <>
+          {sideBySide ? (
+            <p className="text-sm text-day-muted">
+              The draw shares the running order round the mazes ({mazes.map((maze, index) => `#${index + 1} on ${maze}`).join(", ")}, and round again), and each call
+              puts one team on every maze. Change any team&apos;s maze here.
+            </p>
+          ) : null}
+          {teams.length ? (
+            <QualifyingMazes key={`q:${teams.map((team) => team.maze).join(",")}`} teams={teams} mazes={mazes} />
+          ) : (
+            <p className="day-card p-6 text-day-muted">No confirmed teams yet.</p>
+          )}
+          {!state.drawn ? <p className="text-sm text-day-muted">The knockout appears here once the bracket is drawn.</p> : null}
+        </>
       ) : (
-        <p className="day-card p-6 text-day-muted">No matches to play in this round.</p>
+        <>
+          <section className="day-card space-y-4 p-5 sm:p-6" aria-labelledby="auto-title">
+            <div>
+              <h2 id="auto-title" className="day-display text-2xl text-day-ink">
+                Time it for me
+              </h2>
+              <p className="mt-1 text-sm text-day-muted">
+                {sideBySide
+                  ? `Two matches at a time, one on ${mazes[0]} and one on ${mazes[1]}${mazes.length > 2 ? " and so on" : ""}. The third place play-off and then the final are played on their own, on ${mazes[0]}.`
+                  : "One match at a time, the third place play-off before the final."}{" "}
+                Matches already played keep their times. Change any time or maze below afterwards.
+              </p>
+            </div>
+            <DeskForm action={autoSchedule} className="grid grid-cols-2 items-end gap-3 sm:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
+              <div>
+                <label className="day-label" htmlFor="ko-start">
+                  First match
+                </label>
+                <input id="ko-start" name="start" type="time" required className="day-input day-num" />
+              </div>
+              <div>
+                <label className="day-label" htmlFor="ko-minutes">
+                  Minutes a match
+                </label>
+                <input id="ko-minutes" name="minutes" type="number" min={1} max={120} defaultValue={15} required className="day-input day-num" />
+              </div>
+              <div>
+                <label className="day-label" htmlFor="ko-break">
+                  Break between rounds
+                </label>
+                <input id="ko-break" name="break" type="number" min={0} max={180} defaultValue={10} className="day-input day-num" />
+              </div>
+              <div>
+                <label className="day-label" htmlFor="ko-from">
+                  From
+                </label>
+                <select id="ko-from" name="fromRound" defaultValue={firstToPlay} className="day-input">
+                  {rounds.map((round) => (
+                    <option key={round} value={round}>
+                      {phaseInfo(round).name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <Submit pending="Timing…">Time the matches</Submit>
+              </div>
+            </DeskForm>
+          </section>
+
+          {rows.length ? (
+            <MatchSchedule rows={rows} mazes={mazes} />
+          ) : (
+            <p className="day-card p-6 text-day-muted">No matches to play.</p>
+          )}
+        </>
       )}
-      {!state.drawn ? <p className="text-sm text-day-muted">The knockout rounds appear here once the bracket is drawn.</p> : null}
     </div>
   );
 }

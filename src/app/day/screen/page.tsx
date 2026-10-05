@@ -108,31 +108,39 @@ export default async function HallScreenPage() {
       ),
     });
   } else if (queue.active && (queue.queue.now || queue.queue.onDeck)) {
-    const { now, onDeck, inHole } = queue.queue;
-    const lead = now ?? onDeck!;
-    const after = now ? [onDeck, inHole] : [inHole];
+    // With the mazes side by side, each call is one team per maze.
+    const { nowGroup, deckGroup, holeGroup } = queue.queue;
+    const now = nowGroup.length > 0;
+    const lead = now ? nowGroup : deckGroup;
+    const pair = lead.length > 1;
+    const after = now ? [deckGroup, holeGroup] : [holeGroup];
     panels.push({
       key: "now",
-      label: now ? "On the maze" : "First up",
+      label: now ? (pair ? "On the mazes" : "On the maze") : "First up",
       node: (
         <div className="grid h-full grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-[3vh]">
           <div className={`day-card relative flex flex-col justify-center overflow-hidden p-[5vh] ${now ? "border-day-live" : ""}`}>
             <p className={`flex items-center gap-[1.2vh] text-[3vh] font-semibold ${now ? "text-day-live" : "text-day-muted"}`}>
               {now ? <span className="day-live-dot" aria-hidden="true" /> : null}
-              {now ? "On the maze" : "First up"}
+              {now ? (pair ? "On the mazes" : "On the maze") : "First up"}
+              {now && queue.calledAt ? <span className="day-num font-medium text-day-muted">· called at {clockTime(queue.calledAt)}</span> : null}
+              {!now && lead[0] && queue.etaOf(lead[0].id) ? <span className="day-num font-medium text-day-muted">· {queue.etaOf(lead[0].id)}</span> : null}
             </p>
-            <div className="mt-[4vh] flex items-center gap-[4vh]">
-              <Crest name={lead.name} size={150} ring={!!now} />
-              <div className="min-w-0">
-                {lead.code ? <p className="day-num inline-block bg-day-ink px-[1vh] text-[4vh] font-extrabold text-day-on-ink">{lead.code}</p> : null}
-                <p className="day-display break-words text-[11vh] leading-[0.95] text-day-ink">{lead.name}</p>
-              </div>
+            <div className={`mt-[4vh] grid gap-[4vh] ${pair ? "grid-cols-2" : "grid-cols-1"}`}>
+              {lead.map((entry) => (
+                <div key={entry.id} className={`flex min-w-0 gap-[3vh] ${pair ? "flex-col items-start" : "items-center"}`}>
+                  <Crest name={entry.name} size={pair ? 110 : 150} ring={now} />
+                  <div className="min-w-0">
+                    {entry.code ? <p className={`day-num inline-block bg-day-ink px-[1vh] font-extrabold text-day-on-ink ${pair ? "text-[3.4vh]" : "text-[4vh]"}`}>{entry.code}</p> : null}
+                    <p className={`day-display line-clamp-3 break-words leading-[0.95] text-day-ink ${pair ? "text-[7vh]" : "text-[11vh]"}`}>{entry.name}</p>
+                    <p className="day-num mt-[2vh] text-[3vh] text-day-muted">
+                      {queue.mazeOf(entry) ? <span className="font-semibold text-day-crimson">{queue.mazeOf(entry)} · </span> : null}
+                      Runs #{entry.runOrder}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <p className="day-num mt-[4vh] text-[3vh] text-day-muted">
-              {lead.maze ? <span className="font-semibold text-day-crimson">{lead.maze} · </span> : null}
-              Runs #{lead.runOrder}
-              {now && queue.calledAt ? ` · called at ${clockTime(queue.calledAt)}` : !now ? ` · ${queue.etaOf(lead.id)}` : ""}
-            </p>
             <div className="mt-[4vh]">
               <p className="text-[2vh] font-semibold text-day-muted">
                 {queue.queue.ran} of {queue.queue.total} in the running order have run
@@ -143,25 +151,34 @@ export default async function HallScreenPage() {
             </div>
           </div>
           <ol className="grid min-h-0 grid-cols-1 gap-[3vh]" style={{ gridTemplateRows: `repeat(${after.length}, minmax(0, 1fr))` }}>
-            {after.map((entry, index) => {
+            {after.map((group, index) => {
               const label = now ? (index === 0 ? "On deck" : "In the hole") : "Then";
+              const eta = group[0] ? queue.etaOf(group[0].id) : "";
               return (
-                <li key={label} className="day-card flex flex-col justify-center p-[4vh]">
-                  <p className={`text-[2.6vh] font-semibold ${label === "On deck" ? "text-day-gold" : "text-day-plum"}`}>{label}</p>
-                  {entry ? (
+                <li key={label} className="day-card flex min-h-0 flex-col justify-center p-[4vh]">
+                  <p className={`text-[2.6vh] font-semibold ${label === "On deck" ? "text-day-gold" : "text-day-plum"}`}>
+                    {label}
+                    {eta ? <span className="day-num font-medium text-day-muted"> · {eta}</span> : null}
+                  </p>
+                  {group.length ? (
                     <>
-                      <div className="mt-[2vh] flex items-center gap-[2.5vh]">
-                        <Crest name={entry.name} size={72} />
-                        <p className="day-display line-clamp-2 min-w-0 break-words text-[5.4vh] leading-[1.02] text-day-ink">
-                          {entry.code ? <span className="day-num mr-[1vh] bg-day-ink px-[0.8vh] align-middle text-[3vh] font-extrabold text-day-on-ink">{entry.code}</span> : null}
-                          {entry.name}
-                        </p>
-                      </div>
-                      <p className="day-num mt-[2vh] text-[2.4vh] text-day-muted">
-                        {entry.maze ? <span className="font-semibold text-day-crimson">{entry.maze} · </span> : null}#{entry.runOrder}
-                        {queue.etaOf(entry.id) ? ` · ${queue.etaOf(entry.id)}` : ""}
-                      </p>
-                      {label === "On deck" ? <p className="mt-[1vh] text-[2.2vh] font-semibold text-day-ink">Bring your robot to the staging table</p> : null}
+                      <ul className="mt-[2vh] space-y-[2vh]">
+                        {group.map((entry) => (
+                          <li key={entry.id} className="flex min-w-0 items-center gap-[2.5vh]">
+                            <Crest name={entry.name} size={group.length > 1 ? 52 : 72} />
+                            <div className="min-w-0">
+                              <p className={`day-display line-clamp-2 break-words leading-[1.02] text-day-ink ${group.length > 1 ? "text-[4vh]" : "text-[5.4vh]"}`}>
+                                {entry.code ? <span className="day-num mr-[1vh] bg-day-ink px-[0.8vh] align-middle text-[2.6vh] font-extrabold text-day-on-ink">{entry.code}</span> : null}
+                                {entry.name}
+                              </p>
+                              <p className="day-num text-[2.2vh] text-day-muted">
+                                {queue.mazeOf(entry) ? <span className="font-semibold text-day-crimson">{queue.mazeOf(entry)} · </span> : null}#{entry.runOrder}
+                              </p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                      {label === "On deck" ? <p className="mt-[1.5vh] text-[2.2vh] font-semibold text-day-ink">Bring your robot to the staging table</p> : null}
                     </>
                   ) : (
                     <p className="mt-[2vh] text-[3vh] text-day-muted">Nobody left after this</p>
@@ -509,18 +526,16 @@ export default async function HallScreenPage() {
 
   const alert = shell.alerts[0] ?? null;
 
-  const called = queue.active ? queue.queue.now : null;
+  const called = queue.active ? queue.queue.nowGroup : [];
+  const brief = (entry: { name: string; code?: string }) => ({ name: entry.name, code: entry.code ?? "" });
   const call: ScreenCall | null =
-    called && queue.calledAt
+    called.length && queue.calledAt
       ? {
-          key: `${called.id}@${queue.calledAt.toISOString()}`,
-          name: called.name,
-          code: called.code ?? "",
-          runOrder: called.runOrder,
-          maze: called.maze ?? "",
+          key: `${called.map((entry) => entry.id).join("+")}@${queue.calledAt.toISOString()}`,
+          teams: called.map((entry) => ({ ...brief(entry), runOrder: entry.runOrder, maze: queue.mazeOf(entry) })),
           calledAt: queue.calledAt.toISOString(),
-          next: queue.queue.onDeck ? { name: queue.queue.onDeck.name, code: queue.queue.onDeck.code ?? "" } : null,
-          then: queue.queue.inHole ? { name: queue.queue.inHole.name, code: queue.queue.inHole.code ?? "" } : null,
+          next: queue.queue.deckGroup.map(brief),
+          then: queue.queue.holeGroup.map(brief),
         }
       : null;
 

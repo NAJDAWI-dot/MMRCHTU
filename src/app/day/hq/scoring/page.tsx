@@ -1,3 +1,4 @@
+import { laneOf } from "@/lib/run-queue";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DayIcon } from "@/components/day-site/icons";
@@ -16,6 +17,7 @@ import {
   callBack,
   callChosen,
   callNext,
+  callNextOn,
   clearRunOrder,
   drawBracket,
   drawRunOrder,
@@ -111,6 +113,9 @@ export default async function QualifyingDeskPage() {
           </p>
           <p className="mt-1 text-sm text-day-muted">
             Once check-in closes, draw a random order among the teams that checked in. Each gets a slot on the qualifying list and its team page.
+            {queue.mazes.length > 1
+              ? ` The ${queue.mazes.length} mazes run side by side: the order is shared out round them (${queue.mazes.map((maze, index) => `#${index + 1} on ${maze}`).join(", ")}, and round again), and the teams of one call share a slot.`
+              : ""}
           </p>
         </div>
         {locked ? null : (
@@ -156,10 +161,13 @@ export default async function QualifyingDeskPage() {
             <div>
               <p className="day-kicker">Call queue</p>
               <h2 id="queue-title" className="day-display mt-2 text-2xl text-day-ink">
-                {queue.queue.now ? `${queue.queue.now.name} on the maze` : "Nobody called yet"}
+                {queue.queue.nowGroup.length
+                  ? `${queue.queue.nowGroup.map((entry) => entry.name).join(" and ")} on the maze${queue.queue.nowGroup.length === 1 ? "" : "s"}`
+                  : "Nobody called yet"}
               </h2>
               <p className="mt-1 text-sm text-day-muted">
-                {queue.queue.ran} of {queue.queue.total} have run · {queue.queue.upcoming.length} still to call. The hall screen, the live page and each
+                {queue.queue.ran} of {queue.queue.total} have run · {queue.queue.upcoming.length} still to run
+                {queue.queue.lanes > 1 ? `, ${queue.queue.lanes} at a time (${queue.mazes.join(", ")})` : ""}. The hall screen, the live page and each
                 team&rsquo;s page follow this.
               </p>
             </div>
@@ -171,32 +179,60 @@ export default async function QualifyingDeskPage() {
 
           <ol className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-3">
             {[
-              { label: "On the maze", entry: queue.queue.now, note: queue.calledAt && queue.queue.now ? `Called at ${clockTime(queue.calledAt)}` : "" },
-              { label: "On deck", entry: queue.queue.onDeck, note: queue.queue.onDeck ? queue.etaOf(queue.queue.onDeck.id) : "" },
-              { label: "In the hole", entry: queue.queue.inHole, note: queue.queue.inHole ? queue.etaOf(queue.queue.inHole.id) : "" },
+              { label: queue.queue.lanes > 1 ? "On the mazes" : "On the maze", group: queue.queue.nowGroup, note: queue.calledAt && queue.queue.now ? `Called at ${clockTime(queue.calledAt)}` : "" },
+              { label: "On deck", group: queue.queue.deckGroup, note: queue.queue.onDeck ? queue.etaOf(queue.queue.onDeck.id) : "" },
+              { label: "In the hole", group: queue.queue.holeGroup, note: queue.queue.inHole ? queue.etaOf(queue.queue.inHole.id) : "" },
             ].map((tile, index) => (
-              <li key={tile.label} className={`day-sunk p-4 ${index === 0 && tile.entry ? "ring-2 ring-day-live/50" : ""}`}>
+              <li key={tile.label} className={`day-sunk p-4 ${index === 0 && tile.group.length ? "ring-2 ring-day-live/50" : ""}`}>
                 <p className={`flex items-center gap-2 text-xs font-semibold ${index === 0 ? "text-day-live" : "text-day-muted"}`}>
-                  {index === 0 && tile.entry ? <span className="day-live-dot" aria-hidden="true" /> : null}
+                  {index === 0 && tile.group.length ? <span className="day-live-dot" aria-hidden="true" /> : null}
                   {tile.label}
+                  {tile.note ? <span className="day-num font-medium text-day-faint">· {tile.note}</span> : null}
                 </p>
-                <p className="day-display mt-2 flex min-w-0 items-center gap-2 text-xl text-day-ink">
-                  {tile.entry?.code ? <span className="day-num shrink-0 bg-day-ink px-1.5 text-sm font-extrabold text-day-on-ink">{tile.entry.code}</span> : null}
-                  <span className="truncate">{tile.entry?.name ?? "–"}</span>
-                </p>
-                <p className="day-num mt-1 text-xs text-day-faint">
-                  {tile.entry?.runOrder ? `#${tile.entry.runOrder}` : ""}
-                  {tile.note ? ` · ${tile.note}` : ""}
-                </p>
-                {tile.entry?.maze ? <p className="mt-1 text-xs font-semibold text-day-crimson">{tile.entry.maze}</p> : null}
+                {tile.group.length ? (
+                  <ul className="mt-2 space-y-2">
+                    {tile.group.map((entry) => (
+                      <li key={entry.id} className="min-w-0">
+                        <p className="day-display flex min-w-0 items-center gap-2 text-xl text-day-ink">
+                          {entry.code ? <span className="day-num shrink-0 bg-day-ink px-1.5 text-sm font-extrabold text-day-on-ink">{entry.code}</span> : null}
+                          <span className="truncate">{entry.name}</span>
+                        </p>
+                        <p className="day-num text-xs text-day-faint">
+                          {entry.runOrder ? `#${entry.runOrder}` : ""}
+                          {queue.mazes.length > 1 || entry.maze ? (
+                            <span className="ml-1.5 font-semibold text-day-crimson">{entry.maze || queue.mazes[laneOf(entry, queue.mazes)]}</span>
+                          ) : null}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="day-display mt-2 text-xl text-day-ink">–</p>
+                )}
               </li>
             ))}
           </ol>
 
           <div className="flex flex-wrap items-start gap-3">
             <DeskForm action={callNext} className="space-y-3">
-              <Submit pending="Calling…">{queue.queue.onDeck ? `Call ${queue.queue.onDeck.name}` : "Call next"}</Submit>
+              <Submit pending="Calling…">
+                {queue.queue.deckGroup.length ? `Call ${queue.queue.deckGroup.map((entry) => entry.name).join(" and ")}` : "Call next"}
+              </Submit>
             </DeskForm>
+            {/* One maze finished first: call its next team, and leave the other maze running. */}
+            {queue.queue.lanes > 1
+              ? queue.mazes.map((maze, lane) => {
+                  const next = queue.queue.deckGroup.find((entry) => laneOf(entry, queue.mazes) === lane);
+                  return next ? (
+                    <DeskForm key={maze} action={callNextOn} className="space-y-3">
+                      <input type="hidden" name="maze" value={maze} />
+                      <Submit pending="…" variant="secondary">
+                        Next on {maze}
+                      </Submit>
+                    </DeskForm>
+                  ) : null;
+                })
+              : null}
             {queue.queue.now || config.queueHistory ? (
               <DeskForm action={callBack} className="space-y-3">
                 <Submit pending="…" variant="secondary">
@@ -216,7 +252,7 @@ export default async function QualifyingDeskPage() {
           <DeskForm action={callChosen} className="flex flex-wrap items-end gap-3">
             <div className="min-w-0 flex-1 sm:max-w-sm">
               <label className="day-label" htmlFor="queue-team">
-                Call a team out of turn
+                Call a team out of turn{queue.queue.lanes > 1 ? " (it goes on its own maze)" : ""}
               </label>
               <select id="queue-team" name="teamId" className="day-input" defaultValue="">
                 <option value="" disabled>

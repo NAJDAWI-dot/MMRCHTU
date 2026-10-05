@@ -41,9 +41,12 @@ export function minutesBetween(from: string, to: string): number | null {
   return difference;
 }
 
-/** Where the draw put a place in the order: the start plus a slot for every place before it. */
-export function drawnClock(start: string, slotMinutes: number, runOrder: number): string | null {
-  return addMinutes(start, (runOrder - 1) * slotMinutes);
+/**
+ * Where the draw put a place in the order: the start plus a slot for every
+ * call before it. With `lanes` mazes side by side, that many places share a slot.
+ */
+export function drawnClock(start: string, slotMinutes: number, runOrder: number, lanes = 1): string | null {
+  return addMinutes(start, Math.floor((runOrder - 1) / Math.max(1, lanes)) * slotMinutes);
 }
 
 export interface SlotTeam {

@@ -153,7 +153,7 @@ export function followCards(state: CompetitionState, queue: Pick<QueueView, "act
       return {
         ...base,
         status: "Qualifying",
-        next: `${place.ahead} teams before it${eta ? ` · ${eta}` : ""}${team.qualifyingMaze ? ` · ${team.qualifyingMaze}` : ""}`,
+        next: `${place.ahead} team${place.ahead === 1 ? "" : "s"} before it${team.qualifyingMaze ? ` on ${team.qualifyingMaze}` : ""}${eta ? ` · ${eta}` : ""}`,
         tone: "ink",
         live: false,
       };

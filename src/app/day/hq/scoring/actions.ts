@@ -5,7 +5,7 @@ import { requireSection, rolesOf } from "@/lib/admin-access";
 import { prisma } from "@/lib/prisma";
 import { refreshDaySite } from "@/lib/day-refresh";
 import { loadCompetition } from "@/lib/competition";
-import { nextToCall, popHistory, pushHistory, type QueueEntry } from "@/lib/run-queue";
+import { buildQueue, calledIds, callOne, groupKey, laneOf, nextToCall, popHistory, pushHistory, type QueueEntry } from "@/lib/run-queue";
 import { getCompetitionDayConfig } from "@/lib/site-config";
 import { parseClock, zonedInstant } from "@/lib/day-slots";
 import { competitionDayKey, logJson, planMatchResult, qualifyingSlot, type StoredMatch } from "@/lib/match-results";
@@ -29,7 +29,7 @@ import { cleanLog, formatPoints, scoreSheet, sheetFromFields, workingOf } from "
 import { SHEET_PROBLEMS as PROBLEMS, readScoreFile, readTimingFile } from "@/lib/score-transfer";
 import { TEST_DATA_BY, TEST_DATA_NOTE, randomSheet } from "@/lib/test-data";
 import { MAX_SHIFT, planShift } from "@/lib/time-shift";
-import { cleanMaze } from "@/lib/mazes";
+import { cleanMaze, parseMazeNames } from "@/lib/mazes";
 import type { DeskState } from "../state";
 
 const SECTION = "/day/hq/scoring";
@@ -126,6 +126,10 @@ export async function deleteSheet(formData: FormData) {
  * checked in and can still qualify gets a place, drawn at random, and a slot
  * time from the start time and the slot length. A team that did not check in
  * gets no slot.
+ *
+ * With more than one maze on the floor the mazes run side by side: the order
+ * is shared out round them (#1 on the first maze, #2 on the second, #3 on the
+ * first again) and the teams of one call share a slot.
  */
 export async function drawRunOrder(_previous: DeskState, formData: FormData): Promise<DeskState> {
   await requireSection(SECTION);
@@ -137,6 +141,8 @@ export async function drawRunOrder(_previous: DeskState, formData: FormData): Pr
 
   const field = state.competitors.filter((team) => team.checkedIn && team.eligible);
   if (field.length === 0) return { ok: false, message: "No team has checked in yet, so there is nobody to draw." };
+  const mazes = parseMazeNames((await getCompetitionDayConfig()).mazeNames);
+  const lanes = mazes.length;
 
   // Fisher-Yates with the crypto generator: nobody can say the draw was steered.
   const order = field.map((team) => team.id);
@@ -150,15 +156,16 @@ export async function drawRunOrder(_previous: DeskState, formData: FormData): Pr
     ...order.map((registrationId, index) =>
       prisma.teamDayStatus.upsert({
         where: { registrationId },
-        update: { runOrder: index + 1, slotTime: "" },
-        create: { registrationId, runOrder: index + 1 },
+        update: { runOrder: index + 1, slotTime: "", ...(lanes > 1 ? { qualifyingMaze: mazes[index % lanes]! } : {}) },
+        create: { registrationId, runOrder: index + 1, ...(lanes > 1 ? { qualifyingMaze: mazes[index % lanes]! } : {}) },
       }),
     ),
     // A new order starts a new queue.
     upsertConfig({ runOrderStart: start, runSlotMinutes: minutes, runOrderDrawnAt: new Date(), queueTeamId: "", queueCalledAt: null, queueHistory: "" }),
   ]);
   refreshDaySite();
-  return { ok: true, message: `Drawn: ${order.length} teams, the first at ${start}, every ${minutes} minutes.` };
+  const pace = lanes > 1 ? `${lanes} at a time (${mazes.join(", ")}), a call every ${minutes} minutes` : `every ${minutes} minutes`;
+  return { ok: true, message: `Drawn: ${order.length} teams, the first at ${start}, ${pace}.` };
 }
 
 export async function clearRunOrder(_previous: DeskState, _formData: FormData): Promise<DeskState> {
@@ -171,19 +178,25 @@ export async function clearRunOrder(_previous: DeskState, _formData: FormData): 
 // ------------------------------------------------------- the call queue
 
 /**
- * Puts a team on the maze. The teams on deck and in the hole follow from the
- * running order, so this, and the call history "Back one" steps through, is
- * all the queue stores.
+ * Puts teams on the mazes, one per maze ("a+b"). The teams on deck and in the
+ * hole follow from the running order, so this, and the call history "Back
+ * one" steps through, is all the queue stores.
  */
-async function callTeam(id: string, name: string, current: string, history: string): Promise<DeskState> {
+async function callTeams(ids: string, names: string, current: string, history: string): Promise<DeskState> {
   await upsertConfig({
-    queueTeamId: id,
-    queueCalledAt: id ? new Date() : null,
-    queueHistory: current && current !== id ? pushHistory(history, current) : history,
+    queueTeamId: ids,
+    queueCalledAt: ids ? new Date() : null,
+    queueHistory: current && current !== ids ? pushHistory(history, current) : history,
   });
   refreshDaySite();
-  return { ok: true, message: id ? `${name} is on the maze.` : "Nobody is on the maze. The queue is stood down." };
+  if (!ids) return { ok: true, message: "Nobody is on the mazes. The queue is stood down." };
+  return { ok: true, message: `${names} ${calledIds(ids).length === 1 ? "is" : "are"} on the maze${calledIds(ids).length === 1 ? "" : "s"}.` };
 }
+
+const namesOf = (entries: readonly QueueEntry[], ids: string) =>
+  calledIds(ids)
+    .map((id) => entries.find((entry) => entry.id === id)?.name ?? "a team")
+    .join(" and ");
 
 async function queueState() {
   const [state, config] = await Promise.all([loadCompetition(), getCompetitionDayConfig()]);
@@ -194,47 +207,69 @@ async function queueState() {
     eligible: team.eligible,
     ran: !!team.standing?.recorded,
     code: team.teamCode,
+    maze: team.qualifyingMaze,
   }));
-  return { state, entries, current: config.queueTeamId, history: config.queueHistory };
+  return { state, entries, current: config.queueTeamId, history: config.queueHistory, mazes: parseMazeNames(config.mazeNames) };
 }
 
 export async function callNext(_previous: DeskState, _formData: FormData): Promise<DeskState> {
   await requireSection(SECTION);
-  const { state, entries, current, history } = await queueState();
+  const { state, entries, current, history, mazes } = await queueState();
   if (state.qualifyingStatus === "LOCKED") return { ok: false, message: "Qualifying is closed, so there is nobody left to call." };
   if (!entries.some((entry) => entry.runOrder !== null)) return { ok: false, message: "Draw the running order first." };
-  const next = nextToCall(entries, current);
-  if (!next) return { ok: false, message: "Every team in the running order has run." };
-  return callTeam(next.id, next.name, current, history);
+  const next = nextToCall(entries, current, mazes);
+  if (!next.length) return { ok: false, message: "Every team in the running order has run." };
+  return callTeams(groupKey(next), next.map((entry) => entry.name).join(" and "), current, history);
 }
 
-/** Undoes the last call: whoever was on the maze before comes back. */
+/**
+ * Calls the next team on one maze only, for a maze that finishes before the
+ * other: the team on the other maze stays where it is.
+ */
+export async function callNextOn(_previous: DeskState, formData: FormData): Promise<DeskState> {
+  await requireSection(SECTION);
+  const { state, entries, current, history, mazes } = await queueState();
+  if (state.qualifyingStatus === "LOCKED") return { ok: false, message: "Qualifying is closed, so there is nobody left to call." };
+  const lane = mazes.findIndex((maze) => maze.toLowerCase() === String(formData.get("maze") ?? "").toLowerCase());
+  if (lane === -1) return { ok: false, message: "Pick a maze from the list on the Mazes desk." };
+  const next = buildQueue(entries, current, mazes).deckGroup.find((entry) => laneOf(entry, mazes) === lane);
+  if (!next) return { ok: false, message: `Nobody is left to run on ${mazes[lane]}.` };
+  const ids = callOne(entries, current, mazes, next.id);
+  await upsertConfig({ queueTeamId: ids, queueCalledAt: new Date(), queueHistory: current && current !== ids ? pushHistory(history, current) : history });
+  refreshDaySite();
+  return { ok: true, message: `${next.name} is on ${mazes[lane]}.` };
+}
+
+/** Undoes the last call: whoever was on the mazes before comes back. */
 export async function callBack(_previous: DeskState, _formData: FormData): Promise<DeskState> {
   await requireSection(SECTION);
   const { entries, history } = await queueState();
   const popped = popHistory(history);
   if (!popped) return { ok: false, message: "There is no earlier call to go back to." };
-  const team = entries.find((entry) => entry.id === popped.id);
   await upsertConfig({ queueTeamId: popped.id, queueCalledAt: new Date(), queueHistory: popped.history });
   refreshDaySite();
-  return { ok: true, message: `Back to ${team?.name ?? "the team before"}.` };
+  return { ok: true, message: `Back to ${namesOf(entries, popped.id) || "the teams before"}.` };
 }
 
-/** Calls one team out of turn, for a team that has to run early or late. */
+/**
+ * Calls one team out of turn, for a team that has to run early or late. It
+ * goes on its own maze; the team on the other maze stays.
+ */
 export async function callChosen(_previous: DeskState, formData: FormData): Promise<DeskState> {
   await requireSection(SECTION);
-  const { state, entries, current, history } = await queueState();
+  const { state, entries, current, history, mazes } = await queueState();
   if (state.qualifyingStatus === "LOCKED") return { ok: false, message: "Qualifying is closed, so there is nobody left to call." };
   const chosen = entries.find((entry) => entry.id === String(formData.get("teamId") ?? ""));
   if (!chosen || chosen.runOrder === null) return { ok: false, message: "Pick a team from the running order." };
   if (!chosen.eligible) return { ok: false, message: `${chosen.name} cannot run: withdrawn or robot not available.` };
-  return callTeam(chosen.id, chosen.name, current, history);
+  const ids = callOne(entries, current, mazes, chosen.id);
+  return callTeams(ids, namesOf(entries, ids), current, history);
 }
 
 export async function standDown(_previous: DeskState, _formData: FormData): Promise<DeskState> {
   await requireSection(SECTION);
   const { current, history } = await queueState();
-  return callTeam("", "", current, history);
+  return callTeams("", "", current, history);
 }
 
 // ------------------------------------------------------------- the draw
@@ -633,7 +668,7 @@ export async function importTimings(_previous: DeskState, formData: FormData): P
   const day = competitionDayKey(config.eventDate);
   const firstTime = parsed.qualifying.map((row) => row.time).filter(Boolean).sort()[0] ?? "";
   const start = config.runOrderStart || firstTime;
-  const settings = { runOrderStart: start, runSlotMinutes: config.runSlotMinutes };
+  const settings = { runOrderStart: start, runSlotMinutes: config.runSlotMinutes, mazeNames: config.mazeNames };
   const ownTime = (order: number | null, time: string) => {
     if (!time || !order) return time;
     const worked = qualifyingSlot({ runOrder: order, slotTime: "" }, settings, day);

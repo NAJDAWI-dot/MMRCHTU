@@ -40,13 +40,16 @@ export default async function DayTeamPage({ params }: { params: { id: string } }
   const queueChip = !place
     ? null
     : place.kind === "now"
-      ? { text: "On the maze now", tone: "text-day-live bg-day-live/10" }
+      ? { text: `On ${team.qualifyingMaze || "the maze"} now`, tone: "text-day-live bg-day-live/10" }
       : place.kind === "on-deck"
         ? { text: `On deck${eta ? ` · ${eta}` : ""}`, tone: "text-day-gold bg-day-gold/15" }
         : place.kind === "in-hole"
           ? { text: `In the hole${eta ? ` · ${eta}` : ""}`, tone: "text-day-plum bg-day-plum/10" }
           : place.kind === "waiting"
-            ? { text: `${place.ahead} teams before this one${eta ? ` · ${eta}` : ""}`, tone: "text-day-ink bg-day-ink/[0.06]" }
+            ? {
+                text: `${place.ahead} team${place.ahead === 1 ? "" : "s"} before this one${team.qualifyingMaze ? ` on ${team.qualifyingMaze}` : ""}${eta ? ` · ${eta}` : ""}`,
+                tone: "text-day-ink bg-day-ink/[0.06]",
+              }
             : null;
   const nameOf = (id: string | null) => (id ? (state.byId.get(id)?.name ?? null) : null);
   const path = state.bracket

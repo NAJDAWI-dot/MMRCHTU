@@ -1412,6 +1412,30 @@ html.lenis body {
   animation: day-call-draw 900ms var(--day-ease) 1000ms both;
 }
 
+/* One team called, or two side by side when the mazes run together. */
+.day-call-team {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+}
+
+.day-call-pair {
+  display: grid;
+  width: 88vw;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6vw;
+}
+
+.day-call-name-pair {
+  max-width: 42vw;
+  font-size: clamp(2.2rem, 8vh, 6rem);
+}
+
+.day-call-pair .day-call-route {
+  width: 7vw;
+}
+
 .day-call-next {
   margin-top: 6vh;
   font-size: 3vh;

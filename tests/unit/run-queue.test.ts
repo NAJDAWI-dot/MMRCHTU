@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HISTORY_MAX, buildQueue, estimateCall, nextToCall, placeOf, popHistory, pushHistory, type QueueEntry } from "@/lib/run-queue";
+import { HISTORY_MAX, buildQueue, callOne, calledIds, estimateCall, groupKey, laneOf, nextToCall, placeOf, popHistory, pushHistory, type QueueEntry } from "@/lib/run-queue";
 
 const team = (id: string, runOrder: number | null, extra: Partial<QueueEntry> = {}): QueueEntry => ({
   id,
@@ -49,12 +49,12 @@ describe("the call queue", () => {
   it("keeps the team on the maze there after its sheet is saved, until the next call", () => {
     const entries = [team("a", 1, { ran: true }), team("b", 2)];
     expect(buildQueue(entries, "a").now?.id).toBe("a");
-    expect(nextToCall(entries, "a")?.id).toBe("b");
+    expect(names(nextToCall(entries, "a"))).toEqual(["b"]);
   });
 
   it("has nobody to call once every team has run", () => {
     const entries = [team("a", 1, { ran: true }), team("b", 2, { ran: true })];
-    expect(nextToCall(entries, "b")).toBeNull();
+    expect(nextToCall(entries, "b")).toEqual([]);
   });
 
   it("goes back to whoever was really on the maze before, even out of turn", () => {
@@ -106,5 +106,75 @@ describe("when a team will be called", () => {
   it("counts from now when nobody has been called", () => {
     const now = new Date("2026-11-14T08:00:00Z");
     expect(estimateCall(null, now, 8, 1).toISOString()).toBe("2026-11-14T08:16:00.000Z");
+  });
+});
+
+describe("two mazes side by side", () => {
+  const MAZES = ["Maze A", "Maze B"];
+  // The draw shares the order round the mazes: odd places on A, even on B.
+  const field = [1, 2, 3, 4, 5, 6].map((order) => team(`t${order}`, order, { maze: MAZES[(order - 1) % 2] }));
+
+  it("puts a team in the lane of its maze, or shares the order round them when it has none", () => {
+    expect(laneOf(team("a", 3, { maze: "maze b" }), MAZES)).toBe(1);
+    expect(laneOf(team("a", 3), MAZES)).toBe(0);
+    expect(laneOf(team("a", 4), MAZES)).toBe(1);
+    expect(laneOf(team("a", 4, { maze: "Old table" }), MAZES)).toBe(1);
+    expect(laneOf(team("a", 4, { maze: "Maze B" }), [])).toBe(0);
+  });
+
+  it("calls two at a time, one per maze, and lines up the next two calls", () => {
+    const first = buildQueue(field, "", MAZES);
+    expect(first.lanes).toBe(2);
+    expect(names(first.deckGroup)).toEqual(["t1", "t2"]);
+    expect(names(first.holeGroup)).toEqual(["t3", "t4"]);
+    expect(groupKey(first.deckGroup)).toBe("t1+t2");
+
+    const second = buildQueue(field, "t1+t2", MAZES);
+    expect(names(second.nowGroup)).toEqual(["t1", "t2"]);
+    expect(second.now?.id).toBe("t1");
+    expect(names(second.deckGroup)).toEqual(["t3", "t4"]);
+    expect(names(second.holeGroup)).toEqual(["t5", "t6"]);
+    expect(names(second.upcoming)).toEqual(["t3", "t4", "t5", "t6"]);
+  });
+
+  it("says where a team stands in calls, not places", () => {
+    const queue = buildQueue(field, "t1+t2", MAZES);
+    expect(placeOf(queue, field, "t2")).toEqual({ kind: "now" });
+    expect(placeOf(queue, field, "t4")).toEqual({ kind: "on-deck" });
+    expect(placeOf(queue, field, "t6")).toEqual({ kind: "in-hole" });
+    const later = [...field, team("t7", 7, { maze: "Maze A" }), team("t8", 8, { maze: "Maze B" })];
+    expect(placeOf(buildQueue(later, "t1+t2", MAZES), later, "t8")).toEqual({ kind: "waiting", ahead: 2 });
+  });
+
+  it("brings a skipped team round again at the end of its own maze's lane", () => {
+    // T3 was not at the table when called; the rest have run, and T5 and T6 are on.
+    const done = field.map((entry) => (["t1", "t2", "t4"].includes(entry.id) ? { ...entry, ran: true } : entry));
+    const after = buildQueue(done, "t5+t6", MAZES);
+    expect(names(after.deckGroup)).toEqual(["t3"]);
+    expect(after.holeGroup).toEqual([]);
+  });
+
+  it("calls just one team when the other maze has nobody left", () => {
+    const odd = field.slice(0, 5).map((entry) => (entry.runOrder! <= 4 ? { ...entry, ran: true } : entry));
+    expect(names(nextToCall(odd, "t3+t4", MAZES))).toEqual(["t5"]);
+  });
+
+  it("puts a team called out of turn on its own maze and keeps the other maze's team", () => {
+    expect(callOne(field, "t1+t2", MAZES, "t5")).toBe("t2+t5");
+    expect(callOne(field, "t1+t2", MAZES, "t6")).toBe("t1+t6");
+    expect(callOne(field, "", MAZES, "t4")).toBe("t4");
+    expect(calledIds("t2+t5")).toEqual(["t2", "t5"]);
+  });
+
+  it("goes back a whole call at a time", () => {
+    const history = pushHistory(pushHistory("", "t1+t2"), "t3+t4");
+    expect(popHistory(history)).toEqual({ id: "t3+t4", history: "t1+t2" });
+  });
+
+  it("still reads a queue saved before there were lanes", () => {
+    const queue = buildQueue(field, "t3", MAZES);
+    expect(names(queue.nowGroup)).toEqual(["t3"]);
+    // T3 is on Maze A; Maze B carries on from the same place in the order.
+    expect(names(queue.deckGroup)).toEqual(["t5", "t4"]);
   });
 });

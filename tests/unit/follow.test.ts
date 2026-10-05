@@ -22,7 +22,7 @@ describe("the card for a team someone follows", () => {
     expect(cards.map((card) => [card.id, card.next, card.live])).toEqual([
       ["a", "On the maze now. Your eight minutes. Good luck.", true],
       ["b", "Get ready, you are next. Bring your robot to Maze B now. You run about 10:40.", false],
-      ["c", "4 teams before it · about 11:20 · Maze A", false],
+      ["c", "4 teams before it on Maze A · about 11:20", false],
     ]);
     expect(cards[1]!.notice?.tone).toBe("gold");
     expect(cards[2]!.notice).toBeUndefined();
