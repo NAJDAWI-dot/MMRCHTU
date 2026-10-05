@@ -29,8 +29,9 @@ import { cleanLog, formatPoints, scoreSheet, sheetFromFields, workingOf } from "
 import { SHEET_PROBLEMS as PROBLEMS, readScoreFile, readTimingFile } from "@/lib/score-transfer";
 import { TEST_DATA_BY, TEST_DATA_NOTE, randomSheet } from "@/lib/test-data";
 import { MAX_SHIFT, planShift } from "@/lib/time-shift";
-import { cleanMaze, parseMazeNames } from "@/lib/mazes";
-import type { DeskState } from "../state";
+import { cleanMaze, parseMazeNames, serializeMazeNames } from "@/lib/mazes";
+import { readCustomDraw, slotMinutesOf } from "@/lib/custom-draw";
+import type { CustomDrawState, DeskState } from "../state";
 
 const SECTION = "/day/hq/scoring";
 
@@ -166,6 +167,73 @@ export async function drawRunOrder(_previous: DeskState, formData: FormData): Pr
   refreshDaySite();
   const pace = lanes > 1 ? `${lanes} at a time (${mazes.join(", ")}), a call every ${minutes} minutes` : `every ${minutes} minutes`;
   return { ok: true, message: `Drawn: ${order.length} teams, the first at ${start}, ${pace}.` };
+}
+
+/** The custom draw pasted on the desk, read against the confirmed teams. */
+async function customDrawOf(list: string) {
+  const [state, config] = await Promise.all([loadCompetition(), getCompetitionDayConfig()]);
+  const draw = readCustomDraw(
+    list,
+    state.competitors.map((team) => ({ id: team.id, name: team.name, code: team.teamCode })),
+  );
+  // The sheet's own maze names when it has a heading row, else the desk's.
+  const mazes = draw.mazes.length ? draw.mazes : parseMazeNames(config.mazeNames);
+  return { state, draw, mazes };
+}
+
+const NO_DRAW = "Nothing to read. Paste the sheet: a time in the first column, then a team in each maze's column, like 11:30 · A3 - HyperMind · C8 - Tom & Jerry.";
+
+/** Reads a pasted draw and shows what it would set. Writes nothing. */
+export async function checkCustomDraw(_previous: CustomDrawState, formData: FormData): Promise<CustomDrawState> {
+  await requireSection(SECTION);
+  const list = String(formData.get("list") ?? "").slice(0, 100_000);
+  const { state, draw, mazes } = await customDrawOf(list);
+  if (state.qualifyingStatus === "LOCKED") return { ok: false, message: "The bracket is drawn, so the running order is closed.", draw: null, mazes: [], list: "" };
+  if (!draw.rows.length) return { ok: false, message: NO_DRAW, draw: null, mazes: [], list: "" };
+  return { ok: true, message: null, draw, mazes, list };
+}
+
+/**
+ * Uses a draw made by hand instead of a random one: every team in the sheet
+ * gets its row's time as its slot, its column's maze, and a place in the order
+ * read row by row, so the teams of one row are called together. The sheet's
+ * heading names the mazes. Teams not in the sheet are left without a slot.
+ */
+export async function saveCustomDraw(_previous: DeskState, formData: FormData): Promise<DeskState> {
+  await requireSection(SECTION);
+  const { state, draw, mazes } = await customDrawOf(String(formData.get("list") ?? "").slice(0, 100_000));
+  if (state.qualifyingStatus === "LOCKED") return { ok: false, message: "The bracket is drawn, so the running order is closed." };
+  if (!draw.placed) return { ok: false, message: NO_DRAW };
+  if (draw.problems.length) return { ok: false, message: `Nothing was saved. Fix these in the sheet first: ${draw.problems.slice(0, 3).join(" ")}` };
+
+  const placed = draw.rows.flatMap((row) =>
+    row.cells.flatMap((cell, column) => (cell ? [{ ...cell, time: row.time, maze: mazes[column] ?? "" }] : [])),
+  );
+  const first = draw.rows[0]!.time;
+  const last = draw.rows[draw.rows.length - 1]!.time;
+  await prisma.$transaction([
+    prisma.teamDayStatus.updateMany({ data: { runOrder: null, slotTime: "" } }),
+    ...placed.map((cell) =>
+      prisma.teamDayStatus.upsert({
+        where: { registrationId: cell.teamId },
+        update: { runOrder: cell.order, slotTime: cell.time, qualifyingMaze: cell.maze },
+        create: { registrationId: cell.teamId, runOrder: cell.order, slotTime: cell.time, qualifyingMaze: cell.maze },
+      }),
+    ),
+    // A new order starts a new queue.
+    upsertConfig({
+      runOrderStart: first,
+      runSlotMinutes: slotMinutesOf(draw),
+      runOrderDrawnAt: new Date(),
+      queueTeamId: "",
+      queueCalledAt: null,
+      queueHistory: "",
+      ...(draw.mazes.length ? { mazeNames: serializeMazeNames(draw.mazes) } : {}),
+    }),
+  ]);
+  refreshDaySite();
+  const left = draw.missing.length ? ` ${draw.missing.length} confirmed team${draw.missing.length === 1 ? " is" : "s are"} not in it and have no slot.` : "";
+  return { ok: true, message: `Saved the draw: ${placed.length} teams from ${first} to ${last}, on ${mazes.join(" and ")}.${left}` };
 }
 
 export async function clearRunOrder(_previous: DeskState, _formData: FormData): Promise<DeskState> {

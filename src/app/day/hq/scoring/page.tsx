@@ -1,4 +1,5 @@
 import { laneOf } from "@/lib/run-queue";
+import { CustomDraw } from "./CustomDraw";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DayIcon } from "@/components/day-site/icons";
@@ -153,6 +154,9 @@ export default async function QualifyingDeskPage() {
           </div>
         )}
       </section>
+
+      {/* A draw made by hand, from the organisers' sheet. */}
+      {locked ? null : <CustomDraw />}
 
       {/* --------------------------------------------------- call queue */}
       {queue.active ? (

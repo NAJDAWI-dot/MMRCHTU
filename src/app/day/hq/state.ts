@@ -1,3 +1,4 @@
+import type { CustomDraw } from "@/lib/custom-draw";
 import type { CodePlan } from "@/lib/team-codes";
 
 /**
@@ -18,6 +19,15 @@ export interface CodeListState extends DeskState {
 }
 
 export const EMPTY_CODE_LIST: CodeListState = { ok: false, message: null, plan: null, list: "" };
+
+/** A checked custom draw: what it would set, the mazes it would run on, and the paste. */
+export interface CustomDrawState extends DeskState {
+  draw: CustomDraw | null;
+  mazes: string[];
+  list: string;
+}
+
+export const EMPTY_CUSTOM_DRAW: CustomDrawState = { ok: false, message: null, draw: null, mazes: [], list: "" };
 
 /** What has to be typed to reset the day (reset-actions.ts): enough that nobody does it by accident. */
 export const RESET_WORD = "RESET";
