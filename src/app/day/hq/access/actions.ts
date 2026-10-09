@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSection } from "@/lib/admin-access";
 import { parseAudience } from "@/lib/day-access";
 import { refreshDaySite } from "@/lib/day-refresh";
+import { parseDeveloperMessage } from "@/lib/wrap-up";
 import type { ActionState } from "./state";
 
 const SECTION = "/day/hq/access";
@@ -52,4 +53,40 @@ export async function setAudience(_previous: ActionState, formData: FormData): P
         ? "The day site is public. mmrchtu.tech now opens on it."
         : "Saved.",
   };
+}
+
+/**
+ * The competition is over, or, undone, not quite yet. Clears the whole site:
+ * the homepage, the menu and the register page all change with it. The day
+ * site keeps whoever it was open to, as the record of the day.
+ */
+export async function setWrapUp(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  await requireSection(SECTION);
+  const wrapUp = formData.get("wrapUp") === "on";
+  await prisma.competitionDayConfig.upsert({
+    where: { id: "singleton" },
+    update: { wrapUp },
+    create: { id: "singleton", wrapUp },
+  });
+  revalidatePath("/", "layout");
+  refreshDaySite();
+  return {
+    ok: true,
+    message: wrapUp
+      ? "Done. mmrchtu.tech now opens on the thank-you page, and registration is closed."
+      : "Undone. The site is back to how it was before.",
+  };
+}
+
+/** The developer's letter on the thank-you page. Empty goes back to the draft. */
+export async function saveDeveloperMessage(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  await requireSection(SECTION);
+  const developerMessage = parseDeveloperMessage(formData.get("message"));
+  await prisma.competitionDayConfig.upsert({
+    where: { id: "singleton" },
+    update: { developerMessage },
+    create: { id: "singleton", developerMessage },
+  });
+  revalidatePath("/", "layout");
+  return { ok: true, message: developerMessage ? "Saved. It is on the thank-you page." : "Cleared. The thank-you page shows the draft." };
 }

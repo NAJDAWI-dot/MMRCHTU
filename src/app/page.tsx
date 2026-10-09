@@ -12,7 +12,8 @@ import { openDayLocked, openDayPhase, resolveOpenDayWindow } from "@/lib/open-da
 import { getCompetitionDayConfig, getOpenDayConfig } from "@/lib/site-config";
 import { getEarlyBirdState } from "@/lib/early-bird-server";
 import { redirect } from "next/navigation";
-import { dayModeOn } from "@/lib/page-visibility";
+import { dayModeOn, wrapUpOn } from "@/lib/page-visibility";
+import { WrapUpHome } from "@/components/wrap-up/WrapUpHome";
 
 // The countdown reads a live config row, so this page cannot be baked at
 // build time and still be right.
@@ -74,6 +75,13 @@ const FEATURE_CARDS = [
 ] as const;
 
 export default async function HomePage() {
+  // Once the competition is over the homepage is the thank-you page, whatever
+  // the day site is doing. Same rule as day mode: it changes only through the
+  // Access desk, which purges the whole site.
+  if (await wrapUpOn()) {
+    return <WrapUpHome />;
+  }
+
   // While the day site is public, the homepage hands over to it. Checked first
   // and on its own, so the ordinary homepage's reads are not spent on a page
   // nobody is going to see.

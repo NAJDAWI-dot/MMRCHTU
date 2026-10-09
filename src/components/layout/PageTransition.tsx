@@ -19,7 +19,7 @@ import { isDaySitePath } from "@/components/layout/ChromeGate";
  * Remounting also discards the outgoing page's component state, which is the
  * correct behaviour here — that state belongs to a page the visitor has left.
  */
-export function PageTransition({ children }: { children: React.ReactNode }) {
+export function PageTransition({ children, sheet = false }: { children: React.ReactNode; sheet?: boolean }) {
   const pathname = usePathname();
 
   // Not on the day site. An element with a transform animation, even one that
@@ -28,7 +28,9 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
   // centred themselves on the whole page instead of on the screen. The day
   // site fades its own content in, on an element that holds neither.
   return (
-    <div key={pathname} className={isDaySitePath(pathname) ? undefined : "page-enter"}>
+    // Once the competition is over every page sits on a sheet over the shared
+    // background (.wrap-sheet); the day site keeps its own floor.
+    <div key={pathname} className={isDaySitePath(pathname) ? undefined : sheet ? "page-enter wrap-sheet" : "page-enter"}>
       {children}
     </div>
   );

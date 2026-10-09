@@ -9,7 +9,7 @@ import {
   SPLASH_FADE_MS,
   SPLASH_PENDING_CLASS,
   SPLASH_READY_CLASS,
-  splashHoldMs,
+  splashHoldWithCreditMs,
   splashMode,
 } from "@/lib/splash";
 
@@ -28,8 +28,9 @@ import {
  * this schedules against that, rather than the two agreeing on a number that
  * could quietly drift apart.
  */
-export function SplashScreen() {
+export function SplashScreen({ credit = null }: { credit?: { name: string } | null } = {}) {
   const [timing, setTiming] = useState<MazeTiming | null>(null);
+  const hasCredit = !!credit;
 
   // The maze is generated once, but React may invoke this callback from a
   // remount in development. Keeping it stable stops it re-running generation.
@@ -76,7 +77,7 @@ export function SplashScreen() {
     // visitor on a purple screen if generation ever threw.
     const holdTimer = window.setTimeout(
       finish,
-      splashHoldMs(mode, timing?.totalMs),
+      splashHoldWithCreditMs(mode, timing?.totalMs, hasCredit),
     );
 
     // Any deliberate input skips ahead — nobody should be held on an intro.
@@ -100,7 +101,7 @@ export function SplashScreen() {
       // Nothing needs the cleanup anyway — this lives in the root layout,
       // which never unmounts during client navigation.
     };
-  }, [timing]);
+  }, [timing, hasCredit]);
 
   return (
     <div
@@ -109,7 +110,9 @@ export function SplashScreen() {
       // Decorative and self-dismissing: announcing it would interrupt a screen
       // reader before it reaches the real page content.
       aria-hidden="true"
-      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center gap-8 bg-[#3f1546] bg-[radial-gradient(circle_at_50%_40%,#5f2167_0%,#3f1546_60%,#2a0e2f_100%)] text-white${
+      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center gap-8 text-white ${
+        credit ? "splash-encore" : "bg-[#3f1546] bg-[radial-gradient(circle_at_50%_40%,#5f2167_0%,#3f1546_60%,#2a0e2f_100%)]"
+      }${
         timing ? ` ${SPLASH_READY_CLASS}` : ""
       }`}
       style={
@@ -142,9 +145,21 @@ export function SplashScreen() {
           MMRC 26
         </p>
         <p className="text-xs uppercase tracking-[0.28em] text-[#f2a900]">
-          Micro Mouse Robot Competition
+          {credit ? "Thank you · See you at MMRC 27" : "Micro Mouse Robot Competition"}
         </p>
       </div>
+
+      {/* Once the competition is over, the site signs its work. */}
+      {credit ? (
+        <div className="splash-credit -mt-2 flex flex-col items-center gap-2 px-6 text-center">
+          <span className="flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.34em] text-white/70">
+            <span className="splash-credit-rule h-px w-8 origin-right bg-white/40" />
+            A website by
+            <span className="splash-credit-rule h-px w-8 origin-left bg-white/40" />
+          </span>
+          <span className="splash-credit-name font-display text-3xl font-extrabold uppercase tracking-[0.16em] sm:text-4xl">{credit.name}</span>
+        </div>
+      ) : null}
     </div>
   );
 }

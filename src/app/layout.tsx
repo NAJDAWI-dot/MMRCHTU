@@ -5,6 +5,8 @@ import { AmbientMice } from "@/components/brand/AmbientMice";
 import { MazeDescent } from "@/components/layout/MazeDescent";
 import { ThemeProvider } from "@/components/brand/ThemeProvider";
 import { SplashScreen } from "@/components/brand/SplashScreen";
+import { WrapUpBackdrop } from "@/components/wrap-up/WrapUpBackdrop";
+import { DEVELOPER_NAME } from "@/lib/wrap-up";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ChromeGate } from "@/components/layout/ChromeGate";
@@ -42,12 +44,12 @@ const archivo = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-
  * it, for the infection. A page that cannot reach the database still renders,
  * just clean.
  */
-async function infectionSettings(): Promise<{ eventMs: number | null; enabled: boolean }> {
+async function infectionSettings(): Promise<{ eventMs: number | null; enabled: boolean; wrapUp: boolean }> {
   try {
     const config = await getCompetitionDayConfig();
-    return { eventMs: config.eventDate ? config.eventDate.getTime() : null, enabled: config.infection };
+    return { eventMs: config.eventDate ? config.eventDate.getTime() : null, enabled: config.infection, wrapUp: config.wrapUp };
   } catch {
-    return { eventMs: null, enabled: false };
+    return { eventMs: null, enabled: false, wrapUp: false };
   }
 }
 
@@ -112,7 +114,9 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const infection = await infectionSettings();
   return (
-    <html lang="en" suppressHydrationWarning>
+    // wrap-up on <html> once the competition is over: one background for both
+    // themes and the pages on a sheet over it (see WrapUpBackdrop).
+    <html lang="en" className={infection.wrapUp ? "wrap-up" : undefined} suppressHydrationWarning>
       <head>
         {/* Must run before first paint so the page cannot flash behind the
             splash — see src/lib/splash.ts. */}
@@ -137,12 +141,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           decoration with nothing to announce.
         */}
         <div className="site-background" aria-hidden="true" />
+        {infection.wrapUp ? <WrapUpBackdrop /> : null}
         <ThemeProvider>
           {/* Over the artwork and behind everything else: the day site's maze, spreading. */}
           <InfectionLayer eventMs={infection.eventMs} enabled={infection.enabled} />
           <ServiceWorkerRegistrar />
           <ChromeGate>
-            <SplashScreen />
+            <SplashScreen credit={infection.wrapUp ? { name: DEVELOPER_NAME } : null} />
           </ChromeGate>
           {/* The maze curtain is the main site's; on the dark day site a light
               sheet sliding over every page change is a flash, not a transition. */}
@@ -175,7 +180,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Header />
           </ChromeGate>
           <main id="main-content">
-            <PageTransition>{children}</PageTransition>
+            <PageTransition sheet={infection.wrapUp}>{children}</PageTransition>
           </main>
           <ChromeGate>
             <Footer />
