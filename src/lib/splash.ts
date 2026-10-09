@@ -106,3 +106,16 @@ export function splashPrePaintScript(): string {
     `}catch(e){}})();`
   );
 }
+
+/**
+ * How much longer the splash holds when it carries the developer's credit
+ * (once the competition is over). The credit arrives after the lockup and
+ * needs time to be read, not merely seen.
+ */
+export const SPLASH_CREDIT_MS = 1900;
+
+/** The hold, with the credit's time added when there is one. */
+export function splashHoldWithCreditMs(mode: SplashMode, runMs: number | undefined, credit: boolean): number {
+  const hold = splashHoldMs(mode, runMs);
+  return credit && mode !== "none" ? hold + SPLASH_CREDIT_MS : hold;
+}

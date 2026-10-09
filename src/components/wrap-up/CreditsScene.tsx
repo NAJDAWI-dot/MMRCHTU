@@ -4,6 +4,7 @@ import { Caveat } from "next/font/google";
 import { useEffect, useRef, useState } from "react";
 import { MAZE_GOLD } from "@/lib/maze";
 import { SPLASH_PENDING_CLASS } from "@/lib/splash";
+import { ConfettiBurst, CountUp, prefersStill, tween, useSeen } from "./motion";
 
 /** The signature's hand. Loaded here, so only the page with the letter pays for it. */
 const signature = Caveat({ subsets: ["latin"], weight: "600", display: "swap" });
@@ -30,51 +31,6 @@ export interface CreditsProps {
 }
 
 const GLYPHS = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#";
-
-/** Whether the visitor has asked for less motion. Read once, on the client. */
-function prefersStill(): boolean {
-  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-/** Runs `step` with 0..1 over `ms`, eased, and `done` at the end. Returns a cancel. */
-function tween(ms: number, step: (t: number) => void, done?: () => void): () => void {
-  let frame = 0;
-  const start = performance.now();
-  const tick = (now: number) => {
-    const t = Math.min(1, (now - start) / ms);
-    step(t);
-    if (t < 1) frame = requestAnimationFrame(tick);
-    else done?.();
-  };
-  frame = requestAnimationFrame(tick);
-  return () => cancelAnimationFrame(frame);
-}
-
-/** Starts once, the first time the element is well into view. */
-function useSeen<T extends Element>(threshold = 0.45) {
-  const ref = useRef<T>(null);
-  const [seen, setSeen] = useState(false);
-  useEffect(() => {
-    const element = ref.current;
-    if (!element || seen) return;
-    if (!("IntersectionObserver" in window)) {
-      setSeen(true);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setSeen(true);
-          observer.disconnect();
-        }
-      },
-      { threshold },
-    );
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [seen, threshold]);
-  return [ref, seen] as const;
-}
 
 /**
  * Whether the site's intro has cleared. The credits open the page, so the run
@@ -123,29 +79,24 @@ function DecodedName({ name, arrived }: { name: string; arrived: boolean }) {
     );
   }, [arrived, name]);
 
+  // Each word holds the real word's width, with the scramble laid over it, so
+  // wider glyphs mid-decode never push the name onto another line.
+  const real = name.split(" ");
+  const words = shown.split(" ");
   return (
     <span aria-label={name} className="block">
-      <span aria-hidden="true">{shown}</span>
+      <span aria-hidden="true">
+        {real.map((word, i) => (
+          <span key={i}>
+            {i > 0 ? " " : null}
+            <span className="inline-grid">
+              <span className="invisible [grid-area:1/1]">{word}</span>
+              <span data-shown className="whitespace-nowrap [grid-area:1/1]">{words[i] ?? word}</span>
+            </span>
+          </span>
+        ))}
+      </span>
     </span>
-  );
-}
-
-/** A number counting up once it is on screen. */
-function CountUp({ value, approx, run }: { value: number; approx?: boolean; run: boolean }) {
-  const [shown, setShown] = useState(value);
-  useEffect(() => {
-    if (prefersStill()) return;
-    if (!run) {
-      setShown(0);
-      return;
-    }
-    return tween(1400, (t) => setShown(Math.round(value * (1 - Math.pow(1 - t, 3)))));
-  }, [run, value]);
-  return (
-    <>
-      {new Intl.NumberFormat("en-GB").format(shown)}
-      {approx ? "+" : ""}
-    </>
   );
 }
 
@@ -154,13 +105,14 @@ function CountUp({ value, approx, run }: { value: number; approx?: boolean; run:
  * drives the route to the centre, drawing its trail. Arriving is what reveals
  * the credit. Under reduced motion it is already there.
  */
-function MazeRun({ maze, onArrive }: { maze: CreditsMaze; onArrive: () => void }) {
+function MazeRun({ maze, onArrive }: { maze: CreditsMaze; onArrive: (goal: DOMRect | null) => void }) {
   const [frame, inView] = useSeen<HTMLDivElement>(0.5);
   const clear = useSplashGone();
   const seen = inView && clear;
   const route = useRef<SVGPathElement>(null);
   const trail = useRef<SVGPathElement>(null);
   const mouse = useRef<SVGGElement>(null);
+  const goal = useRef<SVGRectElement>(null);
   const [arrived, setArrived] = useState(false);
   const arrive = useRef(onArrive);
   arrive.current = onArrive;
@@ -181,7 +133,7 @@ function MazeRun({ maze, onArrive }: { maze: CreditsMaze; onArrive: () => void }
     if (prefersStill()) {
       place(1);
       setArrived(true);
-      arrive.current();
+      arrive.current(null);
       return;
     }
     place(0);
@@ -194,7 +146,7 @@ function MazeRun({ maze, onArrive }: { maze: CreditsMaze; onArrive: () => void }
       (t) => place(t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2),
       () => {
         setArrived(true);
-        arrive.current();
+        arrive.current(goal.current?.getBoundingClientRect() ?? null);
       },
     );
   }, [seen, maze.cells]);
@@ -216,6 +168,7 @@ function MazeRun({ maze, onArrive }: { maze: CreditsMaze; onArrive: () => void }
           className={`transition-opacity duration-700 motion-reduce:transition-none ${arrived ? "opacity-60" : "opacity-0"}`}
         />
         <rect
+          ref={goal}
           x={maze.goal.x + 2}
           y={maze.goal.y + 2}
           width={maze.goal.size - 4}
@@ -304,9 +257,19 @@ function Letter({ name, paragraphs }: { name: string; paragraphs: string[] }) {
  */
 export function CreditsScene({ maze, name, role, linkedIn, stats, started, lines, paragraphs }: CreditsProps) {
   const [arrived, setArrived] = useState(false);
+  const section = useRef<HTMLElement>(null);
+  const [burst, setBurst] = useState<{ x: number; y: number } | null>(null);
+
+  // Arriving at the centre sets off the confetti from the goal itself.
+  const onArrive = (goal: DOMRect | null) => {
+    setArrived(true);
+    const box = section.current?.getBoundingClientRect();
+    if (goal && box) setBurst({ x: goal.left + goal.width / 2 - box.left, y: goal.top + goal.height / 2 - box.top });
+  };
 
   return (
-    <section aria-labelledby="credits-title" className="relative isolate overflow-hidden bg-[#120a18] px-4 py-24 text-white sm:py-28">
+    <section ref={section} aria-labelledby="credits-title" className="relative isolate overflow-hidden bg-[#120a18] px-4 py-24 text-white sm:py-28">
+      {burst ? <ConfettiBurst x={burst.x} y={burst.y} /> : null}
       <div
         aria-hidden="true"
         className="absolute inset-0 -z-10 [background:radial-gradient(60%_50%_at_50%_0%,rgba(134,38,51,0.35),transparent_70%),radial-gradient(50%_40%_at_80%_90%,rgba(95,33,103,0.45),transparent_70%)]"
@@ -328,7 +291,7 @@ export function CreditsScene({ maze, name, role, linkedIn, stats, started, lines
         </dl>
 
         <div className="mt-16 grid items-center gap-14 lg:grid-cols-2">
-          <MazeRun maze={maze} onArrive={() => setArrived(true)} />
+          <MazeRun maze={maze} onArrive={onArrive} />
 
           <div className="text-center lg:text-left">
             <p className="flex items-center justify-center gap-3 text-[11px] font-medium uppercase tracking-[0.3em] text-white/60 lg:justify-start">
@@ -339,7 +302,10 @@ export function CreditsScene({ maze, name, role, linkedIn, stats, started, lines
             <p
               className={`mt-5 font-display text-4xl font-extrabold uppercase tracking-[0.12em] transition-colors duration-700 motion-reduce:transition-none sm:text-5xl ${arrived ? "text-white" : "text-white/40"}`}
             >
-              <DecodedName name={name} arrived={arrived} />
+              {/* A sweep of gold once the letters have settled. */}
+              <span className={arrived ? "wrap-shine block" : "block"} style={arrived ? { animationDelay: "1.15s" } : undefined}>
+                <DecodedName name={name} arrived={arrived} />
+              </span>
             </p>
             <p className={`mt-4 text-white/70 transition-opacity duration-700 motion-reduce:transition-none ${arrived ? "opacity-100" : "opacity-0"}`}>
               {role}, from the first line in {started} to the final.

@@ -90,3 +90,13 @@ describe("journey", () => {
     }
   });
 });
+
+describe("splash credit", () => {
+  it("holds the splash long enough to read the credit, and not when there is none", async () => {
+    const { splashHoldMs, splashHoldWithCreditMs, SPLASH_CREDIT_MS } = await import("@/lib/splash");
+    expect(splashHoldWithCreditMs("full", 3000, false)).toBe(splashHoldMs("full", 3000));
+    expect(splashHoldWithCreditMs("full", 3000, true)).toBe(splashHoldMs("full", 3000) + SPLASH_CREDIT_MS);
+    expect(splashHoldWithCreditMs("brief", undefined, true)).toBe(splashHoldMs("brief") + SPLASH_CREDIT_MS);
+    expect(splashHoldWithCreditMs("none", 3000, true)).toBe(0);
+  });
+});

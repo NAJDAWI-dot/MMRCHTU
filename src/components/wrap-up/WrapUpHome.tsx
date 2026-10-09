@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/Button";
 import { FeatureCard } from "@/components/home/FeatureCard";
 import { SponsorLogo } from "@/components/day-site/SponsorLogo";
 import { CreditsScene } from "@/components/wrap-up/CreditsScene";
+import { CountOnView } from "@/components/wrap-up/motion";
 import { awardsList, picksOf, type Award } from "@/lib/awards";
 import { CELL, pickMaze, seededRandom } from "@/lib/maze";
 import { loadDayPhotos } from "@/lib/day-photos";
@@ -122,7 +123,7 @@ export async function WrapUpHome() {
           <p className="font-mono text-sm uppercase tracking-widest text-accent">
             {[config.dateText, place].filter(Boolean).join(" · ") || "IEEE RAS HTU Student Chapter"}
           </p>
-          <h1 className="mt-3 font-display text-5xl font-extrabold text-ras-purple dark:text-white sm:text-6xl">MMRC 26 is a wrap</h1>
+          <h1 className="wrap-shimmer mt-3 pb-1 font-display text-5xl font-extrabold sm:text-6xl">MMRC 26 is a wrap</h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg text-ras-gray dark:text-white/70">
             Thank you to every team that built a mouse, every judge and volunteer on the floor, and every sponsor who backed
             it. Here is how it went, and what stays open until MMRC 27.
@@ -142,9 +143,7 @@ export async function WrapUpHome() {
             <ul className="mx-auto mt-14 flex max-w-4xl flex-wrap justify-center gap-px overflow-hidden rounded-xl border border-ras-gray/15 bg-ras-gray/15">
               {numbers.map((number) => (
                 <li key={number.label} className="min-w-[9rem] flex-1 basis-[calc(50%-1px)] bg-[var(--color-surface)] px-4 py-5 sm:basis-[calc(33.333%-1px)]">
-                  <span className="block font-display text-3xl font-extrabold tabular-nums text-ras-purple dark:text-white">
-                    {new Intl.NumberFormat("en-GB").format(number.value)}
-                  </span>
+                  <CountOnView value={number.value} className="block font-display text-3xl font-extrabold tabular-nums text-ras-purple dark:text-white" />
                   <span className="mt-1 block text-sm text-ras-gray dark:text-white/60">{number.label}</span>
                 </li>
               ))}
