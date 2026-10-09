@@ -55,9 +55,9 @@ const PLACE_STYLE: Record<1 | 2 | 3, string> = {
 };
 
 /**
- * The homepage once the competition is over: a thank-you, the podium, the day
- * in numbers and photos, the sponsors, what stays open all year, and the
- * credits. Reads the public competition, so anything the desks still hold
+ * The homepage once the competition is over: the credits and the developer's
+ * letter first, then the thank-you, the podium, the day in numbers and photos,
+ * the sponsors, and what stays open all year. Reads the public competition, so anything the desks still hold
  * back stays held back here.
  */
 export async function WrapUpHome() {
@@ -99,6 +99,24 @@ export async function WrapUpHome() {
 
   return (
     <>
+      {/* The credits open the page: who made the site, then what it was for. */}
+      <CreditsScene
+        maze={creditsMaze()}
+        name={DEVELOPER_NAME}
+        role={DEVELOPER_ROLE}
+        linkedIn={DEVELOPER_LINKEDIN}
+        stats={BUILD_STATS}
+        started={BUILD_STARTED}
+        lines={[
+          { role: "Organised by", name: "IEEE RAS HTU Student Chapter" },
+          ...(teams ? [{ role: "Starring", name: `${teams} teams and their mice` }] : []),
+          { role: "Run by", name: "The MMRC 26 committee" },
+          ...(place ? [{ role: "Held at", name: place }] : []),
+          { role: "Website", name: DEVELOPER_NAME },
+        ]}
+        paragraphs={messageParagraphs(config.developerMessage)}
+      />
+
       <div className="mx-auto max-w-6xl px-4 py-16">
         <section className="text-center">
           <p className="font-mono text-sm uppercase tracking-widest text-accent">
@@ -226,23 +244,6 @@ export async function WrapUpHome() {
           </section>
         ) : null}
       </div>
-
-      <CreditsScene
-        maze={creditsMaze()}
-        name={DEVELOPER_NAME}
-        role={DEVELOPER_ROLE}
-        linkedIn={DEVELOPER_LINKEDIN}
-        stats={BUILD_STATS}
-        started={BUILD_STARTED}
-        lines={[
-          { role: "Organised by", name: "IEEE RAS HTU Student Chapter" },
-          ...(teams ? [{ role: "Starring", name: `${teams} teams and their mice` }] : []),
-          { role: "Run by", name: "The MMRC 26 committee" },
-          ...(place ? [{ role: "Held at", name: place }] : []),
-          { role: "Website", name: DEVELOPER_NAME },
-        ]}
-        paragraphs={messageParagraphs(config.developerMessage)}
-      />
     </>
   );
 }

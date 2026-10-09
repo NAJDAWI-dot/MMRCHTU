@@ -3,6 +3,7 @@
 import { Caveat } from "next/font/google";
 import { useEffect, useRef, useState } from "react";
 import { MAZE_GOLD } from "@/lib/maze";
+import { SPLASH_PENDING_CLASS } from "@/lib/splash";
 
 /** The signature's hand. Loaded here, so only the page with the letter pays for it. */
 const signature = Caveat({ subsets: ["latin"], weight: "600", display: "swap" });
@@ -75,6 +76,23 @@ function useSeen<T extends Element>(threshold = 0.45) {
   return [ref, seen] as const;
 }
 
+/**
+ * Whether the site's intro has cleared. The credits open the page, so the run
+ * waits for the splash rather than playing out underneath it.
+ */
+function useSplashGone(): boolean {
+  const [gone, setGone] = useState(false);
+  useEffect(() => {
+    const root = document.documentElement;
+    const check = () => setGone(!root.classList.contains(SPLASH_PENDING_CLASS));
+    check();
+    const observer = new MutationObserver(check);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+  return gone;
+}
+
 /** The name, scrambled while the mouse is still looking, decoding letter by letter when it arrives. */
 function DecodedName({ name, arrived }: { name: string; arrived: boolean }) {
   const [shown, setShown] = useState(name);
@@ -137,7 +155,9 @@ function CountUp({ value, approx, run }: { value: number; approx?: boolean; run:
  * the credit. Under reduced motion it is already there.
  */
 function MazeRun({ maze, onArrive }: { maze: CreditsMaze; onArrive: () => void }) {
-  const [frame, seen] = useSeen<HTMLDivElement>(0.5);
+  const [frame, inView] = useSeen<HTMLDivElement>(0.5);
+  const clear = useSplashGone();
+  const seen = inView && clear;
   const route = useRef<SVGPathElement>(null);
   const trail = useRef<SVGPathElement>(null);
   const mouse = useRef<SVGGElement>(null);
@@ -276,11 +296,11 @@ function Letter({ name, paragraphs }: { name: string; paragraphs: string[] }) {
 }
 
 /**
- * The end credits: the site's own credit, told the way the competition is.
+ * The credits: the site's own credit, told the way the competition is.
  * A mouse runs a maze, and the developer is what it finds in the centre.
  * Then the developer's letter.
  *
- * Dark in either theme, like the lights going down at the end of a film.
+ * Dark in either theme, like a cinema with the lights down.
  */
 export function CreditsScene({ maze, name, role, linkedIn, stats, started, lines, paragraphs }: CreditsProps) {
   const [arrived, setArrived] = useState(false);
@@ -292,7 +312,7 @@ export function CreditsScene({ maze, name, role, linkedIn, stats, started, lines
         className="absolute inset-0 -z-10 [background:radial-gradient(60%_50%_at_50%_0%,rgba(134,38,51,0.35),transparent_70%),radial-gradient(50%_40%_at_80%_90%,rgba(95,33,103,0.45),transparent_70%)]"
       />
       <div className="mx-auto max-w-6xl">
-        <p className="text-center font-mono text-xs uppercase tracking-[0.35em] text-white/55">End credits</p>
+        <p className="text-center font-mono text-xs uppercase tracking-[0.35em] text-white/55">Credits</p>
         <h2 id="credits-title" className="mt-4 text-center font-display text-3xl font-extrabold sm:text-4xl">
           Who made this site
         </h2>
