@@ -63,6 +63,8 @@ const COMPETITION_DAY_FALLBACK: CompetitionDayConfig = {
   awardBestDesign: "",
   awardBestDesignRunnerUp: "",
   awardsShown: false,
+  wrapUp: false,
+  developerMessage: "",
   updatedAt: NEVER_SAVED,
 };
 

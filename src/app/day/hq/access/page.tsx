@@ -6,6 +6,8 @@ import { getCompetitionDayConfig } from "@/lib/site-config";
 import { prisma } from "@/lib/prisma";
 import { DeskHead } from "../DeskKit";
 import { AudienceForm } from "./DayModeForms";
+import { DeveloperMessageForm, WrapUpSwitch } from "./WrapUpForms";
+import { DEFAULT_DEVELOPER_MESSAGE } from "@/lib/wrap-up";
 import { openDaySite } from "@/lib/day-links";
 
 export const metadata: Metadata = { title: "Access" };
@@ -38,7 +40,9 @@ export default async function DaySiteAccessPage() {
           {DAY_AUDIENCE_LABELS[audience]}
         </p>
         <p className="mt-3 max-w-2xl text-day-ink">
-          {audience === "PUBLIC"
+          {audience === "PUBLIC" && config.wrapUp
+            ? "Everyone can open the day site at /day, as the record of the day. The homepage is the thank-you page (After the day, below)."
+            : audience === "PUBLIC"
             ? `Everyone who opens mmrchtu.tech gets the day site. ${DAY_MODE_HIDDEN_PAGES.join(" and ")} are hidden.`
             : audience === "STAFF"
               ? "Any signed-in admin can open it. Visitors still get the normal site."
@@ -65,6 +69,30 @@ export default async function DaySiteAccessPage() {
           viewerIds={viewerIds}
           admins={admins.map((row) => ({ ...row, isMe: row.id === admin.id }))}
         />
+      </section>
+
+      <section className={`day-card space-y-4 p-5 sm:p-6 ${config.wrapUp ? "ring-2 ring-day-gold/50" : ""}`} aria-labelledby="after-title">
+        <h2 id="after-title" className="day-kicker">
+          After the day
+        </h2>
+        <p className="max-w-2xl text-day-ink">
+          {config.wrapUp
+            ? "The competition is over. mmrchtu.tech opens on the thank-you page with the results, the credits and the journey through the site. Registration is closed; Rules, Micro Mouse, Pac Mouse and the FAQ stay open all year."
+            : "When the prize-giving is done, turn the site into the thank-you page: the results, the sponsors, the credits and a tour of the site as it was. Registration closes and the rest stays open all year."}
+        </p>
+        <p className="flex flex-wrap gap-2">
+          <a href="/" className="day-btn day-btn-soft day-btn-sm">
+            Open the homepage
+          </a>
+          <a href="/journey" className="day-btn day-btn-soft day-btn-sm">
+            Open the journey
+          </a>
+        </p>
+        <WrapUpSwitch on={config.wrapUp} />
+      </section>
+
+      <section className="day-card p-5 sm:p-6">
+        <DeveloperMessageForm message={config.developerMessage} draft={DEFAULT_DEVELOPER_MESSAGE} />
       </section>
     </div>
   );

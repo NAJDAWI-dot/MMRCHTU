@@ -516,6 +516,13 @@ model CompetitionDayConfig {
   awardBestDesignRunnerUp String  @default("")
   awardsShown             Boolean @default(false)
 
+  // After the competition: the homepage becomes the thank-you page with the
+  // results, day mode stops hiding pages and registration goes dark (see
+  // src/lib/wrap-up.ts). developerMessage is the developer's letter on it;
+  // empty shows the draft in that file.
+  wrapUp           Boolean @default(false)
+  developerMessage String  @default("")
+
   updatedAt DateTime @updatedAt
 }
 

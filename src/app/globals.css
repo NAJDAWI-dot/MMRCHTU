@@ -2937,3 +2937,13 @@ svg:hover .maze-progress-ear:nth-of-type(2) {
     pointer-events: none;
   }
 }
+
+/* The journey tour's timer under the controls: one note's worth of time. */
+@keyframes journey-bar {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

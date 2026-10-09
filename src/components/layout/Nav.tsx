@@ -4,8 +4,9 @@ import { MouseMark } from "@/components/brand/MouseMark";
 
 import { prisma } from "@/lib/prisma";
 import { parseStatus } from "@/lib/competition-day";
-import { dayModeOn, hiddenPageHrefs } from "@/lib/page-visibility";
+import { dayModeOn, hiddenPageHrefs, wrapUpOn } from "@/lib/page-visibility";
 import { dayModeMenuHidden } from "@/lib/day-mode";
+import { wrapUpMenuHidden } from "@/lib/wrap-up";
 import { openDayLocked, openDayPhase, resolveOpenDayWindow } from "@/lib/open-day";
 import { getOpenDayConfig } from "@/lib/site-config";
 import { MobileNav, type NavLink } from "@/components/layout/MobileNav";
@@ -28,6 +29,8 @@ const LINKS = [
   { href: "/competition-day", label: "Competition Day" },
   { href: "/gallery", label: "Gallery" },
   { href: "/results", label: "Results" },
+  // The tour of the site as it was. Only once the competition is over.
+  { href: "/journey", label: "Journey" },
   // Marked special so it renders as a pill rather than another plain link:
   // the committee page is the one page about people rather than about the
   // competition, and it was disappearing among six siblings that all look
@@ -56,23 +59,27 @@ const LINKS = [
  * stays reachable by URL for them, which is where previewing it belongs.
  */
 async function hiddenHrefs(): Promise<Set<string>> {
-  const [config, publishedAlbums, adminHidden, openDay, day] = await Promise.all([
+  const [config, publishedAlbums, adminHidden, openDay, day, over] = await Promise.all([
     prisma.competitionDayConfig.findUnique({ where: { id: "singleton" } }),
     prisma.galleryAlbum.count({ where: { isPublished: true, photos: { some: {} } } }),
     hiddenPageHrefs(),
     getOpenDayConfig(),
     dayModeOn(),
+    wrapUpOn(),
   ]);
 
-  const hidden = new Set<string>([...adminHidden, ...dayModeMenuHidden(day)]);
+  const hidden = new Set<string>([...adminHidden, ...dayModeMenuHidden(day), ...wrapUpMenuHidden(over)]);
+  if (!over) hidden.add("/journey");
   // No row yet means the schema defaults apply, and the default is not HIDDEN.
   if (parseStatus(config?.status) === "HIDDEN") hidden.add("/competition-day");
   if (publishedAlbums === 0) hidden.add("/gallery");
   // Results, once the awards are revealed: before that there is nothing final
   // to show. It then takes Competition Day's place, which is over, so the row
   // does not grow; that page still answers at its address.
+  // Once it is all over, Results stays in the menu either way: that is what
+  // people come back for.
   if (config?.awardsShown) hidden.add("/competition-day");
-  else hidden.add("/results");
+  else if (!over) hidden.add("/results");
   // And Open Day until the doors open, for the same reason as the other two:
   // the menu should not offer a page that has nothing on it yet. The homepage
   // band is where the countdown is announced, and admins reach the page by

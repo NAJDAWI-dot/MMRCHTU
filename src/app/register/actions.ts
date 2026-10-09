@@ -24,7 +24,7 @@ import {
 } from "@/lib/payment";
 import { computeFee, type FeeBreakdown } from "@/lib/pricing";
 import { getPaymentConfig, getRegisterFormConfig } from "@/lib/site-config";
-import { dayModeOn } from "@/lib/page-visibility";
+import { registrationShut } from "@/lib/page-visibility";
 import { paymentScreenshotKey } from "@/lib/payment-proof";
 import { SNIFF_BYTES, checkUpload, sniffImageType } from "@/lib/gallery";
 import { StorageNotConfiguredError, removePhoto, storePhoto } from "@/lib/photo-storage";
@@ -166,7 +166,7 @@ export async function checkTeamDetails(
   // exactly that.
   // Day mode as well as the form's own switch. The page 404s in day mode, but
   // a tab opened the night before can still submit on the morning.
-  const [form, day] = await Promise.all([getRegisterFormConfig(), dayModeOn()]);
+  const [form, day] = await Promise.all([getRegisterFormConfig(), registrationShut()]);
   if (!form.isOpen || day) {
     return { status: "error", formError: CLOSED_MESSAGE };
   }
@@ -243,7 +243,7 @@ export async function completeRegistration(
   const [form, paymentConfig, day] = await Promise.all([
     getRegisterFormConfig(),
     getPaymentConfig(),
-    dayModeOn(),
+    registrationShut(),
   ]);
 
   if (!form.isOpen || day) {

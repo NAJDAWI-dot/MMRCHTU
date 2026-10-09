@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { SESSION_COOKIE_NAME, verifySessionSignature } from "@/lib/auth";
 import { withDayMode } from "@/lib/day-mode";
+import { withWrapUp } from "@/lib/wrap-up";
 
 /**
  * Reading admin-controlled page visibility, and enforcing it.
@@ -21,21 +22,50 @@ import { withDayMode } from "@/lib/day-mode";
  * beats a query per page.
  */
 export const hiddenPageHrefs = cache(async (): Promise<Set<string>> => {
-  const [rows, day] = await Promise.all([
+  const [rows, day, over] = await Promise.all([
     prisma.pageVisibility.findMany({
       where: { isHidden: true },
       select: { href: true },
     }),
     dayModeOn(),
+    wrapUpOn(),
   ]);
   // Day mode's pages join the set here, once, so the menu, the homepage cards
   // and the guard on each page all follow the switch without any of them
   // having to know it exists. The Pages tab reads its own rows directly, so
   // an admin's own switches there are left exactly as they set them.
-  return withDayMode(
-    rows.map((row) => row.href),
-    day,
+  return withWrapUp(
+    withDayMode(
+      rows.map((row) => row.href),
+      day,
+    ),
+    over,
   );
+});
+
+/** The two switches off the singleton row, read once per request. */
+const siteSwitches = cache(async () => {
+  const row = await prisma.competitionDayConfig.findUnique({
+    where: { id: "singleton" },
+    select: { dayMode: true, wrapUp: true },
+  });
+  return { dayMode: row?.dayMode ?? false, wrapUp: row?.wrapUp ?? false };
+});
+
+/**
+ * Whether the competition is over and the site has been wrapped up. Wins over
+ * day mode: the day site stays at /day for whoever it is open to, but the
+ * homepage and the menu belong to the wrap-up.
+ */
+export const wrapUpOn = cache(async (): Promise<boolean> => (await siteSwitches()).wrapUp);
+
+/**
+ * Whether registration is shut by either switch, whatever the form's own
+ * setting says: on the day, and for good once the competition is over.
+ */
+export const registrationShut = cache(async (): Promise<boolean> => {
+  const { dayMode, wrapUp } = await siteSwitches();
+  return dayMode || wrapUp;
 });
 
 /**
@@ -45,11 +75,8 @@ export const hiddenPageHrefs = cache(async (): Promise<Set<string>> => {
  * above. No row yet means the schema default, which is off.
  */
 export const dayModeOn = cache(async (): Promise<boolean> => {
-  const row = await prisma.competitionDayConfig.findUnique({
-    where: { id: "singleton" },
-    select: { dayMode: true },
-  });
-  return row?.dayMode ?? false;
+  const { dayMode, wrapUp } = await siteSwitches();
+  return dayMode && !wrapUp;
 });
 
 /**
